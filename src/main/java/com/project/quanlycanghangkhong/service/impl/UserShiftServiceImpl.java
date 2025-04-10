@@ -39,15 +39,19 @@ public class UserShiftServiceImpl implements UserShiftService {
     
     @Override
     public UserShiftDTO assignShiftToUser(Integer userId, LocalDate date, Integer shiftId) {
-        // Lấy thông tin user
+        // Lấy user và shift
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        // Lấy thông tin shift
         Shift shift = shiftRepository.findById(shiftId)
                 .orElseThrow(() -> new RuntimeException("Shift not found"));
-        // Tạo mới UserShift
+        // Kiểm tra conflict: tìm ca trực của user trong ngày date
+        List<UserShift> existingShifts = userShiftRepository.findByUserIdAndShiftDate(userId, date);
+        if (!existingShifts.isEmpty()) {
+            throw new RuntimeException("Nhân viên này đã có ca trực trong ngày " + date);
+        }
         UserShift userShift = new UserShift(user, date, shift);
-        return DTOConverter.convertUserShift(userShiftRepository.save(userShift));
+        UserShift saved = userShiftRepository.save(userShift);
+        return new UserShiftDTO(saved);
     }
 
     @Override
@@ -62,19 +66,35 @@ public class UserShiftServiceImpl implements UserShiftService {
                 .map(DTOConverter::convertUserShift)
                 .collect(Collectors.toList());
     }
-
     @Override
-    public UserShiftDTO updateUserShift(Integer id, Integer shiftId) {
-        Optional<UserShift> opt = userShiftRepository.findById(id);
-        if(opt.isPresent()){
-            UserShift userShift = opt.get();
-            Shift shift = shiftRepository.findById(shiftId)
-                    .orElseThrow(() -> new RuntimeException("Shift not found"));
-            userShift.setShift(shift);
-            return DTOConverter.convertUserShift(userShiftRepository.save(userShift));
+    public UserShiftDTO updateUserShift(Integer id, Integer newShiftId, LocalDate newShiftDate) {
+        // Lấy UserShift cần update
+        UserShift userShift = userShiftRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("UserShift not found with id: " + id));
+
+        // Kiểm tra conflict: nếu người dùng đã có ca trực khác trong cùng ngày (loại trừ bản ghi hiện tại)
+        List<UserShift> existingAssignments = userShiftRepository.findByUserIdAndShiftDate(
+                userShift.getUser().getId(), userShift.getShiftDate());
+        existingAssignments.removeIf(us -> us.getId().equals(id));
+        if (!existingAssignments.isEmpty()) {
+            throw new RuntimeException("Nhân viên này đã có ca trực trong ngày " + userShift.getShiftDate());
         }
-        return null;
+
+        // Lấy đối tượng Shift mới
+        Shift newShift = shiftRepository.findById(newShiftId)
+                .orElseThrow(() -> new RuntimeException("Shift not found with id: " + newShiftId));
+
+        // Cập nhật ca và ngày trực
+        userShift.setShift(newShift);
+        userShift.setShiftDate(newShiftDate);
+
+        // Lưu và trả về DTO
+        UserShift updated = userShiftRepository.save(userShift);
+        return new UserShiftDTO(updated);
     }
+
+
+
 
     @Override
     public void deleteUserShift(Integer id) {
@@ -95,29 +115,21 @@ public class UserShiftServiceImpl implements UserShiftService {
     public List<UserShiftDTO> applyShiftToUsers(ApplyShiftMultiDTO dto) {
         List<UserShiftDTO> createdDTOs = new ArrayList<>();
         LocalDate shiftDate = dto.getShiftDate();
-
-        // Tra cứu shift entity bằng shiftCode
-        Shift shiftEntity = null;
-        if (dto.getShiftCode() != null && !dto.getShiftCode().trim().isEmpty()) {
-            shiftEntity = shiftRepository.findByShiftCode(dto.getShiftCode())
-                .orElseThrow(() -> new RuntimeException("Shift not found with code = " + dto.getShiftCode()));
-        }
-
+        // Tìm shift dựa trên shiftCode
+        Shift shift = shiftRepository.findByShiftCode(dto.getShiftCode())
+                .orElseThrow(() -> new RuntimeException("Shift not found"));
         for (Integer userId : dto.getUserIds()) {
+            // Kiểm tra conflict
+            List<UserShift> conflicts = userShiftRepository.findByUserIdAndShiftDate(userId, shiftDate);
             User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User with id " + userId + " not found"));
-
-            // Kiểm tra xem userShift đã tồn tại cho user + date chưa? 
-            // (nếu có unique constraint user-date => check, update)
-            UserShift userShift = new UserShift();
-            userShift.setUser(user);
-            userShift.setShiftDate(shiftDate);
-            userShift.setShift(shiftEntity); // foreign key shift_id
-            userShiftRepository.save(userShift);
-
-            // Chuyển sang DTO
-            createdDTOs.add(DTOConverter.convertUserShift(userShift));
+                    .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+            if (!conflicts.isEmpty()) {
+                throw new RuntimeException("Nhân viên với tên " + user.getName() + " đã có ca trực trong ngày " + shiftDate);
+            }
+            UserShift newShift = new UserShift(user, shiftDate, shift);
+            UserShift saved = userShiftRepository.save(newShift);
+            createdDTOs.add(new UserShiftDTO(saved));
         }
         return createdDTOs;
-    }
+}
 }

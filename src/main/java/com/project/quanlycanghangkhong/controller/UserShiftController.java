@@ -30,7 +30,7 @@ public class UserShiftController {
 
     @Autowired
     private UserShiftService userShiftService;
-
+    
     @GetMapping
     public ResponseEntity<List<UserShiftDTO>> getAllUserShifts() {
         List<UserShiftDTO> dtos = userShiftService.getAllUserShifts();
@@ -44,20 +44,31 @@ public class UserShiftController {
                   .orElse(ResponseEntity.notFound().build());
     }
 
+    // Endpoint gán ca trực cho 1 user (assign)
     @PostMapping("/assign")
-    public ResponseEntity<UserShiftDTO> assignShiftToUser(@RequestBody AssignShiftRequest request) {
-        // Giả sử AssignShiftRequest có các trường: userId, shiftDate (String), shiftId
-        LocalDate shiftDate = LocalDate.parse(request.getShiftDate());
-        UserShiftDTO dto = userShiftService.assignShiftToUser(request.getUserId(), shiftDate, request.getShiftId());
-        return ResponseEntity.ok(dto);
+    public ResponseEntity<?> assignShiftToUser(@RequestBody AssignShiftRequest request) {
+        try {
+            LocalDate shiftDate = LocalDate.parse(request.getShiftDate());
+            UserShiftDTO dto = userShiftService.assignShiftToUser(request.getUserId(), shiftDate, request.getShiftId());
+            return ResponseEntity.ok(dto);
+        } catch (RuntimeException ex) {
+            // Ví dụ: nếu user đã có ca trực, ném exception với thông báo conflict
+            return ResponseEntity.status(409).body(ex.getMessage());
+        }
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<UserShiftDTO> updateUserShift(
+    public ResponseEntity<?> updateUserShift(
             @PathVariable Integer id,
             @RequestBody AssignShiftRequest request) {
-        UserShiftDTO dto = userShiftService.updateUserShift(id, request.getShiftId());
-        return dto != null ? ResponseEntity.ok(dto) : ResponseEntity.notFound().build();
+        try {
+            // Chuyển đổi shiftDate từ String sang LocalDate
+            LocalDate newShiftDate = LocalDate.parse(request.getShiftDate());
+            UserShiftDTO dto = userShiftService.updateUserShift(id, request.getShiftId(), newShiftDate);
+            return ResponseEntity.ok(dto);
+        } catch (RuntimeException ex) {
+            return ResponseEntity.status(409).body(ex.getMessage());
+        }
     }
 
     @DeleteMapping("/{id}")
@@ -65,6 +76,7 @@ public class UserShiftController {
         userShiftService.deleteUserShift(id);
         return ResponseEntity.noContent().build();
     }
+    
     // Endpoint lọc lịch trực theo ngày, team và unit, trả về ScheduleDTO
     @GetMapping("/filter")
     public ResponseEntity<List<ScheduleDTO>> getSchedulesByCriteria(
@@ -75,13 +87,17 @@ public class UserShiftController {
         List<ScheduleDTO> dtos = userShiftService.getSchedulesByCriteria(shiftDate, teamId, unitId);
         return ResponseEntity.ok(dtos);
     }
-
-    @PostMapping("/apply-multi")
-    public ResponseEntity<List<UserShiftDTO>> applyShiftToUsers(@RequestBody ApplyShiftMultiDTO dto) {
-        List<UserShiftDTO> result = userShiftService.applyShiftToUsers(dto);
-        return ResponseEntity.ok(result);
-    }
     
+    // Endpoint áp dụng ca cho nhiều user (apply-multi)
+    @PostMapping("/apply-multi")
+    public ResponseEntity<?> applyShiftToUsers(@RequestBody ApplyShiftMultiDTO dto) {
+        try {
+            List<UserShiftDTO> result = userShiftService.applyShiftToUsers(dto);
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException ex) {
+            return ResponseEntity.status(409).body(ex.getMessage());
+        }
+    }
     
 
 }

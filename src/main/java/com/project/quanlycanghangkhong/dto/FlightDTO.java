@@ -1,84 +1,44 @@
-package com.project.quanlycanghangkhong.model;
+package com.project.quanlycanghangkhong.dto;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import com.project.quanlycanghangkhong.model.Flight;
 
-@Entity
-@Table(name = "flights")
-public class Flight {
+public class FlightDTO {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    // Số hiệu chuyến bay
-    @Column(name = "flight_number", nullable = false)
     private String flightNumber;
-
-    // Sân bay khởi hành (dự kiến)
-    @Column(name = "departure_airport")
     private String departureAirport;
-
-    // Sân bay hạ cánh (dự kiến)
-    @Column(name = "arrival_airport")
     private String arrivalAirport;
-
-    // Giờ khởi hành dự kiến (LocalTime)
-    @Column(name = "departure_time")
     private LocalTime departureTime;
-
-    // Giờ hạ cánh dự kiến (LocalTime)
-    @Column(name = "arrival_time")
     private LocalTime arrivalTime;
-
-    // Ngày bay (LocalDate)
-    @Column(name = "flight_date")
     private LocalDate flightDate;
 
-    // --- Các trường thêm vào ---
-
-    // Giờ cất cánh thực tế tại sân bay đi
-    @Column(name = "actual_departure_time")
+    // Các trường thêm vào
     private LocalTime actualDepartureTime;
-
-    // Giờ hạ cánh thực tế tại sân bay đến
-    @Column(name = "actual_arrival_time")
     private LocalTime actualArrivalTime;
-
-    // Giờ cất cánh thực tế tại sân bay đến (nếu có, ví dụ phục vụ trường hợp turnaround)
-    @Column(name = "actual_departure_time_at_arrival")
     private LocalTime actualDepartureTimeAtArrival;
 
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    // Constructor không tham số
-    public Flight() {
-    }
+    public FlightDTO() { }
 
-    // Constructor có tham số (chỉ dùng cho các trường cơ bản, bạn có thể mở rộng nếu cần)
-    public Flight(String flightNumber, String departureAirport, String arrivalAirport,
-                  LocalTime departureTime, LocalTime arrivalTime, LocalDate flightDate) {
-        this.flightNumber = flightNumber;
-        this.departureAirport = departureAirport;
-        this.arrivalAirport = arrivalAirport;
-        this.departureTime = departureTime;
-        this.arrivalTime = arrivalTime;
-        this.flightDate = flightDate;
+    // Constructor chuyển từ entity sang DTO
+    public FlightDTO(Flight flight) {
+        this.id = flight.getId();
+        this.flightNumber = flight.getFlightNumber();
+        this.departureAirport = flight.getDepartureAirport();
+        this.arrivalAirport = flight.getArrivalAirport();
+        this.departureTime = flight.getDepartureTime();
+        this.arrivalTime = flight.getArrivalTime();
+        this.flightDate = flight.getFlightDate();
+        this.actualDepartureTime = flight.getActualDepartureTime();
+        this.actualArrivalTime = flight.getActualArrivalTime();
+        this.actualDepartureTimeAtArrival = flight.getActualDepartureTimeAtArrival();
+        this.createdAt = flight.getCreatedAt();
+        this.updatedAt = flight.getUpdatedAt();
     }
 
     // Getters & Setters
