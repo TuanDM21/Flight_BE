@@ -1,13 +1,17 @@
 package com.project.quanlycanghangkhong.service.impl;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.project.quanlycanghangkhong.dto.ApplyFlightShiftRequest;
+import com.project.quanlycanghangkhong.dto.UserFlightShiftResponseDTO;
+import com.project.quanlycanghangkhong.dto.UserFlightShiftResponseSearchDTO;
 import com.project.quanlycanghangkhong.model.Flight;
 import com.project.quanlycanghangkhong.model.User;
 import com.project.quanlycanghangkhong.model.UserFlightShift;
@@ -57,5 +61,55 @@ public class UserFlightShiftServiceImpl implements UserFlightShiftService {
             userFlightShiftRepository.save(ufs);
         }
     }
+    public UserFlightShiftServiceImpl(UserFlightShiftRepository userFlightShiftRepository) {
+        this.userFlightShiftRepository = userFlightShiftRepository;
+    }
+
+    @Override
+    public List<UserFlightShift> getShiftsByDate(LocalDate shiftDate) {
+        return userFlightShiftRepository.findByShiftDate(shiftDate);
+    }
+
+    @Override
+    public List<UserFlightShift> getShiftsByUser(Integer userId) {
+        return userFlightShiftRepository.findByUser_Id(userId);
+    }
+    @Override
+    public List<UserFlightShiftResponseDTO> getShiftsByFlightAndDate(Long flightId, LocalDate shiftDate) {
+        List<UserFlightShift> shifts = userFlightShiftRepository.findByFlight_IdAndShiftDate(flightId, shiftDate);
+        List<UserFlightShiftResponseDTO> dtos = shifts.stream().map(shift -> new UserFlightShiftResponseDTO(
+            shift.getId(),
+            shift.getUser().getId(),
+            shift.getUser().getName(),
+            shift.getFlight().getId(),
+            shift.getFlight().getFlightNumber(),
+            shift.getShiftDate()
+        )).collect(Collectors.toList());
+        return dtos;
+    }
+	@Override
+	public void removeFlightAssignment(Long flightId, LocalDate shiftDate, Integer userId) {
+	    // Tìm record userFlightShift
+	    Optional<UserFlightShift> opt = userFlightShiftRepository.findOneByFlightAndShiftDateAndUser(flightId, shiftDate, userId);
+	    if (opt.isPresent()) {
+	        userFlightShiftRepository.delete(opt.get());
+	    } else {
+	        throw new RuntimeException("Không tìm thấy ca chuyến bay với flightId=" 
+	                                   + flightId + ", shiftDate=" + shiftDate 
+	                                   + ", userId=" + userId);
+	    }
+		
+	}
+	@Override
+	public boolean isUserAssignedToFlight(LocalDate shiftDate, Integer userId) {
+        return userFlightShiftRepository.existsByShiftDateAndUser_Id(shiftDate, userId);
+	}
+	@Override
+	public List<UserFlightShiftResponseSearchDTO> getFlightSchedulesByCriteria(LocalDate shiftDate, Integer teamId,
+			Integer unitId, Long flightId) {
+        return userFlightShiftRepository.findFlightSchedulesByCriteria(shiftDate, teamId, unitId, flightId);
+
+	}
+
 
 }
