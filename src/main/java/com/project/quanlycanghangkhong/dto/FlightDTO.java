@@ -23,14 +23,13 @@ public class FlightDTO {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    public FlightDTO() { }
+    public FlightDTO() {
+    }
 
     // Constructor chuyển từ entity sang DTO
     public FlightDTO(Flight flight) {
         this.id = flight.getId();
         this.flightNumber = flight.getFlightNumber();
-        this.departureAirport = flight.getDepartureAirport();
-        this.arrivalAirport = flight.getArrivalAirport();
         this.departureTime = flight.getDepartureTime();
         this.arrivalTime = flight.getArrivalTime();
         this.flightDate = flight.getFlightDate();

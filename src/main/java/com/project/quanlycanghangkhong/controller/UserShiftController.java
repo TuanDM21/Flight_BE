@@ -30,7 +30,7 @@ public class UserShiftController {
 
     @Autowired
     private UserShiftService userShiftService;
-    
+
     @GetMapping
     public ResponseEntity<List<UserShiftDTO>> getAllUserShifts() {
         List<UserShiftDTO> dtos = userShiftService.getAllUserShifts();
@@ -41,7 +41,7 @@ public class UserShiftController {
     public ResponseEntity<UserShiftDTO> getUserShiftById(@PathVariable Integer id) {
         Optional<UserShiftDTO> dto = userShiftService.getUserShiftById(id);
         return dto.map(ResponseEntity::ok)
-                  .orElse(ResponseEntity.notFound().build());
+                .orElse(ResponseEntity.notFound().build());
     }
 
     // Endpoint gán ca trực cho 1 user (assign)
@@ -76,7 +76,7 @@ public class UserShiftController {
         userShiftService.deleteUserShift(id);
         return ResponseEntity.noContent().build();
     }
-    
+
     // Endpoint lọc lịch trực theo ngày, team và unit, trả về ScheduleDTO
     @GetMapping("/filter")
     public ResponseEntity<List<ScheduleDTO>> getSchedulesByCriteria(
@@ -87,7 +87,7 @@ public class UserShiftController {
         List<ScheduleDTO> dtos = userShiftService.getSchedulesByCriteria(shiftDate, teamId, unitId);
         return ResponseEntity.ok(dtos);
     }
-    
+
     // Endpoint áp dụng ca cho nhiều user (apply-multi)
     @PostMapping("/apply-multi")
     public ResponseEntity<?> applyShiftToUsers(@RequestBody ApplyShiftMultiDTO dto) {
@@ -98,6 +98,5 @@ public class UserShiftController {
             return ResponseEntity.status(409).body(ex.getMessage());
         }
     }
-    
 
 }

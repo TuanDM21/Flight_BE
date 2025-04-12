@@ -31,7 +31,7 @@ public class UserFlightShiftController {
 
     @Autowired
     private UserFlightShiftService userFlightShiftService;
-    
+
     // Lấy ca trực theo ngày
     @GetMapping("/by-date")
     public ResponseEntity<List<UserFlightShift>> getShiftsByDate(
@@ -57,25 +57,42 @@ public class UserFlightShiftController {
             return ResponseEntity.badRequest().body(ex.getMessage());
         }
     }
+
     // GET: lấy danh sách user-flight-shifts theo flightId và shiftDate
-    @GetMapping
-    public List<UserFlightShiftResponseDTO> getUserFlightShifts(
-        @RequestParam("flightId") Long flightId,
-        @RequestParam("shiftDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate shiftDate) {
-        return userFlightShiftService.getShiftsByFlightAndDate(flightId, shiftDate);
+    @GetMapping("/shifts")
+    public ResponseEntity<List<UserFlightShiftResponseDTO>> getShiftsByFlightAndDate(
+            @RequestParam("flightId") Long flightId,
+            @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        List<UserFlightShiftResponseDTO> shifts = userFlightShiftService.getShiftsByFlightAndDate(flightId, date);
+        return ResponseEntity.ok(shifts);
     }
-    
+
+    @GetMapping("/shifts/available")
+    public ResponseEntity<List<UserFlightShiftResponseDTO>> getAvailableShifts(
+            @RequestParam("flightId") Long flightId,
+            @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        List<UserFlightShiftResponseDTO> shifts = userFlightShiftService.getAvailableShifts(flightId, date);
+        return ResponseEntity.ok(shifts);
+    }
+
+    @GetMapping("/shifts/assigned")
+    public ResponseEntity<List<UserFlightShiftResponseDTO>> getAssignedShifts(
+            @RequestParam(value = "flightId", required = false) Long flightId,
+            @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        List<UserFlightShiftResponseDTO> shifts = userFlightShiftService.getAssignedShifts(flightId, date);
+        return ResponseEntity.ok(shifts);
+    }
+
     @DeleteMapping
     public ResponseEntity<?> removeFlightAssignment(
-        @RequestParam("flightId") Long flightId,
-        @RequestParam("shiftDate") @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate shiftDate,
-        @RequestParam("userId") Integer userId
-    ) {
+            @RequestParam("flightId") Long flightId,
+            @RequestParam("shiftDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate shiftDate,
+            @RequestParam("userId") Integer userId) {
         userFlightShiftService.removeFlightAssignment(flightId, shiftDate, userId);
         return ResponseEntity.ok().build();
     }
 
- // Endpoint GET: Kiểm tra nếu một user đã phục vụ chuyến bay vào ngày shiftDate
+    // Endpoint GET: Kiểm tra nếu một user đã phục vụ chuyến bay vào ngày shiftDate
     @GetMapping("/isAssigned")
     public ResponseEntity<Map<String, Boolean>> isUserAssigned(
             @RequestParam("shiftDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate shiftDate,
@@ -85,14 +102,17 @@ public class UserFlightShiftController {
         result.put("assigned", assigned);
         return ResponseEntity.ok(result);
     }
-    // Endpoint GET: Lọc lịch phục vụ chuyến bay theo shiftDate, teamId, unitId, flightId (flightId là tùy chọn)
+
+    // Endpoint GET: Lọc lịch phục vụ chuyến bay theo shiftDate, teamId, unitId,
+    // flightId (flightId là tùy chọn)
     @GetMapping("/filter")
     public ResponseEntity<List<UserFlightShiftResponseSearchDTO>> getFlightSchedules(
             @RequestParam("shiftDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate shiftDate,
             @RequestParam(value = "teamId", required = false) Integer teamId,
             @RequestParam(value = "unitId", required = false) Integer unitId,
             @RequestParam(value = "flightId", required = false) Long flightId) {
-        List<UserFlightShiftResponseSearchDTO> flightSchedules = userFlightShiftService.getFlightSchedulesByCriteria(shiftDate, teamId, unitId, flightId);
-        return ResponseEntity.ok(flightSchedules);
+        List<UserFlightShiftResponseSearchDTO> schedules = userFlightShiftService
+                .getFlightSchedulesByCriteria(shiftDate, teamId, unitId, flightId);
+        return ResponseEntity.ok(schedules);
     }
 }

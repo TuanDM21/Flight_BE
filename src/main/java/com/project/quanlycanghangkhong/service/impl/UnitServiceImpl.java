@@ -21,16 +21,16 @@ public class UnitServiceImpl implements UnitService {
 
     @Override
     public List<UnitDTO> getUnitsByTeam(Integer teamId) {
-        List<Unit> units = unitRepository.findByTeam_Id(teamId); 
+        List<Unit> units = unitRepository.findByTeam_Id(teamId);
         // Hoặc custom query: findAllByTeamId(teamId)
 
         return units.stream()
-                    .map(DTOConverter::convertUnit)
-                    .collect(Collectors.toList());
+                .map(DTOConverter::convertUnit)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public Unit getUnitById(Long id) {
+    public Unit getUnitById(Integer id) {
         return unitRepository.findById(id).orElseThrow(() -> new RuntimeException("Unit not found"));
     }
 
@@ -40,7 +40,7 @@ public class UnitServiceImpl implements UnitService {
     }
 
     @Override
-    public void deleteUnit(Long id) {
+    public void deleteUnit(Integer id) {
         unitRepository.deleteById(id);
     }
 
@@ -48,7 +48,7 @@ public class UnitServiceImpl implements UnitService {
     public List<UnitDTO> getAllUnits() {
         List<Unit> units = unitRepository.findAll();
         return units.stream()
-                    .map(DTOConverter::convertUnit)
-                    .collect(Collectors.toList());
+                .map(DTOConverter::convertUnit)
+                .collect(Collectors.toList());
     }
 }

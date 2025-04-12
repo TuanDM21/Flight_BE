@@ -31,6 +31,7 @@ public class UserFlightShiftServiceImpl implements UserFlightShiftService {
 
     @Autowired
     private UserFlightShiftRepository userFlightShiftRepository;
+
     @Override
     @Transactional
     public void applyFlightShift(ApplyFlightShiftRequest request) {
@@ -50,10 +51,12 @@ public class UserFlightShiftServiceImpl implements UserFlightShiftService {
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên với id: " + userId));
 
             // Kiểm tra xem nhân viên đã được phân công cho chuyến bay này chưa
-            Optional<UserFlightShift> existing = userFlightShiftRepository.findByUserAndFlightAndShiftDate(user, flight, shiftDate);
+            Optional<UserFlightShift> existing = userFlightShiftRepository.findByUserAndFlightAndShiftDate(user, flight,
+                    shiftDate);
             if (existing.isPresent()) {
                 // Nếu đã tồn tại, báo lỗi cụ thể (bạn có thể bỏ qua hoặc ném ngoại lệ)
-                throw new RuntimeException("Nhân viên " + user.getName() + " đã được phân công phục vụ chuyến bay này.");
+                throw new RuntimeException(
+                        "Nhân viên " + user.getName() + " đã được phân công phục vụ chuyến bay này.");
             }
 
             // Nếu chưa có, tạo UserFlightShift mới
@@ -61,6 +64,7 @@ public class UserFlightShiftServiceImpl implements UserFlightShiftService {
             userFlightShiftRepository.save(ufs);
         }
     }
+
     public UserFlightShiftServiceImpl(UserFlightShiftRepository userFlightShiftRepository) {
         this.userFlightShiftRepository = userFlightShiftRepository;
     }
@@ -74,42 +78,55 @@ public class UserFlightShiftServiceImpl implements UserFlightShiftService {
     public List<UserFlightShift> getShiftsByUser(Integer userId) {
         return userFlightShiftRepository.findByUser_Id(userId);
     }
+
     @Override
     public List<UserFlightShiftResponseDTO> getShiftsByFlightAndDate(Long flightId, LocalDate shiftDate) {
         List<UserFlightShift> shifts = userFlightShiftRepository.findByFlight_IdAndShiftDate(flightId, shiftDate);
-        List<UserFlightShiftResponseDTO> dtos = shifts.stream().map(shift -> new UserFlightShiftResponseDTO(
-            shift.getId(),
-            shift.getUser().getId(),
-            shift.getUser().getName(),
-            shift.getFlight().getId(),
-            shift.getFlight().getFlightNumber(),
-            shift.getShiftDate()
-        )).collect(Collectors.toList());
-        return dtos;
+        return shifts.stream()
+                .map(shift -> new UserFlightShiftResponseDTO(
+                        shift.getId(),
+                        shift.getUser().getId(),
+                        shift.getUser().getName(),
+                        shift.getFlight().getId(),
+                        shift.getFlight().getFlightNumber(),
+                        shift.getShiftDate()))
+                .collect(Collectors.toList());
     }
-	@Override
-	public void removeFlightAssignment(Long flightId, LocalDate shiftDate, Integer userId) {
-	    // Tìm record userFlightShift
-	    Optional<UserFlightShift> opt = userFlightShiftRepository.findOneByFlightAndShiftDateAndUser(flightId, shiftDate, userId);
-	    if (opt.isPresent()) {
-	        userFlightShiftRepository.delete(opt.get());
-	    } else {
-	        throw new RuntimeException("Không tìm thấy ca chuyến bay với flightId=" 
-	                                   + flightId + ", shiftDate=" + shiftDate 
-	                                   + ", userId=" + userId);
-	    }
-		
-	}
-	@Override
-	public boolean isUserAssignedToFlight(LocalDate shiftDate, Integer userId) {
+
+    @Override
+    public void removeFlightAssignment(Long flightId, LocalDate shiftDate, Integer userId) {
+        Optional<UserFlightShift> opt = userFlightShiftRepository.findOneByFlightAndShiftDateAndUser(flightId,
+                shiftDate, userId);
+        if (opt.isPresent()) {
+            userFlightShiftRepository.delete(opt.get());
+        } else {
+            throw new RuntimeException("Không tìm thấy ca chuyến bay với flightId="
+                    + flightId + ", shiftDate=" + shiftDate
+                    + ", userId=" + userId);
+        }
+    }
+
+    @Override
+    public boolean isUserAssignedToFlight(LocalDate shiftDate, Integer userId) {
         return userFlightShiftRepository.existsByShiftDateAndUser_Id(shiftDate, userId);
-	}
-	@Override
-	public List<UserFlightShiftResponseSearchDTO> getFlightSchedulesByCriteria(LocalDate shiftDate, Integer teamId,
-			Integer unitId, Long flightId) {
+    }
+
+    @Override
+    public List<UserFlightShiftResponseSearchDTO> getFlightSchedulesByCriteria(LocalDate shiftDate, Integer teamId,
+            Integer unitId, Long flightId) {
         return userFlightShiftRepository.findFlightSchedulesByCriteria(shiftDate, teamId, unitId, flightId);
+    }
 
-	}
+    @Override
+    public List<UserFlightShiftResponseDTO> getAvailableShifts(Long flightId, LocalDate date) {
+        // TODO: Implement logic to get available shifts
+        return null;
+    }
 
+    @Override
+    public List<UserFlightShiftResponseDTO> getAssignedShifts(Long flightId, LocalDate date) {
+        // TODO: Implement logic to get assigned shifts
+        return null;
+    }
 
 }
