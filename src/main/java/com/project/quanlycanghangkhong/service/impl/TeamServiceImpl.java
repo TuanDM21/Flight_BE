@@ -23,12 +23,12 @@ public class TeamServiceImpl implements TeamService {
     public List<TeamDTO> getAllTeams() {
         List<Team> teams = teamRepository.findAll();
         return teams.stream()
-                    .map(DTOConverter::convertTeam) // Chuyển sang TeamDTO
-                    .collect(Collectors.toList());
+                .map(DTOConverter::convertTeam) // Chuyển sang TeamDTO
+                .collect(Collectors.toList());
     }
 
     @Override
-    public Team getTeamById(Long id) {
+    public Team getTeamById(Integer id) {
         return teamRepository.findById(id).orElseThrow(() -> new RuntimeException("Team not found"));
     }
 
@@ -38,7 +38,7 @@ public class TeamServiceImpl implements TeamService {
     }
 
     @Override
-    public void deleteTeam(Long id) {
+    public void deleteTeam(Integer id) {
         teamRepository.deleteById(id);
     }
 }

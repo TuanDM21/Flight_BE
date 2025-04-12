@@ -40,7 +40,7 @@ public class FlightController {
     public ResponseEntity<FlightDTO> getFlightById(@PathVariable Long id) {
         Optional<FlightDTO> dto = flightService.getFlightById(id);
         return dto.map(ResponseEntity::ok)
-                  .orElse(ResponseEntity.notFound().build());
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
@@ -71,6 +71,7 @@ public class FlightController {
         List<FlightDTO> dtos = flightService.searchFlights(keyword);
         return ResponseEntity.ok(dtos);
     }
+
     @GetMapping("/today")
     public ResponseEntity<List<FlightDTO>> getTodayFlights() {
         List<FlightDTO> dtos = flightService.getTodayFlights();
@@ -81,20 +82,20 @@ public class FlightController {
     @GetMapping("/searchByDate")
     public ResponseEntity<List<FlightDTO>> searchFlightByDate(@RequestParam("date") String dateStr) {
         try {
-            LocalDate date = LocalDate.parse(dateStr);  // format YYYY-MM-DD
+            LocalDate date = LocalDate.parse(dateStr); // format YYYY-MM-DD
             List<FlightDTO> dtos = flightService.getFlightsByExactDate(date);
             return ResponseEntity.ok(dtos);
         } catch (DateTimeParseException ex) {
             return ResponseEntity.badRequest().build();
         }
     }
+
     @GetMapping("/searchByDateAndKeyword")
     public ResponseEntity<List<FlightDTO>> searchFlightByDateAndKeyword(
-        @RequestParam("date") String dateStr,
-        @RequestParam(value = "keyword", required = false) String keyword
-    ) {
+            @RequestParam("date") String dateStr,
+            @RequestParam(value = "keyword", required = false) String keyword) {
         try {
-            LocalDate date = LocalDate.parse(dateStr);  // format YYYY-MM-DD
+            LocalDate date = LocalDate.parse(dateStr); // format YYYY-MM-DD
             List<FlightDTO> dtos = flightService.getFlightsByDateAndKeyword(date, keyword);
             return ResponseEntity.ok(dtos);
         } catch (DateTimeParseException ex) {

@@ -10,12 +10,17 @@ import com.project.quanlycanghangkhong.dto.UserShiftDTO;
 
 public interface UserShiftService {
     UserShiftDTO assignShiftToUser(Integer userId, LocalDate date, Integer shiftId);
+
     Optional<UserShiftDTO> getUserShiftById(Integer id);
+
     List<UserShiftDTO> getAllUserShifts();
+
     UserShiftDTO updateUserShift(Integer id, Integer shiftId, LocalDate newShiftDate);
+
     void deleteUserShift(Integer id);
+
     List<ScheduleDTO> getSchedulesByCriteria(LocalDate shiftDate, Integer teamId, Integer unitId);
+
     List<UserShiftDTO> applyShiftToUsers(ApplyShiftMultiDTO dto);
 
- 
 }

@@ -6,7 +6,10 @@ import java.util.List;
 
 public interface TeamService {
     List<TeamDTO> getAllTeams();
-    Team getTeamById(Long id);
+
+    Team getTeamById(Integer id);
+
     Team createTeam(Team team);
-    void deleteTeam(Long id);
+
+    void deleteTeam(Integer id);
 }

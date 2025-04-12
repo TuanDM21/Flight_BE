@@ -10,13 +10,23 @@ import com.project.quanlycanghangkhong.model.UserFlightShift;
 
 public interface UserFlightShiftService {
     void applyFlightShift(ApplyFlightShiftRequest request);
+
     List<UserFlightShift> getShiftsByDate(LocalDate shiftDate);
+
     List<UserFlightShift> getShiftsByUser(Integer userId);
+
     // --- Thêm: Lấy ca trực theo flightId và shiftDate ---
     List<UserFlightShiftResponseDTO> getShiftsByFlightAndDate(Long flightId, LocalDate shiftDate);
-    public void removeFlightAssignment(Long flightId, LocalDate shiftDate, Integer userId) ;
+
+    void removeFlightAssignment(Long flightId, LocalDate shiftDate, Integer userId);
 
     boolean isUserAssignedToFlight(LocalDate shiftDate, Integer userId);
-    List<UserFlightShiftResponseSearchDTO> getFlightSchedulesByCriteria(LocalDate shiftDate, Integer teamId, Integer unitId, Long flightId);
+
+    List<UserFlightShiftResponseSearchDTO> getFlightSchedulesByCriteria(LocalDate shiftDate, Integer teamId,
+            Integer unitId, Long flightId);
+
+    List<UserFlightShiftResponseDTO> getAvailableShifts(Long flightId, LocalDate date);
+
+    List<UserFlightShiftResponseDTO> getAssignedShifts(Long flightId, LocalDate date);
 
 }

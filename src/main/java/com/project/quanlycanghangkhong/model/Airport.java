@@ -1,5 +1,6 @@
 package com.project.quanlycanghangkhong.model;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -7,6 +8,11 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Size;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -18,22 +24,33 @@ public class Airport {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "airport_code", nullable = false)
+    @NotBlank(message = "Airport code is required")
+    @Size(min = 3, max = 3, message = "Airport code must be exactly 3 characters")
+    @Column(name = "airport_code", nullable = false, unique = true)
     private String airportCode;
 
+    @NotBlank(message = "Airport name is required")
     @Column(name = "airport_name", nullable = false)
     private String airportName;
 
-    @Column(name = "latitude", nullable = false)
-    private Double latitude;
+    @NotNull(message = "Latitude is required")
+    @DecimalMin(value = "-90.0", message = "Latitude must be greater than or equal to -90")
+    @DecimalMax(value = "90.0", message = "Latitude must be less than or equal to 90")
+    @Column(name = "latitude", nullable = false, precision = 10, scale = 6)
+    private BigDecimal latitude;
 
-    @Column(name = "longitude", nullable = false)
-    private Double longitude;
+    @NotNull(message = "Longitude is required")
+    @DecimalMin(value = "-180.0", message = "Longitude must be greater than or equal to -180")
+    @DecimalMax(value = "180.0", message = "Longitude must be less than or equal to 180")
+    @Column(name = "longitude", nullable = false, precision = 10, scale = 6)
+    private BigDecimal longitude;
 
-    @Column(name = "city")
+    @NotBlank(message = "City is required")
+    @Column(name = "city", nullable = false)
     private String city;
 
-    @Column(name = "country")
+    @NotBlank(message = "Country is required")
+    @Column(name = "country", nullable = false)
     private String country = "Vietnam";
 
     @CreationTimestamp
@@ -48,7 +65,7 @@ public class Airport {
     public Airport() {
     }
 
-    public Airport(String airportCode, String airportName, Double latitude, Double longitude, String city) {
+    public Airport(String airportCode, String airportName, BigDecimal latitude, BigDecimal longitude, String city) {
         this.airportCode = airportCode;
         this.airportName = airportName;
         this.latitude = latitude;
@@ -61,6 +78,7 @@ public class Airport {
     public Long getId() {
         return id;
     }
+
     public void setId(Long id) {
         this.id = id;
     }
@@ -68,6 +86,7 @@ public class Airport {
     public String getAirportCode() {
         return airportCode;
     }
+
     public void setAirportCode(String airportCode) {
         this.airportCode = airportCode;
     }
@@ -75,27 +94,31 @@ public class Airport {
     public String getAirportName() {
         return airportName;
     }
+
     public void setAirportName(String airportName) {
         this.airportName = airportName;
     }
 
-    public Double getLatitude() {
+    public BigDecimal getLatitude() {
         return latitude;
     }
-    public void setLatitude(Double latitude) {
+
+    public void setLatitude(BigDecimal latitude) {
         this.latitude = latitude;
     }
 
-    public Double getLongitude() {
+    public BigDecimal getLongitude() {
         return longitude;
     }
-    public void setLongitude(Double longitude) {
+
+    public void setLongitude(BigDecimal longitude) {
         this.longitude = longitude;
     }
 
     public String getCity() {
         return city;
     }
+
     public void setCity(String city) {
         this.city = city;
     }
@@ -103,6 +126,7 @@ public class Airport {
     public String getCountry() {
         return country;
     }
+
     public void setCountry(String country) {
         this.country = country;
     }
@@ -110,6 +134,7 @@ public class Airport {
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
+
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
@@ -117,6 +142,7 @@ public class Airport {
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
     }
+
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }

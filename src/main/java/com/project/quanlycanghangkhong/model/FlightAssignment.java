@@ -22,7 +22,7 @@ public class FlightAssignment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Liên kết đến bảng user_shifts
+    // Liên kết đến bảng user_shifts - Đảm bảo là Integer
     @ManyToOne
     @JoinColumn(name = "user_shift_id", nullable = false)
     private UserShift userShift;
@@ -87,6 +87,6 @@ public class FlightAssignment {
 	public void setUpdatedAt(LocalDateTime updatedAt) {
 		this.updatedAt = updatedAt;
 	}
-    
+
 
 }
