@@ -15,8 +15,19 @@ import jakarta.persistence.Table;
 @Entity
 @Table(name = "roles")
 public class Role {
-    
-    public Integer getId() {
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Integer id;
+
+	@Column(name = "role_name", length = 50, nullable = false)
+	private String roleName;
+
+	@OneToMany(mappedBy = "role", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+	private List<User> users;
+
+	// Getters & Setters
+	public Integer getId() {
 		return id;
 	}
 
@@ -39,16 +50,4 @@ public class Role {
 	public void setUsers(List<User> users) {
 		this.users = users;
 	}
-
-	@Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
-
-    @Column(name = "role_name", length = 50, nullable = false)
-    private String roleName;
-
-    @OneToMany(mappedBy = "role", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<User> users;
-    
-    // Getters & Setters
 }

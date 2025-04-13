@@ -3,32 +3,58 @@ package com.project.quanlycanghangkhong.dto;
 import com.project.quanlycanghangkhong.model.User;
 
 public class UserDTO {
-    private Integer id;
-    private String name;
-    private String email;
-    private String roleName;
-    private String teamName;
-    private String unitName;
-    private Integer roleId;
-    private Integer teamId;
-    private Integer unitId;
+	private Integer id;
+	private String name;
+	private String email;
+	private String roleName;
+	private String teamName;
+	private String unitName;
+	private Integer roleId;
+	private Integer teamId;
+	private Integer unitId;
 
-    public UserDTO(User user) {
-        this.id = user.getId();
-        this.name = user.getName();
-        this.email = user.getEmail();
-        this.roleName = user.getRole().getRoleName(); // Lấy role name nếu có
-        this.teamName = user.getTeam().getTeamName();
-        this.unitName =user.getUnit().getUnitName();// Lấy team name nếu có
-    }
+	public UserDTO(User user) {
+		// Handle basic properties
+		this.id = user.getId();
+		this.name = user.getName();
+		this.email = user.getEmail();
+
+		// Initialize all properties that might be null to avoid NPEs later
+		this.roleName = null;
+		this.teamName = null;
+		this.unitName = null;
+		this.roleId = null;
+		this.teamId = null;
+		this.unitId = null;
+
+		// Safely access nested properties
+		if (user.getRole() != null) {
+			this.roleName = user.getRole().getRoleName();
+			this.roleId = user.getRole().getId();
+		}
+
+		if (user.getTeam() != null) {
+			this.teamName = user.getTeam().getTeamName();
+			this.teamId = user.getTeam().getId();
+		}
+
+		if (user.getUnit() != null) {
+			this.unitName = user.getUnit().getUnitName();
+			this.unitId = user.getUnit().getId();
+		}
+	}
 
 	public UserDTO(Integer id, String name, String email, Integer roleId, Integer teamId, Integer unitId) {
 		this.id = id;
-	    this.name = name;
-	    this.email = email;
-	    this.roleId = roleId;
-	    this.teamId = teamId;
-	    this.unitId = unitId;
+		this.name = name;
+		this.email = email;
+		this.roleId = roleId;
+		this.teamId = teamId;
+		this.unitId = unitId;
+		// Initialize other properties to null
+		this.roleName = null;
+		this.teamName = null;
+		this.unitName = null;
 	}
 
 	public Integer getId() {
@@ -102,7 +128,6 @@ public class UserDTO {
 	public void setUnitId(Integer unitId) {
 		this.unitId = unitId;
 	}
-   
-    // Getter & Setter
-}
 
+	// Getter & Setter
+}

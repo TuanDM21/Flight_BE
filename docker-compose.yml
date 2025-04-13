@@ -1,8 +1,0 @@
-services:
-  app:
-    build: .
-    container_name: my-spring-app
-    ports:
-      - "${PORT}:${PORT}"
-    env_file:
-      - .env

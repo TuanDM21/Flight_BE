@@ -19,7 +19,7 @@ import com.project.quanlycanghangkhong.service.UserService;
 public class UserServiceImpl implements UserService {
     @Autowired
     private UserRepository userRepository;
-    
+
     @Autowired
     private UserDAO userDAO;
 
@@ -27,8 +27,8 @@ public class UserServiceImpl implements UserService {
     public List<UserDTO> getAllUsers() {
         List<User> users = userRepository.findAll();
         return users.stream()
-                    .map(DTOConverter::convertUser)
-                    .collect(Collectors.toList());
+                .map(DTOConverter::convertUser)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -57,20 +57,21 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Optional<User> login(String email, String password) {
-        return userRepository.findByEmail(email)
-                .filter(user -> user.getPassword().equals(password));
-    }
-
-    @Override
     public List<UserDTO> filterUsers(Integer teamId, Integer unitId, String searchText) {
         try {
             List<User> users = userDAO.findUsersByCriteria(teamId, unitId, searchText);
             return users.stream()
-                        .map(DTOConverter::convertUser)
-                        .collect(Collectors.toList());
+                    .map(DTOConverter::convertUser)
+                    .collect(Collectors.toList());
         } catch (SQLException e) {
             throw new RuntimeException("Error fetching users", e);
         }
+    }
+
+    @Override
+    public UserDTO getCurrentUser() {
+        // Mock implementation: Replace with actual logic to extract user from token
+        User user = userRepository.findById(1).orElseThrow(() -> new RuntimeException("User not found"));
+        return DTOConverter.convertUser(user);
     }
 }
