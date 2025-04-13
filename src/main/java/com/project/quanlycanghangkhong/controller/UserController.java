@@ -1,7 +1,6 @@
 package com.project.quanlycanghangkhong.controller;
 
 import java.util.List;
-import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -16,13 +15,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.project.quanlycanghangkhong.dto.LoginRequestDTO;
 import com.project.quanlycanghangkhong.dto.UserDTO;
 import com.project.quanlycanghangkhong.model.User;
 import com.project.quanlycanghangkhong.service.UserService;
 
-
-@CrossOrigin(origins = "*") // Hoặc "*"
+@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
@@ -64,18 +61,6 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
-    // Đăng nhập với email và password
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequestDTO loginRequest) {
-        return userService.login(loginRequest.getEmail(), loginRequest.getPassword())
-                .map(user -> {
-                    String token = "your_generated_token_here";
-                    UserDTO userDTO = new UserDTO(user); // Chỉ gửi dữ liệu cần thiết
-                    return ResponseEntity.ok(Map.of("token", token, "user", userDTO));
-                })
-                .orElse(ResponseEntity.status(401).body(Map.of("message", "Invalid credentials")));
-    }
-
     // Endpoint filter user theo team, unit, searchText
     @GetMapping("/filter")
     public ResponseEntity<List<UserDTO>> filterUsers(
@@ -85,6 +70,4 @@ public class UserController {
         List<UserDTO> dtos = userService.filterUsers(teamId, unitId, searchText);
         return ResponseEntity.ok(dtos);
     }
-
-    
 }

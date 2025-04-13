@@ -7,6 +7,7 @@ import java.util.List;
 import javax.sql.DataSource;
 
 import org.springframework.stereotype.Repository;
+
 @Repository
 public class UserDAO {
 
@@ -32,7 +33,7 @@ public class UserDAO {
         }
 
         try (Connection conn = dataSource.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+                PreparedStatement ps = conn.prepareStatement(sql.toString())) {
 
             int index = 1;
             if (teamId != null) {

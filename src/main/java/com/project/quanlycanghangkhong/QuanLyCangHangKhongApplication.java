@@ -4,10 +4,9 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class QuanLyCangHangKhongDongHoiApplication {
+public class QuanLyCangHangKhongApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(QuanLyCangHangKhongDongHoiApplication.class, args);
+		SpringApplication.run(QuanLyCangHangKhongApplication.class, args);
 	}
-
 }

@@ -1,8 +1,74 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: my-spring-app
     ports:
-      - "${PORT}:${PORT}"
+      - "${PORT}:8080"
     env_file:
       - .env
+    environment:
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - airport-network
+
+  app-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: my-spring-app-dev
+    ports:
+      - "${PORT:-8080}:8080"
+      - "35729:35729" # LiveReload port
+    env_file:
+      - .env
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+    volumes:
+      - ./:/app
+      - ~/.m2:/root/.m2
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - airport-network
+
+  mysql:
+    image: mysql:8
+    container_name: my-mysql
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      MYSQL_ROOT_HOST: "%"
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-p${SPRING_DATASOURCE_PASSWORD}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - airport-network
+
+volumes:
+  mysql_data:
+
+networks:
+  airport-network:
+    driver: bridge

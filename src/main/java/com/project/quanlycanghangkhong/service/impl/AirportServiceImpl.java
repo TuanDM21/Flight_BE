@@ -34,7 +34,7 @@ public class AirportServiceImpl implements AirportService {
     @Override
     public Airport updateAirport(Long id, Airport airportData) {
         Optional<Airport> optionalAirport = airportRepository.findById(id);
-        if(optionalAirport.isPresent()){
+        if (optionalAirport.isPresent()) {
             Airport airport = optionalAirport.get();
             airport.setAirportCode(airportData.getAirportCode());
             airport.setAirportName(airportData.getAirportName());

@@ -40,8 +40,8 @@ public interface UserFlightShiftRepository extends JpaRepository<UserFlightShift
 	@Query("SELECT new com.project.quanlycanghangkhong.dto.UserFlightShiftResponseSearchDTO(" +
 			"ufs.id, " +
 			"ufs.user.name, " +
-			"ufs.user.team.teamName, " +
-			"ufs.user.unit.unitName, " +
+			"COALESCE(CASE WHEN ufs.user.team IS NULL THEN NULL ELSE ufs.user.team.teamName END, ''), " +
+			"COALESCE(CASE WHEN ufs.user.unit IS NULL THEN NULL ELSE ufs.user.unit.unitName END, ''), " +
 			"ufs.shiftDate, " +
 			"ufs.flight.flightNumber, " +
 			"ufs.flight.departureTime, " +
