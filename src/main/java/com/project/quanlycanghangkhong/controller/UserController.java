@@ -70,4 +70,11 @@ public class UserController {
         List<UserDTO> dtos = userService.filterUsers(teamId, unitId, searchText);
         return ResponseEntity.ok(dtos);
     }
+
+    // Lấy thông tin user hiện tại dựa vào token
+    @GetMapping("/me")
+    public ResponseEntity<UserDTO> getCurrentUser() {
+        UserDTO currentUser = userService.getCurrentUser();
+        return ResponseEntity.ok(currentUser);
+    }
 }

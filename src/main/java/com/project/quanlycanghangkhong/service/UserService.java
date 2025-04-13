@@ -18,4 +18,7 @@ public interface UserService {
     void deleteUser(Integer id);
 
     List<UserDTO> filterUsers(Integer teamId, Integer unitId, String searchText);
+
+    // Lấy thông tin user hiện tại dựa vào token
+    UserDTO getCurrentUser();
 }

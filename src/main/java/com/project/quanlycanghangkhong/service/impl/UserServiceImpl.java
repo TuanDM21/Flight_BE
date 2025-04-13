@@ -67,4 +67,11 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("Error fetching users", e);
         }
     }
+
+    @Override
+    public UserDTO getCurrentUser() {
+        // Mock implementation: Replace with actual logic to extract user from token
+        User user = userRepository.findById(1).orElseThrow(() -> new RuntimeException("User not found"));
+        return DTOConverter.convertUser(user);
+    }
 }
