@@ -9,8 +9,6 @@ services:
       - "35729:35729"
     env_file:
       - .env
-    environment:
-      - SPRING_PROFILES_ACTIVE=dev
     volumes:
       - ./:/app
       - ~/.m2:/root/.m2

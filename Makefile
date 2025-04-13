@@ -39,18 +39,11 @@ logs-prod:
 
 .PHONY: migrate-dev
 migrate-dev:
-	$(docker_compose_dev) exec $(service_name_dev) mvn flyway:migrate \
-	-Dflyway.url=jdbc:mysql://mysql:3306/airportdb \
-	-Dflyway.user=root \
-	-Dflyway.password=rootpassword -e
+	$(docker_compose_dev) exec $(service_name_dev) mvn flyway:migrate
 
 .PHONY: migrate-prod
 migrate-prod:
-	$(docker_compose_prod) exec $(service_name_prod) mvn flyway:migrate \
-	-Dflyway.url=jdbc:mysql://mysql:3306/airportdb \
-	-Dflyway.user=root \
-	-Dflyway.password=rootpassword -e
-
+	$(docker_compose_prod) exec $(service_name_prod) mvn flyway:migrate
 .PHONY: clean-dev
 clean-dev:
 	$(docker_compose_dev) down --volumes --remove-orphans
