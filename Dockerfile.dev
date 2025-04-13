@@ -12,5 +12,4 @@ COPY src ./src
 
 EXPOSE 8080
 EXPOSE 35729
-
 CMD ["./mvnw", "spring-boot:run", "-Dspring-boot.run.jvmArguments=-Dspring.devtools.restart.enabled=true -Dspring.devtools.livereload.enabled=true"]

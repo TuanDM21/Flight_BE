@@ -1,46 +1,68 @@
-# Makefile for managing the airport-control-system project
-
 # Variables
-docker_compose = docker compose
-service_name = app-dev
+docker_compose_dev = docker compose -f docker-compose.dev.yml
+docker_compose_prod = docker compose -f docker-compose.prod.yml
+service_name_dev = app-dev
+service_name_prod = app
 
 # Targets
-.PHONY: build
-build:
-	$(docker_compose) build
+.PHONY: build-dev
+build-dev:
+	$(docker_compose_dev) build
 
-.PHONY: up
-up:
-	$(docker_compose) up -d
+.PHONY: build-prod
+build-prod:
+	$(docker_compose_prod) build
 
-.PHONY: down
-down:
-	$(docker_compose) down
+.PHONY: up-dev
+up-dev:
+	$(docker_compose_dev) up
 
-.PHONY: logs
-logs:
-	$(docker_compose) logs -f
+.PHONY: up-prod
+up-prod:
+	$(docker_compose_prod) up
 
-.PHONY: migrate
-migrate:
-	$(docker_compose) exec $(service_name) mvn flyway:migrate \
+.PHONY: down-dev
+down-dev:
+	$(docker_compose_dev) down
+
+.PHONY: down-prod
+down-prod:
+	$(docker_compose_prod) down
+
+.PHONY: logs-dev
+logs-dev:
+	$(docker_compose_dev) logs -f
+
+.PHONY: logs-prod
+logs-prod:
+	$(docker_compose_prod) logs -f
+
+.PHONY: migrate-dev
+migrate-dev:
+	$(docker_compose_dev) exec $(service_name_dev) mvn flyway:migrate \
 	-Dflyway.url=jdbc:mysql://mysql:3306/airportdb \
 	-Dflyway.user=root \
 	-Dflyway.password=rootpassword -e
 
-.PHONY: test
-test:
-	$(docker_compose) exec $(service_name) mvn test
+.PHONY: migrate-prod
+migrate-prod:
+	$(docker_compose_prod) exec $(service_name_prod) mvn flyway:migrate \
+	-Dflyway.url=jdbc:mysql://mysql:3306/airportdb \
+	-Dflyway.user=root \
+	-Dflyway.password=rootpassword -e
 
-.PHONY: clean
-clean:
-	$(docker_compose) down --volumes --remove-orphans
+.PHONY: clean-dev
+clean-dev:
+	$(docker_compose_dev) down --volumes --remove-orphans
 
-.PHONY: restart
-restart:
-	$(docker_compose) down && $(docker_compose) up -d
+.PHONY: clean-prod
+clean-prod:
+	$(docker_compose_prod) down --volumes --remove-orphans
 
-# Run the application
-.PHONY: run
-run:
-	$(docker_compose) up --build
+.PHONY: restart-dev
+restart-dev:
+	$(docker_compose_dev) down && $(docker_compose_dev) up -d
+
+.PHONY: restart-prod
+restart-prod:
+	$(docker_compose_prod) down && $(docker_compose_prod) up -d
