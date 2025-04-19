@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.project.quanlycanghangkhong.dto.FlightDTO;
+import com.project.quanlycanghangkhong.dto.FlightTimeUpdateRequest;
 import com.project.quanlycanghangkhong.model.Flight;
 
 public interface FlightService {
@@ -20,6 +21,6 @@ public interface FlightService {
 	    // Thêm method mới: tìm các chuyến bay có flightDate chính xác
 	    List<FlightDTO> getFlightsByExactDate(LocalDate flightDate);
 	    List<FlightDTO> getFlightsByDateAndKeyword(LocalDate date, String keyword);
-	    
+	    public void updateFlightTimes(Long id, FlightTimeUpdateRequest req) ;
 
 }

@@ -20,6 +20,9 @@ public class User {
     @Column(name = "password", length = 255, nullable = false)
     private String password;
 
+    @Column(name = "expo_push_token", length = 255)
+    private String expoPushToken;
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
@@ -66,6 +69,14 @@ public class User {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getExpoPushToken() {
+        return expoPushToken;
+    }
+
+    public void setExpoPushToken(String expoPushToken) {
+        this.expoPushToken = expoPushToken;
     }
 
     public Role getRole() {

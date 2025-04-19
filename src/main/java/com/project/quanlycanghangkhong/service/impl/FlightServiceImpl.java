@@ -1,14 +1,17 @@
 package com.project.quanlycanghangkhong.service.impl;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.project.quanlycanghangkhong.dto.FlightDTO;
+import com.project.quanlycanghangkhong.dto.FlightTimeUpdateRequest;
 import com.project.quanlycanghangkhong.model.Flight;
 import com.project.quanlycanghangkhong.repository.FlightRepository;
 import com.project.quanlycanghangkhong.service.FlightService;
@@ -75,12 +78,11 @@ public class FlightServiceImpl implements FlightService {
 	}
 
 	@Override
-	public List<FlightDTO> getTodayFlights() {
-		   LocalDate today = LocalDate.now();
-	        LocalDate yesterday = today.minusDays(1);
-	        List<Flight> flights = flightRepository.findFlightsForServiceDay(today, yesterday);
-	        return flights.stream().map(FlightDTO::new).collect(Collectors.toList());
-	}
+public List<FlightDTO> getTodayFlights() {
+    LocalDate today = LocalDate.now();
+    LocalDate yesterday = today.minusDays(1);
+    return flightRepository.findFlightsForServiceDay(today, yesterday);
+}
 
 
 	@Override
@@ -101,5 +103,22 @@ public class FlightServiceImpl implements FlightService {
 	                      .map(FlightDTO::new)
 	                      .collect(Collectors.toList());
 	    }
+
+	 @Override
+	@Transactional
+public void updateFlightTimes(Long id, FlightTimeUpdateRequest req) {
+    Flight f = flightRepository.findById(id)
+        .orElseThrow(() -> new RuntimeException("Không tìm thấy flight " + id));
+    if (req.getActualDepartureTime() != null) {
+        f.setActualDepartureTime(LocalTime.parse(req.getActualDepartureTime()));
+    }
+    if (req.getActualArrivalTime() != null) {
+        f.setActualArrivalTime(LocalTime.parse(req.getActualArrivalTime()));
+    }
+    if (req.getActualDepartureTimeAtArrival() != null) {
+        f.setActualDepartureTimeAtArrival(LocalTime.parse(req.getActualDepartureTimeAtArrival()));
+    }
+    flightRepository.save(f);
+}
 
 }

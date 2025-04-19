@@ -5,6 +5,9 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 
@@ -20,14 +23,16 @@ public class Flight {
     @Column(name = "flight_number", nullable = false)
     private String flightNumber;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+   @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "departure_airport_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Airport departureAirport;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "arrival_airport_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Airport arrivalAirport;
-
+    
     @NotNull(message = "Departure time is required")
     @Column(name = "departure_time", nullable = false)
     private LocalTime departureTime;

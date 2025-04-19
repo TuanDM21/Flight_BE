@@ -74,4 +74,12 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(1).orElseThrow(() -> new RuntimeException("User not found"));
         return DTOConverter.convertUser(user);
     }
+
+    @Override
+    public List<UserDTO> searchUsersByKeyword(String keyword) {
+        List<User> users = userRepository.findByNameContainingIgnoreCaseOrEmailContainingIgnoreCase(keyword, keyword);
+        return users.stream()
+                .map(DTOConverter::convertUser)
+                .collect(Collectors.toList());
+    }
 }

@@ -3,6 +3,7 @@ package com.project.quanlycanghangkhong.controller;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -19,13 +21,17 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.project.quanlycanghangkhong.dto.FlightDTO;
+import com.project.quanlycanghangkhong.dto.FlightTimeUpdateRequest;
 import com.project.quanlycanghangkhong.model.Flight;
 import com.project.quanlycanghangkhong.service.FlightService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/flights")
 public class FlightController {
+    private static final Logger logger = LoggerFactory.getLogger(FlightController.class);
 
     @Autowired
     private FlightService flightService;
@@ -74,7 +80,12 @@ public class FlightController {
 
     @GetMapping("/today")
     public ResponseEntity<List<FlightDTO>> getTodayFlights() {
-        List<FlightDTO> dtos = flightService.getTodayFlights();
+        List<FlightDTO> dtos = flightService.getTodayFlights();  
+        if (!dtos.isEmpty()) {
+            logger.info("Today flights: {}", dtos.get(0).getDepartureAirport());
+        } else {
+            logger.info("Today flights: empty list");
+        }
         return ResponseEntity.ok(dtos);
     }
 
@@ -102,5 +113,13 @@ public class FlightController {
             return ResponseEntity.badRequest().build();
         }
     }
+    @PatchMapping("/{id}/times")
+public ResponseEntity<?> updateFlightTimes(
+        @PathVariable Long id,
+        @RequestBody FlightTimeUpdateRequest payload) {
+    flightService.updateFlightTimes(id, payload);
+    // trả wrapper hoặc plain text tuỳ bạn
+    return ResponseEntity.ok(Map.of("success", true, "message", "Thành công"));
+}
 
 }

@@ -4,6 +4,8 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.project.quanlycanghangkhong.dto.UserDTO;
 import com.project.quanlycanghangkhong.model.User;
+import com.project.quanlycanghangkhong.repository.UserRepository;
 import com.project.quanlycanghangkhong.service.UserService;
 
 @CrossOrigin(origins = "*")
@@ -25,6 +28,9 @@ import com.project.quanlycanghangkhong.service.UserService;
 public class UserController {
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private UserRepository userRepository;
 
     // Lấy danh sách user
     @GetMapping
@@ -76,5 +82,25 @@ public class UserController {
     public ResponseEntity<UserDTO> getCurrentUser() {
         UserDTO currentUser = userService.getCurrentUser();
         return ResponseEntity.ok(currentUser);
+    }
+
+    // Search user theo keyword (tìm theo tên hoặc email)
+    @GetMapping("/search")
+    public ResponseEntity<List<UserDTO>> searchUsersByKeyword(@RequestParam("keyword") String keyword) {
+        List<UserDTO> dtos = userService.searchUsersByKeyword(keyword);
+        return ResponseEntity.ok(dtos);
+    }
+
+    // Lưu expoPushToken vào user khi đăng nhập app
+    @PostMapping("/expo-push-token")
+    public ResponseEntity<Void> saveExpoPushToken(@RequestBody String expoPushToken) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user != null) {
+            user.setExpoPushToken(expoPushToken);
+            userRepository.save(user);
+        }
+        return ResponseEntity.ok().build();
     }
 }

@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import com.project.quanlycanghangkhong.dto.FlightDTO;
 import com.project.quanlycanghangkhong.model.Flight;
 
 public interface FlightRepository extends JpaRepository<Flight, Long> {
@@ -15,11 +16,20 @@ public interface FlightRepository extends JpaRepository<Flight, Long> {
 
 	// Thêm phương thức mới: tìm các chuyến bay có flightDate bằng tham số truyền
 	// vào
-	 @Query("SELECT f FROM Flight f " +
-	           "WHERE f.flightDate = :today " +
-	           "   OR (f.flightDate = :yesterday AND f.actualDepartureTimeAtArrival IS NULL)")
-	    List<Flight> findFlightsForServiceDay(@Param("today") LocalDate today,
-	                                           @Param("yesterday") LocalDate yesterday);
+	@Query("SELECT new com.project.quanlycanghangkhong.dto.FlightDTO(" +
+       "f.id, f.flightNumber, " +
+       "d.airportCode, a.airportCode, " +
+       "f.departureTime, f.arrivalTime, f.flightDate, " +
+       "f.actualDepartureTime, f.actualArrivalTime, f.actualDepartureTimeAtArrival, " +
+       "f.createdAt, f.updatedAt) " +
+       "FROM Flight f " +
+       "LEFT JOIN f.departureAirport d " +
+       "LEFT JOIN f.arrivalAirport a " +
+       "WHERE f.flightDate = :today " +
+       "   OR (f.flightDate = :yesterday AND f.actualDepartureTimeAtArrival IS NULL)")
+List<FlightDTO> findFlightsForServiceDay(@Param("today") LocalDate today,
+                                          @Param("yesterday") LocalDate yesterday);
+
 
 	List<Flight> findByFlightDate(LocalDate flightDate);
 

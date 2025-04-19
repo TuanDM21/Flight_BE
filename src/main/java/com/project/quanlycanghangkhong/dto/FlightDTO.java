@@ -3,31 +3,28 @@ package com.project.quanlycanghangkhong.dto;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import com.project.quanlycanghangkhong.model.Flight;
 
 public class FlightDTO {
 
     private Long id;
     private String flightNumber;
-    private String departureAirport;
-    private String arrivalAirport;
+    private AirportDTO departureAirport;
+    private AirportDTO arrivalAirport;
     private LocalTime departureTime;
     private LocalTime arrivalTime;
     private LocalDate flightDate;
 
     // Các trường thêm vào
     private LocalTime actualDepartureTime;
-    private LocalTime actualArrivalTime;
+    private LocalTime actualArrivalTime;    
     private LocalTime actualDepartureTimeAtArrival;
-
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    public FlightDTO() {
-    }
+    public FlightDTO() {}
 
-    // Constructor chuyển từ entity sang DTO
-    public FlightDTO(Flight flight) {
+    // Constructor từ entity Flight (phiên bản cũ)
+    public FlightDTO(com.project.quanlycanghangkhong.model.Flight flight) {
         this.id = flight.getId();
         this.flightNumber = flight.getFlightNumber();
         this.departureTime = flight.getDepartureTime();
@@ -38,103 +35,82 @@ public class FlightDTO {
         this.actualDepartureTimeAtArrival = flight.getActualDepartureTimeAtArrival();
         this.createdAt = flight.getCreatedAt();
         this.updatedAt = flight.getUpdatedAt();
+
+        if (flight.getDepartureAirport() != null) {
+            this.departureAirport = new AirportDTO(
+                flight.getDepartureAirport().getAirportCode(),
+                flight.getDepartureAirport().getAirportName());
+        }
+        if (flight.getArrivalAirport() != null) {
+            this.arrivalAirport = new AirportDTO(
+                flight.getArrivalAirport().getAirportCode(),
+                flight.getArrivalAirport().getAirportName());
+        }
     }
 
-    // Getters & Setters
+    // Constructor hỗ trợ projection từ query trong FlightRepository
+    public FlightDTO(Long id, String flightNumber, 
+                     String departureAirportCode, String arrivalAirportCode,
+                     LocalTime departureTime, LocalTime arrivalTime, LocalDate flightDate,
+                     LocalTime actualDepartureTime, LocalTime actualArrivalTime, LocalTime actualDepartureTimeAtArrival,
+                     LocalDateTime createdAt, LocalDateTime updatedAt) {
+        this.id = id;
+        this.flightNumber = flightNumber;
+        this.departureTime = departureTime;
+        this.arrivalTime = arrivalTime;
+        this.flightDate = flightDate;
+        this.actualDepartureTime = actualDepartureTime;
+        this.actualArrivalTime = actualArrivalTime;
+        this.actualDepartureTimeAtArrival = actualDepartureTimeAtArrival;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+
+        // Chuyển đổi mã sân bay thành AirportDTO; nếu cần bổ sung thêm tên sân bay thì điều chỉnh lại
+        if (departureAirportCode != null) {
+            this.departureAirport = new AirportDTO(departureAirportCode, null);
+        }
+        if (arrivalAirportCode != null) {
+            this.arrivalAirport = new AirportDTO(arrivalAirportCode, null);
+        }
+    }
+
+    // Getters & Setters ...
 
     public Long getId() {
         return id;
     }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
     public String getFlightNumber() {
         return flightNumber;
     }
-
-    public void setFlightNumber(String flightNumber) {
-        this.flightNumber = flightNumber;
-    }
-
-    public String getDepartureAirport() {
+    public AirportDTO getDepartureAirport() {
         return departureAirport;
     }
-
-    public void setDepartureAirport(String departureAirport) {
-        this.departureAirport = departureAirport;
-    }
-
-    public String getArrivalAirport() {
+    public AirportDTO getArrivalAirport() {
         return arrivalAirport;
     }
-
-    public void setArrivalAirport(String arrivalAirport) {
-        this.arrivalAirport = arrivalAirport;
-    }
-
     public LocalTime getDepartureTime() {
         return departureTime;
     }
-
-    public void setDepartureTime(LocalTime departureTime) {
-        this.departureTime = departureTime;
-    }
-
     public LocalTime getArrivalTime() {
         return arrivalTime;
     }
-
-    public void setArrivalTime(LocalTime arrivalTime) {
-        this.arrivalTime = arrivalTime;
-    }
-
     public LocalDate getFlightDate() {
         return flightDate;
     }
-
-    public void setFlightDate(LocalDate flightDate) {
-        this.flightDate = flightDate;
-    }
-
     public LocalTime getActualDepartureTime() {
         return actualDepartureTime;
     }
-
-    public void setActualDepartureTime(LocalTime actualDepartureTime) {
-        this.actualDepartureTime = actualDepartureTime;
-    }
-
     public LocalTime getActualArrivalTime() {
         return actualArrivalTime;
     }
-
-    public void setActualArrivalTime(LocalTime actualArrivalTime) {
-        this.actualArrivalTime = actualArrivalTime;
-    }
-
     public LocalTime getActualDepartureTimeAtArrival() {
         return actualDepartureTimeAtArrival;
     }
-
-    public void setActualDepartureTimeAtArrival(LocalTime actualDepartureTimeAtArrival) {
-        this.actualDepartureTimeAtArrival = actualDepartureTimeAtArrival;
-    }
-
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
     }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
+    // Setters nếu cần...
 }

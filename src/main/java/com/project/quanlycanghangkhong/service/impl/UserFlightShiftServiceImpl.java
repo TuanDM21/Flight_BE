@@ -19,6 +19,7 @@ import com.project.quanlycanghangkhong.repository.FlightRepository;
 import com.project.quanlycanghangkhong.repository.UserFlightShiftRepository;
 import com.project.quanlycanghangkhong.repository.UserRepository;
 import com.project.quanlycanghangkhong.service.UserFlightShiftService;
+import com.project.quanlycanghangkhong.service.NotificationService;
 
 @Service
 public class UserFlightShiftServiceImpl implements UserFlightShiftService {
@@ -31,6 +32,9 @@ public class UserFlightShiftServiceImpl implements UserFlightShiftService {
 
     @Autowired
     private UserFlightShiftRepository userFlightShiftRepository;
+
+    @Autowired
+    private NotificationService notificationService;
 
     @Override
     @Transactional
@@ -62,6 +66,16 @@ public class UserFlightShiftServiceImpl implements UserFlightShiftService {
             // Nếu chưa có, tạo UserFlightShift mới
             UserFlightShift ufs = new UserFlightShift(user, flight, shiftDate);
             userFlightShiftRepository.save(ufs);
+
+            // Trigger notification cho user này
+            notificationService.createNotification(
+                userId,
+                "FLIGHT_ASSIGN",
+                "Bạn được phân công phục vụ chuyến bay " + flight.getFlightNumber(),
+                "Ngày: " + shiftDate + ", Số hiệu: " + flight.getFlightNumber(),
+                flight.getId().intValue(),
+                true
+            );
         }
     }
 

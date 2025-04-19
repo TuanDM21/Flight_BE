@@ -21,4 +21,6 @@ public interface UserService {
 
     // Lấy thông tin user hiện tại dựa vào token
     UserDTO getCurrentUser();
+
+    List<UserDTO> searchUsersByKeyword(String keyword);
 }
