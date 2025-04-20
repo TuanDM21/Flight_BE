@@ -1,9 +1,9 @@
 services:
-  app-dev:
+  app:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    container_name: my-spring-app-dev
+    container_name: my-spring-app
     ports:
       - "${PORT:-8080}:8080"
       - "35729:35729"
