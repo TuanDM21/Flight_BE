@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.repository.query.Param;
 import java.time.LocalDate;
 import java.util.List;
+import java.time.LocalDateTime;
 
 @Repository
 public interface ActivityRepository extends JpaRepository<Activity, Long> {
@@ -33,4 +34,9 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
         @Param("teamIds") List<Integer> teamIds,
         @Param("unitIds") List<Integer> unitIds
     );
+
+    List<Activity> findByStartTimeBetween(LocalDateTime from, LocalDateTime to);
+
+    @Query("SELECT a FROM Activity a WHERE a.startTime BETWEEN :from AND :to")
+    List<Activity> findActivitiesStartingBetween(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 }

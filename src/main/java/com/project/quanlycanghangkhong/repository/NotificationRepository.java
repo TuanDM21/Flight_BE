@@ -20,4 +20,6 @@ public interface NotificationRepository extends JpaRepository<Notification, Inte
 
     @Query("SELECT n FROM Notification n WHERE n.userId = :userId AND n.type = :type AND n.relatedId = :relatedId AND n.createdAt > :after")
     List<Notification> findRecentByUserTypeRelatedId(@Param("userId") Integer userId, @Param("type") String type, @Param("relatedId") Integer relatedId, @Param("after") LocalDateTime after);
+
+    boolean existsByTypeAndRelatedIdAndUserId(String type, Integer relatedId, Integer userId);
 }

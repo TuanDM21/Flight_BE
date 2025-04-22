@@ -48,4 +48,12 @@ public class NotificationController {
         if (userId == null) return ResponseEntity.status(401).build();
         return ResponseEntity.ok(notificationService.countUnread(userId));
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteNotification(@PathVariable Integer id) {
+        Integer userId = getCurrentUserId();
+        if (userId == null) return ResponseEntity.status(401).build();
+        notificationService.deleteNotification(id, userId);
+        return ResponseEntity.ok().build();
+    }
 }

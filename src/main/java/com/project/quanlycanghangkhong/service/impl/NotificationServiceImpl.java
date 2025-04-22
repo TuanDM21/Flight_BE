@@ -13,6 +13,7 @@ import org.springframework.http.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class NotificationServiceImpl implements NotificationService {
@@ -81,16 +82,71 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
+    public void deleteNotification(Integer notificationId, Integer userId) {
+        Notification n = notificationRepository.findById(notificationId).orElse(null);
+        if (n != null && n.getUserId().equals(userId)) {
+            notificationRepository.delete(n);
+        }
+    }
+
+    @Override
     public void sendExpoPush(String expoPushToken, String title, String body) {
         String url = "https://exp.host/--/api/v2/push/send";
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        String payload = String.format(
-            "{\"to\":\"%s\",\"sound\":\"default\",\"title\":\"%s\",\"body\":\"%s\"}",
-            expoPushToken, title, body
-        );
-        HttpEntity<String> entity = new HttpEntity<>(payload, headers);
-        restTemplate.postForEntity(url, entity, String.class);
+        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+        // Loại bỏ dấu ngoặc kép thừa nếu có trong token
+        String cleanToken = expoPushToken.replace("\"", "").trim();
+        Map<String, Object> message = new java.util.HashMap<>();
+        message.put("to", cleanToken);
+        message.put("sound", "default");
+        message.put("title", title);
+        message.put("body", body);
+        List<Map<String, Object>> payload = java.util.Collections.singletonList(message);
+        System.out.println("[Push] Endpoint: " + url);
+        System.out.println("[Push] Payload: " + payload);
+        HttpEntity<List<Map<String, Object>>> entity = new HttpEntity<>(payload, headers);
+        try {
+            ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
+            System.out.println("[Push] Status code: " + response.getStatusCode());
+            System.out.println("[Push] Response body: " + response.getBody());
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                System.out.println("[Push] Lỗi khi gửi push notification: " + response.getBody());
+            } else {
+                System.out.println("[Push] Đã gửi push notification thành công!");
+            }
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            System.out.println("[Push] Exception khi gửi push notification: " + e.getMessage());
+            System.out.println("[Push] Response body lỗi: " + e.getResponseBodyAsString());
+            e.printStackTrace();
+        } catch (Exception e) {
+            System.out.println("[Push] Exception khi gửi push notification: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public boolean hasSentReminder(Integer userId, Long activityId) {
+        return notificationRepository.existsByTypeAndRelatedIdAndUserId("REMINDER", activityId.intValue(), userId);
+    }
+
+    @Override
+    public void sendPushOnly(String expoPushToken, String title, String body) {
+        sendExpoPush(expoPushToken, title, body);
+    }
+
+    @Override
+    public void markReminderSent(Integer userId, Long activityId) {
+        Notification n = new Notification();
+        n.setUserId(userId);
+        n.setType("REMINDER");
+        n.setTitle("Đã gửi push reminder");
+        n.setContent("");
+        n.setRelatedId(activityId.intValue());
+        n.setCreatedAt(java.time.LocalDateTime.now());
+        n.setIsRead(true);
+        notificationRepository.save(n);
+        System.out.println("[Push] Đã lưu notification reminder cho userId: " + userId + ", activityId: " + activityId);
     }
 }

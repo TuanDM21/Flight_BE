@@ -11,4 +11,8 @@ public interface NotificationService {
     long countUnread(Integer userId);
     void deleteOldNotifications();
     void sendExpoPush(String expoPushToken, String title, String body);
+    void deleteNotification(Integer notificationId, Integer userId);
+    boolean hasSentReminder(Integer userId, Long activityId);
+    void sendPushOnly(String expoPushToken, String title, String body);
+    void markReminderSent(Integer userId, Long activityId);
 }
