@@ -13,5 +13,7 @@ public interface UserShiftRepository extends JpaRepository<UserShift, Integer> {
 	// shiftDate);
 	List<UserShift> findByUserIdAndShiftDate(Integer userId, LocalDate shiftDate);
 
+	// Lấy tất cả ca trực trong ngày
+	List<UserShift> findByShiftDate(LocalDate shiftDate);
 }
 

@@ -56,7 +56,11 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public List<Notification> getRecentNotifications(Integer userId) {
         LocalDateTime oneWeekAgo = LocalDateTime.now().minusDays(7);
-        return notificationRepository.findByUserIdAndCreatedAtAfterOrderByCreatedAtDesc(userId, oneWeekAgo);
+        // Chỉ trả về các notification có type là "ACTIVITY"
+        return notificationRepository.findByUserIdAndCreatedAtAfterOrderByCreatedAtDesc(userId, oneWeekAgo)
+            .stream()
+            .filter(n -> "ACTIVITY".equals(n.getType()))
+            .toList();
     }
 
     @Override

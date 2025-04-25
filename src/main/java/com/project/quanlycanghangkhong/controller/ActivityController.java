@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.function.ServerResponse.SseBuilder;
 
 import java.util.List;
 import java.util.Optional;
@@ -60,6 +61,7 @@ public class ActivityController {
     public ResponseEntity<List<ActivityDTO>> searchActivitiesByMonthYear(
             @RequestParam int month,
             @RequestParam int year) {
+                System.out.println("Month: " + month + ", Year: " + year);
         return ResponseEntity.ok(activityService.searchActivitiesByMonthYear(month, year));
     }
 

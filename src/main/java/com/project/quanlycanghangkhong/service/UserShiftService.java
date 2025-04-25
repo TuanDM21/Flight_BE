@@ -23,4 +23,7 @@ public interface UserShiftService {
 
     List<UserShiftDTO> applyShiftToUsers(ApplyShiftMultiDTO dto);
 
+    // Lấy danh sách userId trực chung theo ngày và actualTime
+    List<Integer> getUserIdsOnDutyAtTime(LocalDate date, java.time.LocalTime actualTime);
+
 }

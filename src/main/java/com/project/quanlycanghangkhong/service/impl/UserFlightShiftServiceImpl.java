@@ -143,4 +143,13 @@ public class UserFlightShiftServiceImpl implements UserFlightShiftService {
         return null;
     }
 
+    @Override
+    public List<Integer> getUserIdsByFlightAndDate(Long flightId, LocalDate shiftDate) {
+        return userFlightShiftRepository.findByFlight_IdAndShiftDate(flightId, shiftDate)
+                .stream()
+                .map(ufs -> ufs.getUser().getId())
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
 }

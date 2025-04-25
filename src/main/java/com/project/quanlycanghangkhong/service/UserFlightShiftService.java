@@ -18,6 +18,9 @@ public interface UserFlightShiftService {
     // --- Thêm: Lấy ca trực theo flightId và shiftDate ---
     List<UserFlightShiftResponseDTO> getShiftsByFlightAndDate(Long flightId, LocalDate shiftDate);
 
+    // Lấy danh sách userId phục vụ chuyến bay theo flightId và shiftDate
+    List<Integer> getUserIdsByFlightAndDate(Long flightId, LocalDate shiftDate);
+
     void removeFlightAssignment(Long flightId, LocalDate shiftDate, Integer userId);
 
     boolean isUserAssignedToFlight(LocalDate shiftDate, Integer userId);

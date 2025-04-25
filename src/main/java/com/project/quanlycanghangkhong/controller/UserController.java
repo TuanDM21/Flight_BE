@@ -103,4 +103,40 @@ public class UserController {
         }
         return ResponseEntity.ok().build();
     }
+
+    // Xóa expoPushToken khi user logout và log giá trị token
+    @PostMapping("/device-token/remove")
+    public ResponseEntity<?> removeDeviceToken(@RequestBody String expoPushToken) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+        User user = userRepository.findByEmail(email).orElse(null);
+        System.out.println("[LOG] User: " + email + ", DB Token: " + (user != null ? user.getExpoPushToken() : "null") + ", Request Token: " + expoPushToken);
+        if (user != null && expoPushToken != null && expoPushToken.equals(user.getExpoPushToken())) {
+            user.setExpoPushToken(null);
+            userRepository.save(user);
+            System.out.println("[LOG] Token removed for user: " + email);
+            return ResponseEntity.ok().body("Token removed");
+        }
+        System.out.println("[LOG] Token not removed for user: " + email);
+        return ResponseEntity.badRequest().body("Invalid user or token");
+    }
+
+    // Xóa sạch thông tin liên quan đến user khi logout (expoPushToken, ...)
+    @PostMapping("/logout-cleanup")
+    public ResponseEntity<?> logoutCleanup() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user != null) {
+            // Xóa expoPushToken
+            user.setExpoPushToken(null);
+            // Nếu có thêm trường/thông tin nào khác cần xóa khi logout, xử lý tại đây
+            userRepository.save(user);
+            System.out.println("[LOG] Logout cleanup: Đã xóa expoPushToken cho user: " + email);
+            return ResponseEntity.ok().body("Logout cleanup success");
+        }
+        System.out.println("[LOG] Logout cleanup: Không tìm thấy user: " + email);
+        return ResponseEntity.badRequest().body("User not found");
+    }
+    
 }

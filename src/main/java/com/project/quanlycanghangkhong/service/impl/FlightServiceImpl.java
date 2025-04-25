@@ -5,6 +5,7 @@ import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.HashSet;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -15,12 +16,24 @@ import com.project.quanlycanghangkhong.dto.FlightTimeUpdateRequest;
 import com.project.quanlycanghangkhong.model.Flight;
 import com.project.quanlycanghangkhong.repository.FlightRepository;
 import com.project.quanlycanghangkhong.service.FlightService;
+import com.project.quanlycanghangkhong.service.UserFlightShiftService;
+import com.project.quanlycanghangkhong.service.UserShiftService;
+import com.project.quanlycanghangkhong.service.NotificationService;
 
 @Service
 public class FlightServiceImpl implements FlightService {
 
 	@Autowired
 	private FlightRepository flightRepository;
+
+	@Autowired
+	private UserFlightShiftService userFlightShiftService;
+
+	@Autowired
+	private UserShiftService userShiftService;
+
+	@Autowired
+	private NotificationService notificationService;
 
 	@Override
 	public FlightDTO createFlight(Flight flight) {
@@ -120,5 +133,33 @@ public void updateFlightTimes(Long id, FlightTimeUpdateRequest req) {
     }
     flightRepository.save(f);
 }
+
+    @Override
+    public Flight getFlightEntityById(Long id) {
+        return flightRepository.findById(id).orElse(null);
+    }
+
+	@Override
+	public void notifyUsersOnActualTimeChange(Long flightId, LocalTime actualTime) {
+	    Flight flight = getFlightEntityById(flightId);
+	    if (flight == null || actualTime == null) return;
+	    LocalDate flightDate = flight.getFlightDate();
+	    // Lấy user phục vụ chuyến bay
+	    HashSet<Integer> userIds = new HashSet<>(userFlightShiftService.getUserIdsByFlightAndDate(flightId, flightDate));
+	    // Lấy user trực ca
+	    userIds.addAll(userShiftService.getUserIdsOnDutyAtTime(flightDate, actualTime));
+	    if (!userIds.isEmpty()) {
+	        String title = "Thông báo chuyến bay";
+	        String content = "Chuyến bay " + flight.getFlightNumber() + " đã cập nhật giờ thực tế: " + actualTime;
+	        notificationService.createNotifications(
+	            userIds.stream().toList(),
+	            "FLIGHT",
+	            title,
+	            content,
+	            flightId.intValue(),
+	            false
+	        );
+	    }
+	}
 
 }

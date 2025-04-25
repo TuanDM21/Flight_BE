@@ -35,7 +35,7 @@ public class NotificationController {
     }
 
     @PostMapping("/read/{id}")
-    public ResponseEntity<Void> markAsRead(@PathVariable Integer id) {
+    public ResponseEntity<Void> markAsRead(@PathVariable Integer id) {  
         Integer userId = getCurrentUserId();
         if (userId == null) return ResponseEntity.status(401).build();
         notificationService.markAsRead(id, userId);

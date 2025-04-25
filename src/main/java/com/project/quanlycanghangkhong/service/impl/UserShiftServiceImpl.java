@@ -1,6 +1,7 @@
 package com.project.quanlycanghangkhong.service.impl;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -93,9 +94,6 @@ public class UserShiftServiceImpl implements UserShiftService {
         return new UserShiftDTO(updated);
     }
 
-
-
-
     @Override
     public void deleteUserShift(Integer id) {
         userShiftRepository.deleteById(id);
@@ -131,5 +129,24 @@ public class UserShiftServiceImpl implements UserShiftService {
             createdDTOs.add(new UserShiftDTO(saved));
         }
         return createdDTOs;
-}
+    }
+
+    @Override
+    public List<Integer> getUserIdsOnDutyAtTime(LocalDate date, LocalTime actualTime) {
+        List<UserShift> shifts = userShiftRepository.findByShiftDate(date);
+        return shifts.stream()
+                .filter(shift -> {
+                    LocalTime start = shift.getShift().getStartTime();
+                    LocalTime end = shift.getShift().getEndTime();
+                    if (end.isBefore(start)) {
+                        // ca qua đêm
+                        return (!actualTime.isBefore(start) || !actualTime.isAfter(end));
+                    } else {
+                        return !actualTime.isBefore(start) && !actualTime.isAfter(end);
+                    }
+                })
+                .map(shift -> shift.getUser().getId())
+                .distinct()
+                .collect(Collectors.toList());
+    }
 }

@@ -22,5 +22,12 @@ public interface FlightService {
 	    List<FlightDTO> getFlightsByExactDate(LocalDate flightDate);
 	    List<FlightDTO> getFlightsByDateAndKeyword(LocalDate date, String keyword);
 	    public void updateFlightTimes(Long id, FlightTimeUpdateRequest req) ;
+	    
+	    // Lấy entity Flight theo id
+	    Flight getFlightEntityById(Long id);
 
+	    /**
+	     * Gửi notification cho các user phục vụ chuyến bay hoặc trực ca khi thay đổi actual time
+	     */
+	    void notifyUsersOnActualTimeChange(Long flightId, java.time.LocalTime actualTime);
 }

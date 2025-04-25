@@ -5,6 +5,9 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.time.LocalTime;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +27,9 @@ import com.project.quanlycanghangkhong.dto.FlightDTO;
 import com.project.quanlycanghangkhong.dto.FlightTimeUpdateRequest;
 import com.project.quanlycanghangkhong.model.Flight;
 import com.project.quanlycanghangkhong.service.FlightService;
+import com.project.quanlycanghangkhong.service.UserFlightShiftService;
+import com.project.quanlycanghangkhong.service.UserShiftService;
+import com.project.quanlycanghangkhong.service.NotificationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +41,15 @@ public class FlightController {
 
     @Autowired
     private FlightService flightService;
+
+    @Autowired
+    private UserFlightShiftService userFlightShiftService;
+
+    @Autowired
+    private UserShiftService userShiftService;
+
+    @Autowired
+    private NotificationService notificationService;
 
     @GetMapping
     public ResponseEntity<List<FlightDTO>> getAllFlights() {
@@ -113,13 +128,53 @@ public class FlightController {
             return ResponseEntity.badRequest().build();
         }
     }
-    @PatchMapping("/{id}/times")
-public ResponseEntity<?> updateFlightTimes(
-        @PathVariable Long id,
-        @RequestBody FlightTimeUpdateRequest payload) {
-    flightService.updateFlightTimes(id, payload);
-    // trả wrapper hoặc plain text tuỳ bạn
-    return ResponseEntity.ok(Map.of("success", true, "message", "Thành công"));
-}
 
+    @PatchMapping("/{id}/times")
+    public ResponseEntity<?> updateFlightTimes(
+            @PathVariable Long id,
+            @RequestBody FlightTimeUpdateRequest payload) {
+        flightService.updateFlightTimes(id, payload);
+        // trả wrapper hoặc plain text tuỳ bạn
+        return ResponseEntity.ok(Map.of("success", true, "message", "Thành công"));
+    }
+
+    @PatchMapping("/{id}/actual-time-notify")
+    public ResponseEntity<?> updateActualTimeAndNotify(
+            @PathVariable Long id,
+            @RequestBody FlightTimeUpdateRequest payload) {
+        // Cập nhật actual time
+        flightService.updateFlightTimes(id, payload);
+        Flight flight = flightService.getFlightEntityById(id);
+        if (flight == null) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Không tìm thấy chuyến bay"));
+        }
+        // Lấy actual time vừa nhập
+        LocalTime actualTime = null;
+        if (payload.getActualDepartureTimeAtArrival() != null) {
+            actualTime = LocalTime.parse(payload.getActualDepartureTimeAtArrival());
+        } else if (payload.getActualArrivalTime() != null) {
+            actualTime = LocalTime.parse(payload.getActualArrivalTime());
+        }
+        if (actualTime == null) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Chưa nhập giờ thực tế"));
+        }
+        // Lấy ngày chuyến bay
+        LocalDate flightDate = flight.getFlightDate();
+        // Lấy userId phục vụ chuyến bay
+        Set<Integer> userIds = new HashSet<>(userFlightShiftService.getUserIdsByFlightAndDate(id, flightDate));
+        // Lấy userId trực chung, lọc theo actual time
+        userIds.addAll(userShiftService.getUserIdsOnDutyAtTime(flightDate, actualTime));
+        // Gửi notification
+        String title = "Thông báo chuyến bay";
+        String content = "Chuyến bay " + flight.getFlightNumber() + " đã cập nhật giờ thực tế: " + actualTime;
+        notificationService.createNotifications(
+            userIds.stream().toList(),
+            "FLIGHT",
+            title,
+            content,
+            id.intValue(),
+            false
+        );
+        return ResponseEntity.ok(Map.of("success", true, "message", "Đã gửi notification cho " + userIds.size() + " nhân viên."));
+    }
 }
