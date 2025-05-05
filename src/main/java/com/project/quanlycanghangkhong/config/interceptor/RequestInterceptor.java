@@ -1,8 +1,8 @@
 package com.project.quanlycanghangkhong.config.interceptor;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
 import com.project.quanlycanghangkhong.security.JwtTokenProvider;
-import com.project.quanlycanghangkhong.dto.response.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +27,7 @@ public class RequestInterceptor implements HandlerInterceptor {
 			response.setStatus(HttpStatus.UNAUTHORIZED.value());
 			response.setContentType("application/json;charset=UTF-8");
 			response.setCharacterEncoding("UTF-8");
-			ApiResponse<?> apiResponse = ApiResponse.error(HttpStatus.UNAUTHORIZED,
+			ApiResponseCustom<?> apiResponse = ApiResponseCustom.error(HttpStatus.UNAUTHORIZED,
 					"Vui lòng đăng nhập để tiếp tục");
 			response.getWriter().write(objectMapper.writeValueAsString(apiResponse));
 			return false;
@@ -38,7 +38,7 @@ public class RequestInterceptor implements HandlerInterceptor {
 			response.setStatus(HttpStatus.UNAUTHORIZED.value());
 			response.setContentType("application/json;charset=UTF-8");
 			response.setCharacterEncoding("UTF-8");
-			ApiResponse<?> apiResponse = ApiResponse.error(HttpStatus.UNAUTHORIZED,
+			ApiResponseCustom<?> apiResponse = ApiResponseCustom.error(HttpStatus.UNAUTHORIZED,
 					"Token không hợp lệ hoặc đã hết hạn");
 			response.getWriter().write(objectMapper.writeValueAsString(apiResponse));
 			return false;

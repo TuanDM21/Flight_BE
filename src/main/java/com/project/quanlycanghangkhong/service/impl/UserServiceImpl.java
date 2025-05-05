@@ -7,10 +7,12 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import com.project.quanlycanghangkhong.dao.UserDAO;
 import com.project.quanlycanghangkhong.dto.DTOConverter;
 import com.project.quanlycanghangkhong.dto.UserDTO;
+import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
 import com.project.quanlycanghangkhong.model.User;
 import com.project.quanlycanghangkhong.repository.UserRepository;
 import com.project.quanlycanghangkhong.service.UserService;
@@ -69,10 +71,10 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserDTO getCurrentUser() {
-        // Mock implementation: Replace with actual logic to extract user from token
-        User user = userRepository.findById(1).orElseThrow(() -> new RuntimeException("User not found"));
-        return DTOConverter.convertUser(user);
+    public ApiResponseCustom<UserDTO> getCurrentUser() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
+        return ApiResponseCustom.success(DTOConverter.convertUser(user));
     }
 
     @Override

@@ -1,4 +1,4 @@
-package com.project.quanlycanghangkhong.dto.response;
+package com.project.quanlycanghangkhong.dto.response.auth;
 
 import com.project.quanlycanghangkhong.dto.RoleDTO;
 import com.project.quanlycanghangkhong.dto.TeamDTO;

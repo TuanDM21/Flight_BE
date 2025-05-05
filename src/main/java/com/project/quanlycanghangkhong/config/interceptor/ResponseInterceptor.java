@@ -2,7 +2,8 @@ package com.project.quanlycanghangkhong.config.interceptor;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.project.quanlycanghangkhong.dto.response.ApiResponse;
+import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
+
 import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -23,11 +24,11 @@ public class ResponseInterceptor implements ResponseBodyAdvice<Object> {
 
 	@Override
 	public boolean supports(MethodParameter returnType, Class<? extends HttpMessageConverter<?>> converterType) {
-		// Chỉ áp dụng cho các response không phải là ApiResponse hoặc
-		// ResponseEntity<ApiResponse>
-		return !returnType.getParameterType().equals(ApiResponse.class) &&
+		// Chỉ áp dụng cho các response không phải là ApiResponseCustom hoặc
+		// ResponseEntity<ApiResponseCustom>
+		return !returnType.getParameterType().equals(ApiResponseCustom.class) &&
 				!(returnType.getParameterType().equals(ResponseEntity.class) &&
-						returnType.getGenericParameterType().getTypeName().contains("ApiResponse"));
+						returnType.getGenericParameterType().getTypeName().contains("ApiResponseCustom"));
 	}
 
 	@Override
@@ -40,13 +41,13 @@ public class ResponseInterceptor implements ResponseBodyAdvice<Object> {
 			return body;
 		}
 
-		// Nếu body là null, trả về ApiResponse với data là null
+		// Nếu body là null, trả về ApiResponseCustom với data là null
 		if (body == null) {
-			return ApiResponse.success(null);
+			return ApiResponseCustom.success(null);
 		}
 
-		// Nếu đã là ApiResponse, trả về nguyên vẹn
-		if (body instanceof ApiResponse) {
+		// Nếu đã là ApiResponseCustom, trả về nguyên vẹn
+		if (body instanceof ApiResponseCustom) {
 			return body;
 		}
 
@@ -55,14 +56,14 @@ public class ResponseInterceptor implements ResponseBodyAdvice<Object> {
 			ResponseEntity<?> responseEntity = (ResponseEntity<?>) body;
 			Object responseBody = responseEntity.getBody();
 
-			// Không wrap nếu đã là ApiResponse
-			if (responseBody instanceof ApiResponse) {
+			// Không wrap nếu đã là ApiResponseCustom
+			if (responseBody instanceof ApiResponseCustom) {
 				return body;
 			}
 
-			// Tạo ApiResponse mới với status code và body từ ResponseEntity
-			ApiResponse<?> apiResponse = ApiResponse.builder()
-					.statusCode(responseEntity.getStatusCodeValue())
+			// Tạo ApiResponseCustom mới với status code và body từ ResponseEntity
+			ApiResponseCustom<?> apiResponse = ApiResponseCustom.builder()
+					.statusCode(responseEntity.getStatusCode().value())
 					.message("Thành công")
 					.data(responseBody)
 					.success(true)
@@ -76,14 +77,14 @@ public class ResponseInterceptor implements ResponseBodyAdvice<Object> {
 		// Nếu là String, cần chuyển đổi thành JSON string
 		if (body instanceof String) {
 			try {
-				ApiResponse<Object> apiResponse = ApiResponse.success(body);
+				ApiResponseCustom<Object> apiResponse = ApiResponseCustom.success(body);
 				return objectMapper.writeValueAsString(apiResponse);
 			} catch (JsonProcessingException e) {
 				return body;
 			}
 		}
 
-		// Nếu không phải ResponseEntity, wrap trực tiếp trong ApiResponse
-		return ApiResponse.success(body);
+		// Nếu không phải ResponseEntity, wrap trực tiếp trong ApiResponseCustom
+		return ApiResponseCustom.success(body);
 	}
 }

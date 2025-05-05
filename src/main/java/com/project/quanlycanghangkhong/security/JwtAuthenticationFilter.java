@@ -1,7 +1,8 @@
 package com.project.quanlycanghangkhong.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.project.quanlycanghangkhong.dto.response.ApiResponse;
+import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,8 +21,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -100,7 +99,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 		response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 		response.setCharacterEncoding("UTF-8");
 
-		ApiResponse<?> apiResponse = ApiResponse.error(HttpStatus.UNAUTHORIZED, message);
+		ApiResponseCustom<?> apiResponse = ApiResponseCustom.error(HttpStatus.UNAUTHORIZED, message);
 		response.getWriter().write(objectMapper.writeValueAsString(apiResponse));
 	}
 }
