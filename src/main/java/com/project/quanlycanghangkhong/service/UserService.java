@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.project.quanlycanghangkhong.dto.UserDTO;
+import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
 import com.project.quanlycanghangkhong.model.User;
 
 public interface UserService {
@@ -19,8 +20,7 @@ public interface UserService {
 
     List<UserDTO> filterUsers(Integer teamId, Integer unitId, String searchText);
 
-    // Lấy thông tin user hiện tại dựa vào token
-    UserDTO getCurrentUser();
+    ApiResponseCustom<UserDTO> getCurrentUser();
 
     List<UserDTO> searchUsersByKeyword(String keyword);
 }

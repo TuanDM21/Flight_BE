@@ -1,4 +1,4 @@
-package com.project.quanlycanghangkhong.dto.response;
+package com.project.quanlycanghangkhong.dto.response.auth;
 
 import lombok.Builder;
 import lombok.Data;

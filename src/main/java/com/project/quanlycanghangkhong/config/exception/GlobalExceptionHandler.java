@@ -1,6 +1,6 @@
 package com.project.quanlycanghangkhong.config.exception;
 
-import com.project.quanlycanghangkhong.dto.response.ApiResponse;
+import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -20,78 +20,67 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
 	@ExceptionHandler(Exception.class)
-	public ResponseEntity<ApiResponse<Object>> handleAllExceptions(Exception ex, WebRequest request) {
-		ApiResponse<Object> response = ApiResponse.error(
-				HttpStatus.INTERNAL_SERVER_ERROR,
-				"Đã xảy ra lỗi: " + ex.getMessage());
+	public ResponseEntity<ApiResponseCustom<Object>> handleAllExceptions(Exception ex, WebRequest request) {
+		ApiResponseCustom<Object> response = ApiResponseCustom.error(
+				HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
 		return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
 	}
 
 	@ExceptionHandler(AccessDeniedException.class)
-	public ResponseEntity<ApiResponse<Object>> handleAccessDeniedException(AccessDeniedException ex) {
-		ApiResponse<Object> response = ApiResponse.error(
-				HttpStatus.FORBIDDEN,
-				"Bạn không có quyền truy cập tài nguyên này");
+	public ResponseEntity<ApiResponseCustom<Object>> handleAccessDeniedException(AccessDeniedException ex) {
+		ApiResponseCustom<Object> response = ApiResponseCustom.error(
+				HttpStatus.FORBIDDEN, "Access denied");
 		return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
 	}
 
 	@ExceptionHandler(EntityNotFoundException.class)
-	public ResponseEntity<ApiResponse<Object>> handleEntityNotFoundException(EntityNotFoundException ex) {
-		ApiResponse<Object> response = ApiResponse.error(
-				HttpStatus.NOT_FOUND,
-				ex.getMessage());
+	public ResponseEntity<ApiResponseCustom<Object>> handleEntityNotFoundException(EntityNotFoundException ex) {
+		ApiResponseCustom<Object> response = ApiResponseCustom.error(
+				HttpStatus.NOT_FOUND, ex.getMessage());
 		return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
 	}
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)
-	public ResponseEntity<ApiResponse<Map<String, String>>> handleValidationExceptions(
+	public ResponseEntity<ApiResponseCustom<Map<String, String>>> handleValidationExceptions(
 			MethodArgumentNotValidException ex) {
 		Map<String, String> errors = new HashMap<>();
-		ex.getBindingResult().getFieldErrors().forEach(error -> {
-			String fieldName = error.getField();
-			String errorMessage = error.getDefaultMessage();
-			errors.put(fieldName, errorMessage);
-		});
-
-		// Log validation errors for debugging
-		System.out.println("Validation errors: " + errors);
-
-		ApiResponse<Map<String, String>> response = ApiResponse.error(
-				HttpStatus.BAD_REQUEST,
-				"Dữ liệu không hợp lệ");
+		ex.getBindingResult().getFieldErrors()
+				.forEach(error -> errors.put(error.getField(), error.getDefaultMessage()));
+		ApiResponseCustom<Map<String, String>> response = ApiResponseCustom.error(HttpStatus.BAD_REQUEST,
+				"Validation failed");
 		response.setData(errors);
-
 		return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
 	}
 
 	@ExceptionHandler(ConstraintViolationException.class)
-	public ResponseEntity<ApiResponse<Object>> handleConstraintViolationException(ConstraintViolationException ex) {
-		ApiResponse<Object> response = ApiResponse.error(
+	public ResponseEntity<ApiResponseCustom<Object>> handleConstraintViolationException(
+			ConstraintViolationException ex) {
+		ApiResponseCustom<Object> response = ApiResponseCustom.error(
 				HttpStatus.BAD_REQUEST,
 				"Dữ liệu vi phạm ràng buộc: " + ex.getMessage());
 		return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
 	}
 
 	@ExceptionHandler(MethodArgumentTypeMismatchException.class)
-	public ResponseEntity<ApiResponse<Object>> handleMethodArgumentTypeMismatch(
+	public ResponseEntity<ApiResponseCustom<Object>> handleMethodArgumentTypeMismatch(
 			MethodArgumentTypeMismatchException ex) {
-		ApiResponse<Object> response = ApiResponse.error(
+		ApiResponseCustom<Object> response = ApiResponseCustom.error(
 				HttpStatus.BAD_REQUEST,
 				"Tham số không đúng kiểu dữ liệu: " + ex.getName());
 		return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
 	}
 
 	@ExceptionHandler(DataIntegrityViolationException.class)
-	public ResponseEntity<ApiResponse<Object>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
-		ApiResponse<Object> response = ApiResponse.error(
+	public ResponseEntity<ApiResponseCustom<Object>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+		ApiResponseCustom<Object> response = ApiResponseCustom.error(
 				HttpStatus.CONFLICT,
 				"Vi phạm tính toàn vẹn dữ liệu: " + ex.getMostSpecificCause().getMessage());
 		return new ResponseEntity<>(response, HttpStatus.CONFLICT);
 	}
 
 	@ExceptionHandler(RuntimeException.class)
-	public ResponseEntity<ApiResponse<Object>> handleRuntimeException(RuntimeException ex) {
-		ApiResponse<Object> response = ApiResponse.error(
+	public ResponseEntity<ApiResponseCustom<Object>> handleRuntimeException(RuntimeException ex) {
+		ApiResponseCustom<Object> response = ApiResponseCustom.error(
 				HttpStatus.BAD_REQUEST,
 				ex.getMessage());
 		return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
