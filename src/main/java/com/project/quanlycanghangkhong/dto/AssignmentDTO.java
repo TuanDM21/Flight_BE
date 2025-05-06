@@ -3,11 +3,24 @@ package com.project.quanlycanghangkhong.dto;
 import java.util.Date;
 
 public class AssignmentDTO {
+    private Integer assignmentId;
     private Integer recipientId;
     private String recipientType; // 'team', 'unit', 'user'
     private Integer assignedBy;
+    private Date assignedAt;
     private Date dueAt;
+    private Date completedAt;
+    private Integer completedBy;
+    private Integer status;
     private String note;
+
+    public Integer getAssignmentId() {
+        return assignmentId;
+    }
+
+    public void setAssignmentId(Integer assignmentId) {
+        this.assignmentId = assignmentId;
+    }
 
     public Integer getRecipientId() {
         return recipientId;
@@ -33,6 +46,14 @@ public class AssignmentDTO {
         this.assignedBy = assignedBy;
     }
 
+    public Date getAssignedAt() {
+        return assignedAt;
+    }
+
+    public void setAssignedAt(Date assignedAt) {
+        this.assignedAt = assignedAt;
+    }
+
     public Date getDueAt() {
         return dueAt;
     }
@@ -47,5 +68,29 @@ public class AssignmentDTO {
 
     public void setNote(String note) {
         this.note = note;
+    }
+
+    public Date getCompletedAt() {
+        return completedAt;
+    }
+
+    public void setCompletedAt(Date completedAt) {
+        this.completedAt = completedAt;
+    }
+
+    public Integer getCompletedBy() {
+        return completedBy;
+    }
+
+    public void setCompletedBy(Integer completedBy) {
+        this.completedBy = completedBy;
+    }
+
+    public Integer getStatus() {
+        return status;
+    }
+
+    public void setStatus(Integer status) {
+        this.status = status;
     }
 }

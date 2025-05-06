@@ -197,11 +197,16 @@ public class TaskServiceImpl implements TaskService {
             .filter(a -> a.getTask().getId().equals(task.getId()))
             .map(a -> {
                 AssignmentDTO adto = new AssignmentDTO();
+                adto.setAssignmentId(a.getAssignmentId());
                 adto.setRecipientId(a.getRecipientId());
                 adto.setRecipientType(a.getRecipientType());
                 adto.setAssignedBy(a.getAssignedBy() != null ? a.getAssignedBy().getId() : null);
+                adto.setAssignedAt(a.getAssignedAt() != null ? java.sql.Timestamp.valueOf(a.getAssignedAt()) : null);
                 adto.setDueAt(a.getDueAt() != null ? java.sql.Timestamp.valueOf(a.getDueAt()) : null);
                 adto.setNote(a.getNote());
+                adto.setCompletedAt(a.getCompletedAt() != null ? java.sql.Timestamp.valueOf(a.getCompletedAt()) : null);
+                adto.setCompletedBy(a.getCompletedBy() != null ? a.getCompletedBy().getId() : null);
+                adto.setStatus(a.getStatus());
                 return adto;
             }).toList();
         dto.setAssignments(assignmentDTOs);
