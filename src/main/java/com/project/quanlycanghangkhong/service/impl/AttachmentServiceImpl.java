@@ -1,10 +1,12 @@
-package com.project.quanlycanghangkhong.service;
+package com.project.quanlycanghangkhong.service.impl;
 
 import com.project.quanlycanghangkhong.dto.AttachmentDTO;
 import com.project.quanlycanghangkhong.model.Attachment;
 import com.project.quanlycanghangkhong.model.Document;
 import com.project.quanlycanghangkhong.repository.AttachmentRepository;
 import com.project.quanlycanghangkhong.repository.DocumentRepository;
+import com.project.quanlycanghangkhong.service.AttachmentService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;

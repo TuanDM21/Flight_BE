@@ -1,9 +1,11 @@
-package com.project.quanlycanghangkhong.service;
+package com.project.quanlycanghangkhong.service.impl;
 
 import com.project.quanlycanghangkhong.model.Task;
 import com.project.quanlycanghangkhong.model.User;
 import com.project.quanlycanghangkhong.repository.TaskRepository;
 import com.project.quanlycanghangkhong.repository.UserRepository;
+import com.project.quanlycanghangkhong.service.TaskService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

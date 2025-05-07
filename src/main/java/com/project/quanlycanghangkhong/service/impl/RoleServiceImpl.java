@@ -1,7 +1,9 @@
-package com.project.quanlycanghangkhong.service;
+package com.project.quanlycanghangkhong.service.impl;
 
 import com.project.quanlycanghangkhong.model.Role;
 import com.project.quanlycanghangkhong.repository.RoleRepository;
+import com.project.quanlycanghangkhong.service.RoleService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
