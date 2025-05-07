@@ -4,6 +4,7 @@ import java.util.Date;
 
 public class AssignmentDTO {
     private Integer assignmentId;
+    private Integer taskId;
     private Integer recipientId;
     private String recipientType; // 'team', 'unit', 'user'
     private Integer assignedBy;
@@ -20,6 +21,14 @@ public class AssignmentDTO {
 
     public void setAssignmentId(Integer assignmentId) {
         this.assignmentId = assignmentId;
+    }
+
+    public Integer getTaskId() {
+        return taskId;
+    }
+
+    public void setTaskId(Integer taskId) {
+        this.taskId = taskId;
     }
 
     public Integer getRecipientId() {
