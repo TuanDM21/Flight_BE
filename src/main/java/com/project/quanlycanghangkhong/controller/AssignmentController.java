@@ -44,7 +44,7 @@ public class AssignmentController {
         AssignmentDTO result = assignmentService.getAssignmentById(id);
         if (result == null) return ResponseEntity.status(404).body(ApiResponseCustom.error(HttpStatus.NOT_FOUND, "Không tìm thấy assignment"));
         return ResponseEntity.ok(ApiResponseCustom.success(result));
-    }
+    }   
 
     // Lấy danh sách giao công việc theo task
     @GetMapping("/task/{taskId}")

@@ -3,7 +3,6 @@ package com.project.quanlycanghangkhong.service.impl;
 import com.project.quanlycanghangkhong.dto.AssignmentDTO;
 import com.project.quanlycanghangkhong.model.Assignment;
 import com.project.quanlycanghangkhong.model.Task;
-import com.project.quanlycanghangkhong.model.User;
 import com.project.quanlycanghangkhong.repository.AssignmentRepository;
 import com.project.quanlycanghangkhong.repository.TaskRepository;
 import com.project.quanlycanghangkhong.repository.UserRepository;
@@ -13,7 +12,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
-import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -30,6 +28,8 @@ public class AssignmentServiceImpl implements AssignmentService {
     private AssignmentDTO toDTO(Assignment a) {
         AssignmentDTO dto = new AssignmentDTO();
         dto.setAssignmentId(a.getAssignmentId());
+        // Set taskId from Assignment entity
+        dto.setTaskId(a.getTask() != null ? a.getTask().getId() : null);
         dto.setRecipientId(a.getRecipientId());
         dto.setRecipientType(a.getRecipientType());
         dto.setAssignedBy(a.getAssignedBy() != null ? a.getAssignedBy().getId() : null);
