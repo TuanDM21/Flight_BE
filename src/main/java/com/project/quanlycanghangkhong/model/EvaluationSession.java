@@ -37,6 +37,7 @@ public class EvaluationSession {
     @OneToMany(mappedBy = "evaluationSession", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<EvaluationIssue> issues;
 
+     // Getters and Setters
     public Integer getId() {
         return id;
     }
