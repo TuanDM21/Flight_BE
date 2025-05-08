@@ -2,6 +2,7 @@ package com.project.quanlycanghangkhong.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import org.hibernate.annotations.CreationTimestamp;
 
 @Entity
 @Table(name = "Attachment")
@@ -23,7 +24,8 @@ public class Attachment {
     @Column(name = "file_size")
     private Long fileSize;
 
-    @Column(name = "created_at", nullable = false)
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     // Getters and setters
