@@ -10,6 +10,7 @@ import com.project.quanlycanghangkhong.dto.TeamDTO;
 import com.project.quanlycanghangkhong.model.Team;
 import com.project.quanlycanghangkhong.service.TeamService;
 import com.project.quanlycanghangkhong.dto.ApiResponse;
+import com.project.quanlycanghangkhong.dto.response.teams.ApiAllTeamsResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -33,12 +34,17 @@ public class TeamController {
 	    @io.swagger.v3.oas.annotations.responses.ApiResponse(
 	        responseCode = "200",
 	        description = "Successfully retrieved all teams",
-	        content = @Content(array = @ArraySchema(schema = @Schema(implementation = TeamDTO.class)))
+	        content = @Content(schema = @Schema(implementation = ApiAllTeamsResponse.class))
 	    )
 	})
-	public ResponseEntity<ApiResponse<List<TeamDTO>>> getAllTeams() {
+	public ResponseEntity<ApiAllTeamsResponse> getAllTeams() {
 		List<TeamDTO> dtos = teamService.getAllTeams();
-		return ResponseEntity.ok(new ApiResponse<>("Thành công", 200, dtos, true));
+		ApiAllTeamsResponse response = new ApiAllTeamsResponse();
+		response.setMessage("Thành công");
+		response.setStatusCode(200);
+		response.setData(dtos);
+		response.setSuccess(true);
+		return ResponseEntity.ok(response);
 	}
 
 	@PostMapping

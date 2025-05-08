@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.project.quanlycanghangkhong.dto.UnitDTO;
 import com.project.quanlycanghangkhong.service.UnitService;
 import com.project.quanlycanghangkhong.dto.ApiResponse;
+import com.project.quanlycanghangkhong.dto.response.units.ApiAllUnitsResponse;
 
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.Operation;
@@ -35,16 +36,21 @@ public class UnitController {
 	        @io.swagger.v3.oas.annotations.responses.ApiResponse(
 	            responseCode = "200",
 	            description = "Successfully retrieved all units",
-	            content = @Content(array = @ArraySchema(schema = @Schema(implementation = UnitDTO.class)))
+	            content = @Content(schema = @Schema(implementation = ApiAllUnitsResponse.class))
 	        )
 	    })
-	    public ResponseEntity<ApiResponse<List<UnitDTO>>> getUnits(@RequestParam(value = "teamId", required = false) Integer teamId) {
+	    public ResponseEntity<ApiAllUnitsResponse> getUnits(@RequestParam(value = "teamId", required = false) Integer teamId) {
 	        List<UnitDTO> dtos;
 	        if (teamId != null) {
 	            dtos = unitService.getUnitsByTeam(teamId);
 	        } else {
 	            dtos = unitService.getAllUnits();
 	        }
-	        return ResponseEntity.ok(new ApiResponse<>("Thành công", 200, dtos, true));
+	        ApiAllUnitsResponse response = new ApiAllUnitsResponse();
+	        response.setMessage("Thành công");
+	        response.setStatusCode(200);
+	        response.setData(dtos);
+	        response.setSuccess(true);
+	        return ResponseEntity.ok(response);
 	    }
 }
