@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.project.quanlycanghangkhong.dto.UnitDTO;
 import com.project.quanlycanghangkhong.service.UnitService;
+import com.project.quanlycanghangkhong.dto.ApiResponse;
 
 @CrossOrigin(origins = "*")
 @RestController
@@ -23,13 +24,13 @@ public class UnitController {
 
 	    // Nếu có teamId, trả về unit của team đó; nếu không có, trả về tất cả unit.
 	    @GetMapping
-	    public ResponseEntity<List<UnitDTO>> getUnits(@RequestParam(value = "teamId", required = false) Integer teamId) {
+	    public ResponseEntity<ApiResponse<List<UnitDTO>>> getUnits(@RequestParam(value = "teamId", required = false) Integer teamId) {
 	        List<UnitDTO> dtos;
 	        if (teamId != null) {
 	            dtos = unitService.getUnitsByTeam(teamId);
 	        } else {
 	            dtos = unitService.getAllUnits();
 	        }
-	        return ResponseEntity.ok(dtos);
+	        return ResponseEntity.ok(new ApiResponse<>("Thành công", 200, dtos, true));
 	    }
 }

@@ -1,8 +1,10 @@
-package com.project.quanlycanghangkhong.service;
+package com.project.quanlycanghangkhong.service.impl;
 
 import com.project.quanlycanghangkhong.dto.EvaluationGroupDTO;
 import com.project.quanlycanghangkhong.model.EvaluationGroup;
 import com.project.quanlycanghangkhong.repository.EvaluationGroupRepository;
+import com.project.quanlycanghangkhong.service.EvaluationGroupService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

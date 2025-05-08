@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import com.project.quanlycanghangkhong.dto.TeamDTO;
 import com.project.quanlycanghangkhong.model.Team;
 import com.project.quanlycanghangkhong.service.TeamService;
+import com.project.quanlycanghangkhong.dto.ApiResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -30,9 +31,9 @@ public class TeamController {
 	@ApiResponses(value = {
 			@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully retrieved all teams", content = @Content(schema = @Schema(implementation = TeamDTO.class)))
 	})
-	public ResponseEntity<List<TeamDTO>> getAllTeams() {
+	public ResponseEntity<ApiResponse<List<TeamDTO>>> getAllTeams() {
 		List<TeamDTO> dtos = teamService.getAllTeams();
-		return ResponseEntity.ok(dtos);
+		return ResponseEntity.ok(new ApiResponse<>("Thành công", 200, dtos, true));
 	}
 
 	@PostMapping
@@ -41,10 +42,11 @@ public class TeamController {
 			@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Team created successfully", content = @Content(schema = @Schema(implementation = TeamDTO.class))),
 			@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid input")
 	})
-	public ResponseEntity<TeamDTO> createTeam(@RequestBody TeamDTO teamDTO) {
+	public ResponseEntity<ApiResponse<TeamDTO>> createTeam(@RequestBody TeamDTO teamDTO) {
 		Team team = new Team();
 		team.setTeamName(teamDTO.getTeamName());
 		Team createdTeam = teamService.createTeam(team);
-		return ResponseEntity.ok(new TeamDTO(createdTeam.getId(), createdTeam.getTeamName()));
+		TeamDTO dto = new TeamDTO(createdTeam.getId(), createdTeam.getTeamName());
+		return ResponseEntity.ok(new ApiResponse<>("Thành công", 200, dto, true));
 	}
 }
