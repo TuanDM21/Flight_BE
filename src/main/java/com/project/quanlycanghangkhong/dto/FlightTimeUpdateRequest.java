@@ -6,7 +6,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 public class FlightTimeUpdateRequest {
     private String actualDepartureTime;
     private String actualArrivalTime;
-    private String actualDepartureTimeAtArrival;    
+    private String actualDepartureTimeAtArrival;
+    private String eventType;
 
     // 1) Default constructor bắt buộc cho Jackson
     public FlightTimeUpdateRequest() {}
@@ -38,5 +39,11 @@ public class FlightTimeUpdateRequest {
     }
     public void setActualDepartureTimeAtArrival(String actualDepartureTimeAtArrival) {
         this.actualDepartureTimeAtArrival = actualDepartureTimeAtArrival;
+    }
+    public String getEventType() {
+        return eventType;
+    }
+    public void setEventType(String eventType) {
+        this.eventType = eventType;
     }
 }

@@ -150,10 +150,13 @@ public class FlightController {
         }
         // Lấy actual time vừa nhập
         LocalTime actualTime = null;
+        String eventType = payload.getEventType();
         if (payload.getActualDepartureTimeAtArrival() != null) {
             actualTime = LocalTime.parse(payload.getActualDepartureTimeAtArrival());
+            if (eventType == null || eventType.isEmpty()) eventType = "actualDepartureTimeAtArrival";
         } else if (payload.getActualArrivalTime() != null) {
             actualTime = LocalTime.parse(payload.getActualArrivalTime());
+            if (eventType == null || eventType.isEmpty()) eventType = "actualArrivalTime";
         }
         if (actualTime == null) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Chưa nhập giờ thực tế"));
@@ -165,8 +168,15 @@ public class FlightController {
         // Lấy userId trực chung, lọc theo actual time
         userIds.addAll(userShiftService.getUserIdsOnDutyAtTime(flightDate, actualTime));
         // Gửi notification
-        String title = "Thông báo chuyến bay";
-        String content = "Chuyến bay " + flight.getFlightNumber() + " đã cập nhật giờ thực tế: " + actualTime;
+        String title = "Thông báo chuyến bay " + flight.getFlightNumber() + " " +flight.getArrivalAirport().getAirportCode() ;
+        String content;
+        if ("actualArrivalTime".equals(eventType)) {
+            content = "Hạ cánh thực tế tại " + (flight.getArrivalAirport() != null ? flight.getArrivalAirport().getAirportCode() : "?") + ": " + actualTime;
+        } else if ("actualDepartureTimeAtArrival".equals(eventType)) {
+            content = "Cất cánh thực tế tại " + (flight.getArrivalAirport() != null ? flight.getArrivalAirport().getAirportCode() : "?") + ": " + actualTime;
+        } else {
+            content = "Chuyến bay " + flight.getFlightNumber() + " đã cập nhật giờ thực tế: " + actualTime;
+        }
         notificationService.createNotifications(
             userIds.stream().toList(),
             "FLIGHT",
