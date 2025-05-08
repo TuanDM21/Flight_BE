@@ -12,6 +12,7 @@ import com.project.quanlycanghangkhong.service.TeamService;
 import com.project.quanlycanghangkhong.dto.ApiResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -29,7 +30,11 @@ public class TeamController {
 	@GetMapping
 	@Operation(summary = "Get all teams", description = "Retrieve a list of all teams")
 	@ApiResponses(value = {
-			@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully retrieved all teams", content = @Content(schema = @Schema(implementation = TeamDTO.class)))
+	    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+	        responseCode = "200",
+	        description = "Successfully retrieved all teams",
+	        content = @Content(array = @ArraySchema(schema = @Schema(implementation = TeamDTO.class)))
+	    )
 	})
 	public ResponseEntity<ApiResponse<List<TeamDTO>>> getAllTeams() {
 		List<TeamDTO> dtos = teamService.getAllTeams();

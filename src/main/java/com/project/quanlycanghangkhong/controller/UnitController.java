@@ -14,6 +14,12 @@ import com.project.quanlycanghangkhong.dto.UnitDTO;
 import com.project.quanlycanghangkhong.service.UnitService;
 import com.project.quanlycanghangkhong.dto.ApiResponse;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+
 @CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/units")
@@ -24,6 +30,14 @@ public class UnitController {
 
 	    // Nếu có teamId, trả về unit của team đó; nếu không có, trả về tất cả unit.
 	    @GetMapping
+	    @Operation(summary = "Get all units", description = "Retrieve a list of all units or units by teamId")
+	    @ApiResponses(value = {
+	        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+	            responseCode = "200",
+	            description = "Successfully retrieved all units",
+	            content = @Content(array = @ArraySchema(schema = @Schema(implementation = UnitDTO.class)))
+	        )
+	    })
 	    public ResponseEntity<ApiResponse<List<UnitDTO>>> getUnits(@RequestParam(value = "teamId", required = false) Integer teamId) {
 	        List<UnitDTO> dtos;
 	        if (teamId != null) {

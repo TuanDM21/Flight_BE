@@ -30,6 +30,7 @@ import com.project.quanlycanghangkhong.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 
 @CrossOrigin(origins = "*")
@@ -46,7 +47,7 @@ public class UserController {
         @GetMapping
         @Operation(summary = "Get all users", description = "Retrieve a list of all users")
         @ApiResponses(value = {
-                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully retrieved all users", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
+                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully retrieved all users", content = @Content(array = @ArraySchema(schema = @Schema(implementation = UserDTO.class))))
         })
         public ResponseEntity<ApiResponse<List<UserDTO>>> getAllUsers() {
                 List<UserDTO> dtos = userService.getAllUsers();
