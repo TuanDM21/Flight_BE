@@ -59,7 +59,7 @@ public class NotificationServiceImpl implements NotificationService {
         // Chỉ trả về các notification có type là "ACTIVITY"
         return notificationRepository.findByUserIdAndCreatedAtAfterOrderByCreatedAtDesc(userId, oneWeekAgo)
             .stream()
-            .filter(n -> "ACTIVITY".equals(n.getType()))
+            // .filter(n -> "ACTIVITY".equals(n.getType()))
             .toList();
     }
 

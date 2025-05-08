@@ -10,6 +10,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/evaluation-groups")
+@CrossOrigin(origins = "*")
 public class EvaluationGroupController {
     @Autowired
     private EvaluationGroupService evaluationGroupService;

@@ -9,6 +9,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/evaluation-sessions")
+@CrossOrigin(origins = "*")
 public class EvaluationSessionController {
     @Autowired
     private EvaluationSessionService evaluationSessionService;

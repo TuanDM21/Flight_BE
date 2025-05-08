@@ -24,6 +24,7 @@ import javax.validation.Valid;
 @RequestMapping("/api/auth")
 @Tag(name = "Authentication", description = "APIs for user authentication")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class AuthController {
 
 	private final AuthService authService;

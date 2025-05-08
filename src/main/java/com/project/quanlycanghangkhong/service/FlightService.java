@@ -29,5 +29,5 @@ public interface FlightService {
 	    /**
 	     * Gửi notification cho các user phục vụ chuyến bay hoặc trực ca khi thay đổi actual time
 	     */
-	    void notifyUsersOnActualTimeChange(Long flightId, java.time.LocalTime actualTime);
+	    void notifyUsersOnActualTimeChange(Long flightId, java.time.LocalTime actualTime, String eventType, String airportCode);
 }

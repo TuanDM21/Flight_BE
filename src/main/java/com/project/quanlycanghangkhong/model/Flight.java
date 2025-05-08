@@ -60,6 +60,9 @@ public class Flight {
     @Column(name = "actual_departure_time_at_arrival")
     private LocalTime actualDepartureTimeAtArrival;
 
+    @Column(name = "note", columnDefinition = "TEXT")
+    private String note;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -81,6 +84,18 @@ public class Flight {
         this.departureTime = departureTime;
         this.arrivalTime = arrivalTime;
         this.flightDate = flightDate;
+    }
+
+    // Constructor có tham số (bổ sung note)
+    public Flight(String flightNumber, Airport departureAirport, Airport arrivalAirport,
+            LocalTime departureTime, LocalTime arrivalTime, LocalDate flightDate, String note) {
+        this.flightNumber = flightNumber;
+        this.departureAirport = departureAirport;
+        this.arrivalAirport = arrivalAirport;
+        this.departureTime = departureTime;
+        this.arrivalTime = arrivalTime;
+        this.flightDate = flightDate;
+        this.note = note;
     }
 
     // Getters & Setters
@@ -163,6 +178,14 @@ public class Flight {
 
     public void setActualDepartureTimeAtArrival(LocalTime actualDepartureTimeAtArrival) {
         this.actualDepartureTimeAtArrival = actualDepartureTimeAtArrival;
+    }
+
+    public String getNote() {
+        return note;
+    }
+
+    public void setNote(String note) {
+        this.note = note;
     }
 
     public LocalDateTime getCreatedAt() {

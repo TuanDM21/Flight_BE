@@ -9,6 +9,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/evaluation-issues")
+@CrossOrigin(origins = "*")
 public class EvaluationIssueController {
     @Autowired
     private EvaluationIssueService evaluationIssueService;

@@ -20,6 +20,7 @@ public class FlightDTO {
     private LocalTime actualDepartureTimeAtArrival;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String note;
 
     public FlightDTO() {}
 
@@ -35,7 +36,8 @@ public class FlightDTO {
         this.actualDepartureTimeAtArrival = flight.getActualDepartureTimeAtArrival();
         this.createdAt = flight.getCreatedAt();
         this.updatedAt = flight.getUpdatedAt();
-
+        this.note = flight.getNote();
+        
         if (flight.getDepartureAirport() != null) {
             this.departureAirport = new AirportDTO(
                 flight.getDepartureAirport().getAirportCode(),
@@ -53,7 +55,7 @@ public class FlightDTO {
                      String departureAirportCode, String arrivalAirportCode,
                      LocalTime departureTime, LocalTime arrivalTime, LocalDate flightDate,
                      LocalTime actualDepartureTime, LocalTime actualArrivalTime, LocalTime actualDepartureTimeAtArrival,
-                     LocalDateTime createdAt, LocalDateTime updatedAt) {
+                     LocalDateTime createdAt, LocalDateTime updatedAt, String note) {
         this.id = id;
         this.flightNumber = flightNumber;
         this.departureTime = departureTime;
@@ -64,6 +66,7 @@ public class FlightDTO {
         this.actualDepartureTimeAtArrival = actualDepartureTimeAtArrival;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.note = note;
 
         // Chuyển đổi mã sân bay thành AirportDTO; nếu cần bổ sung thêm tên sân bay thì điều chỉnh lại
         if (departureAirportCode != null) {
@@ -72,6 +75,16 @@ public class FlightDTO {
         if (arrivalAirportCode != null) {
             this.arrivalAirport = new AirportDTO(arrivalAirportCode, null);
         }
+    }
+
+    // Constructor projection không có trường note (backward compatible)
+    public FlightDTO(Long id, String flightNumber, 
+                     String departureAirportCode, String arrivalAirportCode,
+                     LocalTime departureTime, LocalTime arrivalTime, LocalDate flightDate,
+                     LocalTime actualDepartureTime, LocalTime actualArrivalTime, LocalTime actualDepartureTimeAtArrival,
+                     LocalDateTime createdAt, LocalDateTime updatedAt) {
+        this(id, flightNumber, departureAirportCode, arrivalAirportCode, departureTime, arrivalTime, flightDate,
+            actualDepartureTime, actualArrivalTime, actualDepartureTimeAtArrival, createdAt, updatedAt, null);
     }
 
     // Getters & Setters ...
@@ -111,6 +124,12 @@ public class FlightDTO {
     }
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
+    }
+    public String getNote() {
+        return note;
+    }
+    public void setNote(String note) {
+        this.note = note;
     }
     // Setters nếu cần...
 }

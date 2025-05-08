@@ -64,6 +64,7 @@ public class FlightServiceImpl implements FlightService {
         existingFlight.setDepartureTime(flightData.getDepartureTime());
         existingFlight.setArrivalTime(flightData.getArrivalTime());
         existingFlight.setFlightDate(flightData.getFlightDate());
+		existingFlight.setNote(flightData.getNote());
 
         // Cập nhật các trường thực tế
         existingFlight.setActualDepartureTime(flightData.getActualDepartureTime());
@@ -138,28 +139,34 @@ public void updateFlightTimes(Long id, FlightTimeUpdateRequest req) {
     public Flight getFlightEntityById(Long id) {
         return flightRepository.findById(id).orElse(null);
     }
-
-	@Override
-	public void notifyUsersOnActualTimeChange(Long flightId, LocalTime actualTime) {
-	    Flight flight = getFlightEntityById(flightId);
-	    if (flight == null || actualTime == null) return;
-	    LocalDate flightDate = flight.getFlightDate();
-	    // Lấy user phục vụ chuyến bay
-	    HashSet<Integer> userIds = new HashSet<>(userFlightShiftService.getUserIdsByFlightAndDate(flightId, flightDate));
-	    // Lấy user trực ca
-	    userIds.addAll(userShiftService.getUserIdsOnDutyAtTime(flightDate, actualTime));
-	    if (!userIds.isEmpty()) {
-	        String title = "Thông báo chuyến bay";
-	        String content = "Chuyến bay " + flight.getFlightNumber() + " đã cập nhật giờ thực tế: " + actualTime;
-	        notificationService.createNotifications(
-	            userIds.stream().toList(),
-	            "FLIGHT",
-	            title,
-	            content,
-	            flightId.intValue(),
-	            false
-	        );
-	    }
-	}
+@Override
+public void notifyUsersOnActualTimeChange(Long flightId, LocalTime actualTime, String eventType, String airportCode) {
+    Flight flight = getFlightEntityById(flightId);
+    if (flight == null || actualTime == null) return;
+    LocalDate flightDate = flight.getFlightDate();
+    // Lấy user phục vụ chuyến bay
+    HashSet<Integer> userIds = new HashSet<>(userFlightShiftService.getUserIdsByFlightAndDate(flightId, flightDate));
+    // Lấy user trực ca
+    userIds.addAll(userShiftService.getUserIdsOnDutyAtTime(flightDate, actualTime));
+    if (!userIds.isEmpty()) {
+        String title = "Thông báo chuyến bay";
+        String content;
+        if ("actualArrivalTime".equals(eventType)) {
+            content = "Hạ cánh thực tế tại " + airportCode + ": " + actualTime;
+        } else if ("actualDepartureTimeAtArrival".equals(eventType)) {
+            content = "Cất cánh thực tế tại " + airportCode + ": " + actualTime;
+        } else {
+            content = "Chuyến bay " + flight.getFlightNumber() + " đã cập nhật giờ thực tế: " + actualTime;
+        }
+        notificationService.createNotifications(
+            userIds.stream().toList(),
+            "FLIGHT",
+            title,
+            content,
+            flightId.intValue(),
+            false
+        );
+    }
+}
 
 }

@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/task-documents")
+@CrossOrigin(origins = "*")
 public class TaskDocumentController {
     @Autowired
     private TaskDocumentService taskDocumentService;

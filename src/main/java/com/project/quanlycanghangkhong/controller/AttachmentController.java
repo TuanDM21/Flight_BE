@@ -11,6 +11,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/attachments")
+@CrossOrigin(origins = "*")
 public class AttachmentController {
     @Autowired
     private AttachmentService attachmentService;
