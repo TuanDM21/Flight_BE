@@ -125,7 +125,7 @@ curl -s -X PUT "$API_URL/$NEW_ID/status" \
   }' | jq
 
 # 9. Xóa EvaluationIssue
-# echo "\n[9] Xóa EvaluationIssue..."
-# curl -s -X DELETE "$API_URL/$NEW_ID" -H "$AUTH_HEADER"
+echo "\n[9] Xóa EvaluationIssue..."
+curl -s -X DELETE "$API_URL/$NEW_ID" -H "$AUTH_HEADER"
 
-# echo "\n[Hoàn thành script test EvaluationIssue]"
+echo "\n[Hoàn thành script test EvaluationIssue]"

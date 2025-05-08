@@ -26,6 +26,7 @@ import com.project.quanlycanghangkhong.dto.response.ApiErrorResponse;
 import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
 import com.project.quanlycanghangkhong.dto.response.users.ApiMeResponse;
 import com.project.quanlycanghangkhong.dto.ApiResponse;
+import com.project.quanlycanghangkhong.dto.response.users.ApiAllUsersResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -47,11 +48,16 @@ public class UserController {
         @GetMapping
         @Operation(summary = "Get all users", description = "Retrieve a list of all users")
         @ApiResponses(value = {
-                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully retrieved all users", content = @Content(array = @ArraySchema(schema = @Schema(implementation = UserDTO.class))))
+                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully retrieved all users", content = @Content(schema = @Schema(implementation = ApiAllUsersResponse.class)))
         })
-        public ResponseEntity<ApiResponse<List<UserDTO>>> getAllUsers() {
+        public ResponseEntity<ApiAllUsersResponse> getAllUsers() {
                 List<UserDTO> dtos = userService.getAllUsers();
-                return ResponseEntity.ok(new ApiResponse<>("Thành công", 200, dtos, true));
+                ApiAllUsersResponse response = new ApiAllUsersResponse();
+                response.setMessage("Thành công");
+                response.setStatusCode(200);
+                response.setData(dtos);
+                response.setSuccess(true);
+                return ResponseEntity.ok(response);
         }
 
         // Lấy user theo ID

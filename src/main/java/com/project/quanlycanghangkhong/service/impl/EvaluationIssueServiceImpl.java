@@ -12,6 +12,7 @@ import com.project.quanlycanghangkhong.repository.DocumentRepository;
 import com.project.quanlycanghangkhong.repository.EvaluationIssueDocumentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -40,7 +41,12 @@ public class EvaluationIssueServiceImpl implements EvaluationIssueService {
         dto.setNotes(entity.getNotes());
         dto.setCreatedAt(entity.getCreatedAt());
         if (entity.getDocuments() != null) {
-            dto.setDocumentIds(entity.getDocuments().stream().map(doc -> doc.getDocument().getId()).collect(Collectors.toList()));
+            dto.setDocumentIds(
+                entity.getDocuments().stream()
+                    .map(doc -> doc.getDocument().getId())
+                    .distinct()
+                    .collect(java.util.stream.Collectors.toList())
+            );
         }
         return dto;
     }
@@ -96,6 +102,7 @@ public class EvaluationIssueServiceImpl implements EvaluationIssueService {
     }
 
     @Override
+    @Transactional
     public EvaluationIssueDTO updateIssue(Integer id, EvaluationIssueDTO dto) {
         Optional<EvaluationIssue> optional = evaluationIssueRepository.findById(id);
         if (optional.isPresent()) {
@@ -106,8 +113,8 @@ public class EvaluationIssueServiceImpl implements EvaluationIssueService {
             entity.setResolutionDate(dto.getResolutionDate());
             entity.setNotes(dto.getNotes());
             evaluationIssueRepository.save(entity);
-            // Xóa documents cũ (KHÔNG set lại list documents)
-            evaluationIssueDocumentRepository.deleteAll(entity.getDocuments());
+            // Xóa tất cả liên kết document cũ bằng issueId (tránh lỗi list documents không đồng bộ)
+            evaluationIssueDocumentRepository.deleteAllByEvaluationIssue_Id(entity.getId());
             // Thêm mới documents
             if (dto.getDocumentIds() != null) {
                 for (Integer docId : dto.getDocumentIds()) {

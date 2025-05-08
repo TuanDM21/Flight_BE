@@ -6,4 +6,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface EvaluationIssueDocumentRepository extends JpaRepository<EvaluationIssueDocument, Integer> {
+    void deleteAllByEvaluationIssue_Id(Integer evaluationIssueId);
+    java.util.List<EvaluationIssueDocument> findByEvaluationIssue_Id(Integer evaluationIssueId);
 }
