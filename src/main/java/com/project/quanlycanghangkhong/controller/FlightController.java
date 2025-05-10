@@ -168,7 +168,7 @@ public class FlightController {
         // Lấy userId trực chung, lọc theo actual time
         userIds.addAll(userShiftService.getUserIdsOnDutyAtTime(flightDate, actualTime));
         // Gửi notification
-        String title = "Thông báo chuyến bay " + flight.getFlightNumber() + " " +flight.getArrivalAirport().getAirportCode() ;
+        String title = "Thông báo chuyến bay " + flight.getFlightNumber() ; 
         String content;
         if ("actualArrivalTime".equals(eventType)) {
             content = "Hạ cánh thực tế tại " + (flight.getArrivalAirport() != null ? flight.getArrivalAirport().getAirportCode() : "?") + ": " + actualTime;

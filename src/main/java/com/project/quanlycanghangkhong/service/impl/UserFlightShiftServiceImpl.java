@@ -152,4 +152,46 @@ public class UserFlightShiftServiceImpl implements UserFlightShiftService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public List<UserFlightShiftResponseDTO> getAllUserFlightShifts() {
+        List<UserFlightShift> shifts = userFlightShiftRepository.findAll();
+        return shifts.stream()
+                .map(shift -> new UserFlightShiftResponseDTO(
+                        shift.getId(),
+                        shift.getUser().getId(),
+                        shift.getUser().getName(),
+                        shift.getFlight().getId(),
+                        shift.getFlight().getFlightNumber(),
+                        shift.getShiftDate()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<UserFlightShiftResponseDTO> getShiftsByDateDTO(LocalDate date) {
+        List<UserFlightShift> shifts = userFlightShiftRepository.findByShiftDate(date);
+        return shifts.stream()
+                .map(shift -> new UserFlightShiftResponseDTO(
+                        shift.getId(),
+                        shift.getUser().getId(),
+                        shift.getUser().getName(),
+                        shift.getFlight().getId(),
+                        shift.getFlight().getFlightNumber(),
+                        shift.getShiftDate()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<UserFlightShiftResponseDTO> getShiftsByUserDTO(Integer userId) {
+        List<UserFlightShift> shifts = userFlightShiftRepository.findByUser_Id(userId);
+        return shifts.stream()
+                .map(shift -> new UserFlightShiftResponseDTO(
+                        shift.getId(),
+                        shift.getUser().getId(),
+                        shift.getUser().getName(),
+                        shift.getFlight().getId(),
+                        shift.getFlight().getFlightNumber(),
+                        shift.getShiftDate()))
+                .collect(Collectors.toList());
+    }
+
 }

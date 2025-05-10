@@ -31,6 +31,9 @@ public class UserDTO {
 	@Schema(description = "Unit ID of the user", required = true)
 	private Integer unitId;
 
+	// Bổ sung constructor không tham số để hỗ trợ serialization/deserialization
+	public UserDTO() {}
+
 	public UserDTO(User user) {
 		// Handle basic properties
 		this.id = user.getId();

@@ -27,6 +27,12 @@ import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
 import com.project.quanlycanghangkhong.dto.response.users.ApiMeResponse;
 import com.project.quanlycanghangkhong.dto.ApiResponse;
 import com.project.quanlycanghangkhong.dto.response.users.ApiAllUsersResponse;
+import com.project.quanlycanghangkhong.dto.response.users.ApiUserByIdResponse;
+import com.project.quanlycanghangkhong.dto.response.users.ApiCreateUserResponse;
+import com.project.quanlycanghangkhong.dto.response.users.ApiUpdateUserResponse;
+import com.project.quanlycanghangkhong.dto.response.users.ApiDeleteUserResponse;
+import com.project.quanlycanghangkhong.dto.response.users.ApiFilterUsersResponse;
+import com.project.quanlycanghangkhong.dto.response.users.ApiSearchUsersResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -64,64 +70,94 @@ public class UserController {
         @GetMapping("/{id}")
         @Operation(summary = "Get user by ID", description = "Retrieve a user by their ID")
         @ApiResponses(value = {
-                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully retrieved user", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
-                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
+                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully retrieved user", content = @Content(schema = @Schema(implementation = ApiUserByIdResponse.class))),
+                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found", content = @Content(schema = @Schema(implementation = ApiUserByIdResponse.class)))
         })
-        public ResponseEntity<ApiResponse<User>> getUserById(@PathVariable Integer id) {
+        public ResponseEntity<ApiUserByIdResponse> getUserById(@PathVariable Integer id) {
                 return userService.getUserById(id)
-                                .map(user -> ResponseEntity.ok(new ApiResponse<>("Thành công", 200, user, true)))
+                                .map(user -> {
+                                        ApiUserByIdResponse res = new ApiUserByIdResponse();
+                                        res.setMessage("Thành công");
+                                        res.setStatusCode(200);
+                                        res.setData(user);
+                                        res.setSuccess(true);
+                                        return ResponseEntity.ok(res);
+                                })
                                 .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
-                                                .body(new ApiResponse<>("User not found", 404, null, false)));
+                                                .body(new ApiUserByIdResponse("User not found", 404, null, false)));
         }
 
         // Thêm user mới
         @PostMapping
         @Operation(summary = "Create user", description = "Create a new user")
         @ApiResponses(value = {
-                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "User created successfully", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
+                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "User created successfully", content = @Content(schema = @Schema(implementation = ApiCreateUserResponse.class)))
         })
-        public ResponseEntity<ApiResponse<User>> createUser(@RequestBody User user) {
+        public ResponseEntity<ApiCreateUserResponse> createUser(@RequestBody User user) {
                 User created = userService.createUser(user);
-                return ResponseEntity.ok(new ApiResponse<>("Thành công", 200, created, true));
+                ApiCreateUserResponse res = new ApiCreateUserResponse();
+                res.setMessage("Thành công");
+                res.setStatusCode(200);
+                res.setData(created);
+                res.setSuccess(true);
+                return ResponseEntity.ok(res);
         }
 
         // Cập nhật user
         @PutMapping("/{id}")
         @Operation(summary = "Update user", description = "Update an existing user")
         @ApiResponses(value = {
-                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "User updated successfully", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
-                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
+                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "User updated successfully", content = @Content(schema = @Schema(implementation = ApiUpdateUserResponse.class))),
+                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found", content = @Content(schema = @Schema(implementation = ApiUpdateUserResponse.class)))
         })
-        public ResponseEntity<ApiResponse<User>> updateUser(@PathVariable Integer id, @RequestBody User user) {
+        public ResponseEntity<ApiUpdateUserResponse> updateUser(@PathVariable Integer id, @RequestBody User user) {
                 User updatedUser = userService.updateUser(id, user);
-                return updatedUser != null ? ResponseEntity.ok(new ApiResponse<>("Thành công", 200, updatedUser, true))
-                                : ResponseEntity.status(HttpStatus.NOT_FOUND)
-                                                .body(new ApiResponse<>("User not found", 404, null, false));
+                if (updatedUser != null) {
+                        ApiUpdateUserResponse res = new ApiUpdateUserResponse();
+                        res.setMessage("Thành công");
+                        res.setStatusCode(200);
+                        res.setData(updatedUser);
+                        res.setSuccess(true);
+                        return ResponseEntity.ok(res);
+                } else {
+                        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                                        .body(new ApiUpdateUserResponse("User not found", 404, null, false));
+                }
         }
 
         // Xóa user
         @DeleteMapping("/{id}")
         @Operation(summary = "Delete user", description = "Delete a user by ID")
         @ApiResponses(value = {
-                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "204", description = "User deleted successfully", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
+                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "204", description = "User deleted successfully", content = @Content(schema = @Schema(implementation = ApiDeleteUserResponse.class)))
         })
-        public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable Integer id) {
+        public ResponseEntity<ApiDeleteUserResponse> deleteUser(@PathVariable Integer id) {
                 userService.deleteUser(id);
-                return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new ApiResponse<>("Thành công", 204, null, true));
+                ApiDeleteUserResponse res = new ApiDeleteUserResponse();
+                res.setMessage("Thành công");
+                res.setStatusCode(204);
+                res.setData(null);
+                res.setSuccess(true);
+                return ResponseEntity.status(HttpStatus.NO_CONTENT).body(res);
         }
 
         // Endpoint filter user theo team, unit, searchText
         @GetMapping("/filter")
         @Operation(summary = "Filter users", description = "Filter users by team, unit, or search text")
         @ApiResponses(value = {
-                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully filtered users", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
+                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully filtered users", content = @Content(schema = @Schema(implementation = ApiFilterUsersResponse.class)))
         })
-        public ResponseEntity<ApiResponse<List<UserDTO>>> filterUsers(
+        public ResponseEntity<ApiFilterUsersResponse> filterUsers(
                         @RequestParam(value = "teamId", required = false) Integer teamId,
                         @RequestParam(value = "unitId", required = false) Integer unitId,
                         @RequestParam(value = "searchText", required = false) String searchText) {
                 List<UserDTO> dtos = userService.filterUsers(teamId, unitId, searchText);
-                return ResponseEntity.ok(new ApiResponse<>("Thành công", 200, dtos, true));
+                ApiFilterUsersResponse res = new ApiFilterUsersResponse();
+                res.setMessage("Thành công");
+                res.setStatusCode(200);
+                res.setData(dtos);
+                res.setSuccess(true);
+                return ResponseEntity.ok(res);
         }
 
         // Lấy thông tin user hiện tại dựa vào token
@@ -131,21 +167,31 @@ public class UserController {
                         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully retrieved current user", content = @Content(schema = @Schema(implementation = ApiMeResponse.class))),
                         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
         })
-        public ResponseEntity<ApiResponse<UserDTO>> getCurrentUser() {
-                UserDTO currentUser = userService.getCurrentUser().getData();
-                return ResponseEntity.ok(new ApiResponse<>("Thành công", 200, currentUser, true));
+        public ResponseEntity<ApiMeResponse> getCurrentUser() {
+                ApiResponseCustom<UserDTO> old = userService.getCurrentUser();
+                ApiMeResponse res = new ApiMeResponse();
+                res.setMessage(old.getMessage());
+                res.setStatusCode(old.getStatusCode());
+                res.setData(old.getData());
+                res.setSuccess(old.isSuccess());
+                return ResponseEntity.ok(res);
         }
 
         // Search user theo keyword (tìm theo tên hoặc email)
         @GetMapping("/search")
         @Operation(summary = "Search users", description = "Search users by keyword (name or email)")
         @ApiResponses(value = {
-                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully searched users", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
+                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully searched users", content = @Content(schema = @Schema(implementation = ApiSearchUsersResponse.class)))
         })
-        public ResponseEntity<ApiResponse<List<UserDTO>>> searchUsersByKeyword(
+        public ResponseEntity<ApiSearchUsersResponse> searchUsersByKeyword(
                         @RequestParam("keyword") String keyword) {
                 List<UserDTO> dtos = userService.searchUsersByKeyword(keyword);
-                return ResponseEntity.ok(new ApiResponse<>("Thành công", 200, dtos, true));
+                ApiSearchUsersResponse res = new ApiSearchUsersResponse();
+                res.setMessage("Thành công");
+                res.setStatusCode(200);
+                res.setData(dtos);
+                res.setSuccess(true);
+                return ResponseEntity.ok(res);
         }
 
         // Lưu expoPushToken vào user khi đăng nhập app

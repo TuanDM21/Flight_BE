@@ -32,4 +32,9 @@ public interface UserFlightShiftService {
 
     List<UserFlightShiftResponseDTO> getAssignedShifts(Long flightId, LocalDate date);
 
+    // Bổ sung các hàm trả về DTO cho controller mới
+    List<UserFlightShiftResponseDTO> getAllUserFlightShifts();
+    List<UserFlightShiftResponseDTO> getShiftsByDateDTO(LocalDate date);
+    List<UserFlightShiftResponseDTO> getShiftsByUserDTO(Integer userId);
+
 }

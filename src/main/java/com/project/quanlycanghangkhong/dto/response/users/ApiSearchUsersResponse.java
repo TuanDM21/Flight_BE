@@ -11,9 +11,9 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-@Schema(description = "API response for all users, data is List<UserDTO>", required = true)
-public class ApiAllUsersResponse extends ApiResponseCustom<List<UserDTO>> {
-    public ApiAllUsersResponse(String message, int statusCode, java.util.List<com.project.quanlycanghangkhong.dto.UserDTO> data, boolean success) {
+@Schema(description = "API response for search users, data is List<UserDTO>", required = true)
+public class ApiSearchUsersResponse extends ApiResponseCustom<List<UserDTO>> {
+    public ApiSearchUsersResponse(String message, int statusCode, java.util.List<com.project.quanlycanghangkhong.dto.UserDTO> data, boolean success) {
         super(message, statusCode, data, success);
     }
 }

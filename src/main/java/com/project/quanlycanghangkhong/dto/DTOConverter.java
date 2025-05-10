@@ -23,10 +23,7 @@ public class DTOConverter {
     
     public static UserDTO convertUser(User user) {
         if (user == null) return null;
-        Integer roleId = (user.getRole() != null) ? user.getRole().getId() : null;
-        Integer teamId = (user.getTeam() != null) ? user.getTeam().getId() : null;
-        Integer unitId = (user.getUnit() != null) ? user.getUnit().getId() : null;
-        return new UserDTO(user.getId(), user.getName(), user.getEmail(), roleId, teamId, unitId);
+        return new UserDTO(user); // Sử dụng constructor đầy đủ, sẽ lấy cả roleName, teamName, unitName
     }
     
     public static UserShiftDTO convertUserShift(UserShift us) {
