@@ -12,6 +12,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 
 @RestController
 @RequestMapping("/api/tasks")
@@ -21,6 +26,10 @@ public class TaskController {
     private TaskService taskService;
 
     @PostMapping
+    @Operation(summary = "Tạo task", description = "Tạo mới một công việc")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "Tạo thành công", content = @Content(schema = @Schema(implementation = ApiTaskResponse.class)))
+    })
     public ResponseEntity<ApiTaskResponse> createTask(@RequestBody CreateTaskRequest request) {
         TaskDTO created = taskService.createTaskWithAssignmentsAndDocuments(request);
         ApiTaskResponse res = new ApiTaskResponse("Tạo công việc thành công", 201, created, true);
@@ -28,6 +37,11 @@ public class TaskController {
     }
 
     @PutMapping("/{id}")
+    @Operation(summary = "Cập nhật task", description = "Cập nhật một công việc theo id")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Cập nhật thành công", content = @Content(schema = @Schema(implementation = ApiTaskResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy công việc", content = @Content(schema = @Schema(implementation = ApiTaskResponse.class)))
+    })
     public ResponseEntity<ApiTaskResponse> updateTask(@PathVariable Integer id, @RequestBody TaskDTO taskDTO) {
         TaskDTO updated = taskService.updateTask(id, taskDTO);
         if (updated == null) return ResponseEntity.status(404).body(new ApiTaskResponse("Không tìm thấy công việc", 404, null, false));
@@ -35,12 +49,21 @@ public class TaskController {
     }
 
     @DeleteMapping("/{id}")
+    @Operation(summary = "Xoá task", description = "Xoá một công việc theo id")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Xoá thành công", content = @Content(schema = @Schema(implementation = ApiTaskResponse.class)))
+    })
     public ResponseEntity<ApiTaskResponse> deleteTask(@PathVariable Integer id) {
         taskService.deleteTask(id);
         return ResponseEntity.ok(new ApiTaskResponse("Xoá thành công", 200, null, true));
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Lấy chi tiết task", description = "Lấy chi tiết một công việc theo id")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiTaskDetailResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy công việc", content = @Content(schema = @Schema(implementation = ApiTaskDetailResponse.class)))
+    })
     public ResponseEntity<ApiTaskDetailResponse> getTaskDetailById(@PathVariable Integer id) {
         TaskDetailDTO task = taskService.getTaskDetailById(id);
         if (task == null) return ResponseEntity.status(404).body(new ApiTaskDetailResponse("Không tìm thấy công việc", 404, null, false));
@@ -48,6 +71,10 @@ public class TaskController {
     }
 
     @GetMapping
+    @Operation(summary = "Lấy danh sách task", description = "Lấy danh sách tất cả công việc")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiAllTasksResponse.class)))
+    })
     public ResponseEntity<ApiAllTasksResponse> getAllTaskDetails() {
         List<TaskDetailDTO> tasks = taskService.getAllTaskDetails();
         return ResponseEntity.ok(new ApiAllTasksResponse("Thành công", 200, tasks, true));
