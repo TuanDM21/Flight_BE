@@ -17,11 +17,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.PutMapping;
 
 import com.project.quanlycanghangkhong.dto.ApplyFlightShiftRequest;
 import com.project.quanlycanghangkhong.dto.UserFlightShiftResponseDTO;
 import com.project.quanlycanghangkhong.dto.UserFlightShiftResponseSearchDTO;
-import com.project.quanlycanghangkhong.model.UserFlightShift;
+import com.project.quanlycanghangkhong.dto.UpdateUserFlightShiftRequest;
 import com.project.quanlycanghangkhong.service.UserFlightShiftService;
 import com.project.quanlycanghangkhong.dto.response.userflightshift.*;
 
@@ -99,6 +100,28 @@ public class UserFlightShiftController {
         return ResponseEntity.ok(response);
     }
 
+    @PutMapping("/{id}")
+    @Operation(summary = "Update user flight shift", description = "Update user flight shift by id")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "Successfully updated user flight shift",
+            content = @Content(schema = @Schema(implementation = ApiUpdateUserFlightShiftResponse.class))
+        )
+    })
+    public ResponseEntity<ApiUpdateUserFlightShiftResponse> updateUserFlightShift(
+            @PathVariable Integer id,
+            @RequestBody UpdateUserFlightShiftRequest request) {
+        userFlightShiftService.updateUserFlightShift(id, request.getShiftDate(), request.getFlightId());
+        // Lấy lại thông tin sau cập nhật để trả về
+        UserFlightShiftResponseDTO data = userFlightShiftService.getAllUserFlightShifts()
+            .stream().filter(dto -> dto.getId().equals(id)).findFirst().orElse(null);
+        ApiUpdateUserFlightShiftResponse response = new ApiUpdateUserFlightShiftResponse(
+            "Cập nhật thành công", 200, data, true
+        );
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/shifts")
     @Operation(summary = "Get user flight shifts by flight and date", description = "Retrieve user flight shifts by flight and date")
     @ApiResponses(value = {
@@ -168,6 +191,21 @@ public class UserFlightShiftController {
         return ResponseEntity.ok(response);
     }
 
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Delete user flight shift by id", description = "Delete user flight shift by id")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "Successfully deleted user flight shift",
+            content = @Content(schema = @Schema(implementation = ApiDeleteUserFlightShiftResponse.class))
+        )
+    })
+    public ResponseEntity<ApiDeleteUserFlightShiftResponse> deleteUserFlightShift(@PathVariable Integer id) {
+        userFlightShiftService.deleteUserFlightShiftById(id);
+        ApiDeleteUserFlightShiftResponse response = new ApiDeleteUserFlightShiftResponse("Xóa thành công", 200, null, true);
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/isAssigned")
     @Operation(summary = "Check if user is assigned to flight", description = "Check if a user is assigned to a flight on a specific date")
     @ApiResponses(value = {
@@ -202,6 +240,25 @@ public class UserFlightShiftController {
             @RequestParam(value = "unitId", required = false) Integer unitId,
             @RequestParam(value = "flightId", required = false) Long flightId) {
         List<UserFlightShiftResponseSearchDTO> dtos = userFlightShiftService.getFlightSchedulesByCriteria(shiftDate, teamId, unitId, flightId);
+        ApiFilterUserFlightShiftsResponse response = new ApiFilterUserFlightShiftsResponse("Thành công", 200, dtos, true);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/filter-schedules")
+    @Operation(summary = "Filter user flight shifts", description = "Filter user flight shifts by date, team, unit")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "Successfully filtered user flight shifts",
+            content = @Content(schema = @Schema(implementation = ApiFilterUserFlightShiftsResponse.class))
+        )
+    })
+    public ResponseEntity<ApiFilterUserFlightShiftsResponse> filterUserFlightShifts(
+            @RequestParam("shiftDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate shiftDate,
+            @RequestParam(value = "teamId", required = false) Integer teamId,
+            @RequestParam(value = "unitId", required = false) Integer unitId
+    ) {
+        List<UserFlightShiftResponseSearchDTO> dtos = userFlightShiftService.getFlightSchedulesByCriteria(shiftDate, teamId, unitId, null);
         ApiFilterUserFlightShiftsResponse response = new ApiFilterUserFlightShiftsResponse("Thành công", 200, dtos, true);
         return ResponseEntity.ok(response);
     }

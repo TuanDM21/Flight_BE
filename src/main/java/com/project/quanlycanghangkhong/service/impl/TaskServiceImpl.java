@@ -21,6 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+
 @Service
 public class TaskServiceImpl implements TaskService {
     @Autowired
@@ -79,6 +82,11 @@ public class TaskServiceImpl implements TaskService {
     @Transactional
     @Override
     public TaskDTO createTaskWithAssignmentsAndDocuments(CreateTaskRequest request) {
+        // Lấy user hiện tại từ SecurityContextHolder
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication != null ? authentication.getName() : null;
+        User creator = (email != null) ? userRepository.findByEmail(email).orElse(null) : null;
+
         // Tạo Task
         Task task = new Task();
         task.setContent(request.getContent());
@@ -86,63 +94,38 @@ public class TaskServiceImpl implements TaskService {
         task.setNotes(request.getNotes());
         task.setCreatedAt(LocalDateTime.now());
         task.setUpdatedAt(LocalDateTime.now());
-        if (request.getCreatedBy() != null) {
-            userRepository.findById(request.getCreatedBy()).ifPresent(task::setCreatedBy);
-        }
+        if (creator != null) task.setCreatedBy(creator);
         Task savedTask = taskRepository.save(task);
 
         // Tạo Assignment
         if (request.getAssignments() != null) {
-            for (AssignmentDTO a : request.getAssignments()) {
+            for (AssignmentRequest a : request.getAssignments()) {
                 Assignment assignment = new Assignment();
                 assignment.setTask(savedTask);
                 assignment.setRecipientType(a.getRecipientType());
                 assignment.setRecipientId(a.getRecipientId());
                 assignment.setNote(a.getNote());
                 assignment.setAssignedAt(LocalDateTime.now());
+                assignment.setAssignedBy(creator); // Đảm bảo luôn set người giao việc
                 assignment.setStatus(0);
                 if (a.getDueAt() != null) {
                     assignment.setDueAt(new java.sql.Timestamp(a.getDueAt().getTime()).toLocalDateTime());
-                }
-                if (a.getAssignedBy() != null) {
-                    userRepository.findById(a.getAssignedBy()).ifPresent(assignment::setAssignedBy);
                 }
                 assignmentRepository.save(assignment);
             }
         }
 
-        // Tạo Document và liên kết với Task (TaskDocument), đồng thời tạo Attachment
-        if (request.getDocuments() != null) {
-            for (DocumentDTO d : request.getDocuments()) {
-                Document doc = new Document();
-                doc.setDocumentType(d.getDocumentType());
-                doc.setContent(d.getContent());
-                doc.setNotes(d.getNotes());
-                doc.setCreatedAt(LocalDateTime.now());
-                doc.setUpdatedAt(LocalDateTime.now());
-                // Xử lý attachment
-                if (d.getAttachments() != null) {
-                    List<Attachment> attachments = new ArrayList<>();
-                    for (AttachmentDTO att : d.getAttachments()) {
-                        Attachment attachment = new Attachment();
-                        attachment.setDocument(doc);
-                        attachment.setFilePath(att.getFilePath());
-                        attachment.setFileName(att.getFileName());
-                        attachment.setFileSize(att.getFileSize());
-                        attachment.setCreatedAt(LocalDateTime.now());
-                        attachments.add(attachment);
-                    }
-                    doc.setAttachments(attachments);
+        // Liên kết documentIds với task thông qua TaskDocument
+        if (request.getDocumentIds() != null) {
+            for (Integer docId : request.getDocumentIds()) {
+                Document doc = documentRepository.findById(docId).orElse(null);
+                if (doc != null) {
+                    TaskDocument taskDocument = new TaskDocument();
+                    taskDocument.setTask(savedTask);
+                    taskDocument.setDocument(doc);
+                    taskDocument.setCreatedAt(LocalDateTime.now());
+                    taskDocumentRepository.save(taskDocument);
                 }
-                Document savedDoc = documentRepository.save(doc);
-                // Tạo liên kết TaskDocument
-                TaskDocument taskDocument = new TaskDocument();
-                taskDocument.setTask(savedTask);
-                taskDocument.setDocument(savedDoc);
-                taskDocument.setCreatedAt(LocalDateTime.now());
-                // Lưu liên kết
-                // Cần có TaskDocumentRepository
-                taskDocumentRepository.save(taskDocument);
             }
         }
         return convertToDTO(savedTask);

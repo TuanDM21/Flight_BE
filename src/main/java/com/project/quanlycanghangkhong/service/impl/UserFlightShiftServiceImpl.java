@@ -194,4 +194,28 @@ public class UserFlightShiftServiceImpl implements UserFlightShiftService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public void updateUserFlightShift(Integer id, java.time.LocalDate shiftDate, Long flightId) {
+        System.out.println("[updateUserFlightShift] id=" + id + ", shiftDate=" + shiftDate + ", flightId=" + flightId);
+        UserFlightShift ufs = userFlightShiftRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy lịch trực chuyến bay với id: " + id));
+        if (shiftDate != null) {
+            System.out.println("[updateUserFlightShift] Update shiftDate to " + shiftDate);
+            ufs.setShiftDate(shiftDate);
+        }
+        if (flightId != null) {
+            System.out.println("[updateUserFlightShift] Update flightId to " + flightId);
+            com.project.quanlycanghangkhong.model.Flight flight = flightRepository.findById(flightId)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy chuyến bay với id: " + flightId));
+            ufs.setFlight(flight);
+        }
+        userFlightShiftRepository.save(ufs);
+        System.out.println("[updateUserFlightShift] Updated UserFlightShift: " + ufs.getId());
+    }
+
+    @Override
+    public void deleteUserFlightShiftById(Integer id) {
+        userFlightShiftRepository.deleteById(id);
+    }
+
 }

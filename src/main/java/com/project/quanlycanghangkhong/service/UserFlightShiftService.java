@@ -37,4 +37,7 @@ public interface UserFlightShiftService {
     List<UserFlightShiftResponseDTO> getShiftsByDateDTO(LocalDate date);
     List<UserFlightShiftResponseDTO> getShiftsByUserDTO(Integer userId);
 
+    void updateUserFlightShift(Integer id, java.time.LocalDate shiftDate, Long flightId);
+
+    void deleteUserFlightShiftById(Integer id);
 }

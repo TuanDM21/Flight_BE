@@ -37,7 +37,6 @@ import com.project.quanlycanghangkhong.dto.response.users.ApiSearchUsersResponse
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 
 @CrossOrigin(origins = "*")

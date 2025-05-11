@@ -6,9 +6,8 @@ public class CreateTaskRequest {
     private String content;
     private String instructions;
     private String notes;
-    private Integer createdBy; // userId
-    private List<AssignmentDTO> assignments;
-    private List<DocumentDTO> documents;
+    private List<AssignmentRequest> assignments;
+    private List<Integer> documentIds;
 
     // Getters and setters
     public String getContent() {
@@ -35,27 +34,19 @@ public class CreateTaskRequest {
         this.notes = notes;
     }
 
-    public Integer getCreatedBy() {
-        return createdBy;
-    }
-
-    public void setCreatedBy(Integer createdBy) {
-        this.createdBy = createdBy;
-    }
-
-    public List<AssignmentDTO> getAssignments() {
+    public List<AssignmentRequest> getAssignments() {
         return assignments;
     }
 
-    public void setAssignments(List<AssignmentDTO> assignments) {
+    public void setAssignments(List<AssignmentRequest> assignments) {
         this.assignments = assignments;
     }
 
-    public List<DocumentDTO> getDocuments() {
-        return documents;
+    public List<Integer> getDocumentIds() {
+        return documentIds;
     }
 
-    public void setDocuments(List<DocumentDTO> documents) {
-        this.documents = documents;
+    public void setDocumentIds(List<Integer> documentIds) {
+        this.documentIds = documentIds;
     }
 }

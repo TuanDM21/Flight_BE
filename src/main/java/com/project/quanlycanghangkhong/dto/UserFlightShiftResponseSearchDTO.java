@@ -12,9 +12,12 @@ public class UserFlightShiftResponseSearchDTO {
     private String flightNumber;
     private LocalTime departureTime;
     private LocalTime arrivalTime;
+    private String departureAirportCode; // Sân bay đi
+    private String arrivalAirportCode;   // Sân bay đến
 
     public UserFlightShiftResponseSearchDTO(Integer scheduleId, String userName, String teamName, String unitName,
-            LocalDate shiftDate, String flightNumber, LocalTime departureTime, LocalTime arrivalTime) {
+            LocalDate shiftDate, String flightNumber, LocalTime departureTime, LocalTime arrivalTime,
+            String departureAirportCode, String arrivalAirportCode) {
         this.scheduleId = scheduleId;
         this.userName = userName;
         this.teamName = teamName;
@@ -23,6 +26,8 @@ public class UserFlightShiftResponseSearchDTO {
         this.flightNumber = flightNumber;
         this.departureTime = departureTime;
         this.arrivalTime = arrivalTime;
+        this.departureAirportCode = departureAirportCode;
+        this.arrivalAirportCode = arrivalAirportCode;
     }
 
     // Getters & Setters
@@ -88,5 +93,21 @@ public class UserFlightShiftResponseSearchDTO {
 
     public void setArrivalTime(LocalTime arrivalTime) {
         this.arrivalTime = arrivalTime;
+    }
+
+    public String getDepartureAirportCode() {
+        return departureAirportCode;
+    }
+
+    public void setDepartureAirportCode(String departureAirportCode) {
+        this.departureAirportCode = departureAirportCode;
+    }
+
+    public String getArrivalAirportCode() {
+        return arrivalAirportCode;
+    }
+
+    public void setArrivalAirportCode(String arrivalAirportCode) {
+        this.arrivalAirportCode = arrivalAirportCode;
     }
 }
