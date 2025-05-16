@@ -177,7 +177,6 @@ public class TaskServiceImpl implements TaskService {
         dto.setCreatedAt(task.getCreatedAt());
         dto.setUpdatedAt(task.getUpdatedAt());
         if (task.getCreatedBy() != null) {
-            dto.setCreatedBy(task.getCreatedBy().getId());
             dto.setCreatedByUser(new UserDTO(task.getCreatedBy()));
         }
         // Assignments
@@ -186,10 +185,8 @@ public class TaskServiceImpl implements TaskService {
             .map(a -> {
                 AssignmentDTO adto = new AssignmentDTO();
                 adto.setAssignmentId(a.getAssignmentId());
-                adto.setRecipientId(a.getRecipientId());
                 adto.setRecipientType(a.getRecipientType());
                 if (a.getAssignedBy() != null) {
-                    adto.setAssignedBy(a.getAssignedBy().getId());
                     adto.setAssignedByUser(new UserDTO(a.getAssignedBy()));
                 }
                 adto.setAssignedAt(a.getAssignedAt() != null ? java.sql.Timestamp.valueOf(a.getAssignedAt()) : null);
@@ -197,7 +194,6 @@ public class TaskServiceImpl implements TaskService {
                 adto.setNote(a.getNote());
                 adto.setCompletedAt(a.getCompletedAt() != null ? java.sql.Timestamp.valueOf(a.getCompletedAt()) : null);
                 if (a.getCompletedBy() != null) {
-                    adto.setCompletedBy(a.getCompletedBy().getId());
                     adto.setCompletedByUser(new UserDTO(a.getCompletedBy()));
                 }
                 adto.setStatus(a.getStatus());

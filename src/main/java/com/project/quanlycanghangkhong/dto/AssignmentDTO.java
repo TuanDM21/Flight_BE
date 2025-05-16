@@ -5,13 +5,10 @@ import java.util.Date;
 public class AssignmentDTO {
     private Integer assignmentId;
     private Integer taskId;
-    private Integer recipientId;
     private String recipientType; // 'team', 'unit', 'user'
-    private Integer assignedBy;
     private Date assignedAt;
     private Date dueAt;
     private Date completedAt;
-    private Integer completedBy;
     private Integer status;
     private String note;
     private UserDTO assignedByUser;
@@ -34,28 +31,12 @@ public class AssignmentDTO {
         this.taskId = taskId;
     }
 
-    public Integer getRecipientId() {
-        return recipientId;
-    }
-
-    public void setRecipientId(Integer recipientId) {
-        this.recipientId = recipientId;
-    }
-
     public String getRecipientType() {
         return recipientType;
     }
 
     public void setRecipientType(String recipientType) {
         this.recipientType = recipientType;
-    }
-
-    public Integer getAssignedBy() {
-        return assignedBy;
-    }
-
-    public void setAssignedBy(Integer assignedBy) {
-        this.assignedBy = assignedBy;
     }
 
     public Date getAssignedAt() {
@@ -88,14 +69,6 @@ public class AssignmentDTO {
 
     public void setCompletedAt(Date completedAt) {
         this.completedAt = completedAt;
-    }
-
-    public Integer getCompletedBy() {
-        return completedBy;
-    }
-
-    public void setCompletedBy(Integer completedBy) {
-        this.completedBy = completedBy;
     }
 
     public Integer getStatus() {

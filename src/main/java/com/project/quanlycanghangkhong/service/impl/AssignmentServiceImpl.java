@@ -30,30 +30,28 @@ public class AssignmentServiceImpl implements AssignmentService {
         dto.setAssignmentId(a.getAssignmentId());
         // Set taskId from Assignment entity
         dto.setTaskId(a.getTask() != null ? a.getTask().getId() : null);
-        dto.setRecipientId(a.getRecipientId());
+        // Không set recipientId, assignedBy, completedBy vào DTO nữa
         dto.setRecipientType(a.getRecipientType());
-        dto.setAssignedBy(a.getAssignedBy() != null ? a.getAssignedBy().getId() : null);
         dto.setAssignedAt(a.getAssignedAt() != null ? Timestamp.valueOf(a.getAssignedAt()) : null);
         dto.setDueAt(a.getDueAt() != null ? Timestamp.valueOf(a.getDueAt()) : null);
         dto.setCompletedAt(a.getCompletedAt() != null ? Timestamp.valueOf(a.getCompletedAt()) : null);
-        dto.setCompletedBy(a.getCompletedBy() != null ? a.getCompletedBy().getId() : null);
         dto.setStatus(a.getStatus());
         dto.setNote(a.getNote());
+        // Set user info dạng object
+        if (a.getAssignedBy() != null) dto.setAssignedByUser(new com.project.quanlycanghangkhong.dto.UserDTO(a.getAssignedBy()));
+        if (a.getCompletedBy() != null) dto.setCompletedByUser(new com.project.quanlycanghangkhong.dto.UserDTO(a.getCompletedBy()));
+        if ("user".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null) {
+            userRepository.findById(a.getRecipientId()).ifPresent(u -> dto.setRecipientUser(new com.project.quanlycanghangkhong.dto.UserDTO(u)));
+        }
         return dto;
     }
 
     private void updateEntityFromDTO(Assignment a, AssignmentDTO dto) {
-        a.setRecipientId(dto.getRecipientId());
+        // Không set recipientId, assignedBy, completedBy từ DTO nữa
         a.setRecipientType(dto.getRecipientType());
-        if (dto.getAssignedBy() != null) {
-            userRepository.findById(dto.getAssignedBy()).ifPresent(a::setAssignedBy);
-        }
         a.setAssignedAt(dto.getAssignedAt() != null ? new Timestamp(dto.getAssignedAt().getTime()).toLocalDateTime() : a.getAssignedAt());
         a.setDueAt(dto.getDueAt() != null ? new Timestamp(dto.getDueAt().getTime()).toLocalDateTime() : null);
         a.setCompletedAt(dto.getCompletedAt() != null ? new Timestamp(dto.getCompletedAt().getTime()).toLocalDateTime() : null);
-        if (dto.getCompletedBy() != null) {
-            userRepository.findById(dto.getCompletedBy()).ifPresent(a::setCompletedBy);
-        }
         a.setStatus(dto.getStatus());
         a.setNote(dto.getNote());
     }

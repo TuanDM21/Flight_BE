@@ -10,7 +10,6 @@ public class TaskDetailDTO {
     private String notes;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private Integer createdBy;
     private UserDTO createdByUser;
     private List<AssignmentDTO> assignments;
     private List<DocumentDetailDTO> documents;
@@ -61,14 +60,6 @@ public class TaskDetailDTO {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
-    }
-
-    public Integer getCreatedBy() {
-        return createdBy;
-    }
-
-    public void setCreatedBy(Integer createdBy) {
-        this.createdBy = createdBy;
     }
 
     public UserDTO getCreatedByUser() {
