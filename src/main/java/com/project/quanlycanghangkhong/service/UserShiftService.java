@@ -26,4 +26,5 @@ public interface UserShiftService {
     // Lấy danh sách userId trực chung theo ngày và actualTime
     List<Integer> getUserIdsOnDutyAtTime(LocalDate date, java.time.LocalTime actualTime);
 
+    List<ScheduleDTO> getSchedulesByUserAndDateRange(Integer userId, LocalDate startDate, LocalDate endDate);
 }

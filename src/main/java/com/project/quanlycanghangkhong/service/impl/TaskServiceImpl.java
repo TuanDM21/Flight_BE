@@ -176,7 +176,10 @@ public class TaskServiceImpl implements TaskService {
         dto.setNotes(task.getNotes());
         dto.setCreatedAt(task.getCreatedAt());
         dto.setUpdatedAt(task.getUpdatedAt());
-        dto.setCreatedBy(task.getCreatedBy() != null ? task.getCreatedBy().getId() : null);
+        if (task.getCreatedBy() != null) {
+            dto.setCreatedBy(task.getCreatedBy().getId());
+            dto.setCreatedByUser(new UserDTO(task.getCreatedBy()));
+        }
         // Assignments
         List<AssignmentDTO> assignmentDTOs = assignmentRepository.findAll().stream()
             .filter(a -> a.getTask().getId().equals(task.getId()))
@@ -185,13 +188,23 @@ public class TaskServiceImpl implements TaskService {
                 adto.setAssignmentId(a.getAssignmentId());
                 adto.setRecipientId(a.getRecipientId());
                 adto.setRecipientType(a.getRecipientType());
-                adto.setAssignedBy(a.getAssignedBy() != null ? a.getAssignedBy().getId() : null);
+                if (a.getAssignedBy() != null) {
+                    adto.setAssignedBy(a.getAssignedBy().getId());
+                    adto.setAssignedByUser(new UserDTO(a.getAssignedBy()));
+                }
                 adto.setAssignedAt(a.getAssignedAt() != null ? java.sql.Timestamp.valueOf(a.getAssignedAt()) : null);
                 adto.setDueAt(a.getDueAt() != null ? java.sql.Timestamp.valueOf(a.getDueAt()) : null);
                 adto.setNote(a.getNote());
                 adto.setCompletedAt(a.getCompletedAt() != null ? java.sql.Timestamp.valueOf(a.getCompletedAt()) : null);
-                adto.setCompletedBy(a.getCompletedBy() != null ? a.getCompletedBy().getId() : null);
+                if (a.getCompletedBy() != null) {
+                    adto.setCompletedBy(a.getCompletedBy().getId());
+                    adto.setCompletedByUser(new UserDTO(a.getCompletedBy()));
+                }
                 adto.setStatus(a.getStatus());
+                // recipientUser chỉ set nếu recipientType là 'user' và recipientId != null
+                if ("user".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null) {
+                    userRepository.findById(a.getRecipientId()).ifPresent(u -> adto.setRecipientUser(new UserDTO(u)));
+                }
                 return adto;
             }).toList();
         dto.setAssignments(assignmentDTOs);

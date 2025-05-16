@@ -22,6 +22,11 @@ public class NotificationServiceImpl implements NotificationService {
     @Autowired
     private UserRepository userRepository;
 
+    // Danh sách type được phép push notification
+    private static final List<String> ALLOWED_PUSH_TYPES = List.of(
+        "FLIGHT", "ACTIVITY"// Thêm các type bạn muốn cho phép push
+    );
+
     @Override
     public void createNotification(Integer userId, String type, String title, String content, Integer relatedId, boolean overwriteIfExists) {
         LocalDateTime oneWeekAgo = LocalDateTime.now().minusDays(7);
@@ -39,10 +44,12 @@ public class NotificationServiceImpl implements NotificationService {
         n.setIsRead(false);
         notificationRepository.save(n);
 
-        // Push notification nếu user có expoPushToken
-        User user = userRepository.findById(userId).orElse(null);
-        if (user != null && user.getExpoPushToken() != null) {
-            sendExpoPush(user.getExpoPushToken(), title, content);
+        // Push notification nếu user có expoPushToken và type hợp lệ
+        if (ALLOWED_PUSH_TYPES.contains(type)) {
+            User user = userRepository.findById(userId).orElse(null);
+            if (user != null && user.getExpoPushToken() != null) {
+                sendExpoPush(user.getExpoPushToken(), title, content);
+            }
         }
     }
 
@@ -56,10 +63,10 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public List<Notification> getRecentNotifications(Integer userId) {
         LocalDateTime oneWeekAgo = LocalDateTime.now().minusDays(7);
-        // Chỉ trả về các notification có type là "ACTIVITY"
+        List<String> allowedTypes = List.of("ACTIVITY", "FLIGHT"); // Thêm các type bạn muốn
         return notificationRepository.findByUserIdAndCreatedAtAfterOrderByCreatedAtDesc(userId, oneWeekAgo)
             .stream()
-            // .filter(n -> "ACTIVITY".equals(n.getType()))
+            .filter(n -> allowedTypes.contains(n.getType()))
             .toList();
     }
 

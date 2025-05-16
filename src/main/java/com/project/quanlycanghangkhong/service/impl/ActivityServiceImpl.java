@@ -240,6 +240,23 @@ public class ActivityServiceImpl implements ActivityService {
         return activities.stream().map(this::toDTO).collect(Collectors.toList());
     }
 
+    @Override
+    public List<ActivityDTO> getActivitiesByDate(java.time.LocalDate date) {
+        return activityRepository.findByDate(date).stream().map(this::toDTO).toList();
+    }
+
+    @Override
+    public List<ActivityDTO> getActivitiesByDateRange(java.time.LocalDate start, java.time.LocalDate end) {
+        return activityRepository.findByDateRange(start, end).stream().map(this::toDTO).toList();
+    }
+
+    @Override
+    public void pinActivity(Long id, boolean pinned) {
+        Activity activity = activityRepository.findById(id).orElseThrow();
+        activity.setPinned(pinned);
+        activityRepository.save(activity);
+    }
+
     private ActivityDTO toDTO(Activity activity) {
         ActivityDTO dto = new ActivityDTO();
         dto.setId(activity.getId());
@@ -250,6 +267,7 @@ public class ActivityServiceImpl implements ActivityService {
         dto.setNotes(activity.getNotes());
         dto.setCreatedAt(activity.getCreatedAt());
         dto.setUpdatedAt(activity.getUpdatedAt());
+        dto.setPinned(activity.getPinned());
         List<ActivityParticipantDTO> participants = activityParticipantRepository.findByActivityId(activity.getId())
                 .stream().map(this::toParticipantDTO).collect(Collectors.toList());
         dto.setParticipants(participants);

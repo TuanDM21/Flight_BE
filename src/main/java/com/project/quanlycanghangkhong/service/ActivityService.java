@@ -13,8 +13,11 @@ public interface ActivityService {
     List<ActivityDTO> searchActivities(String name, String location);
     List<ActivityDTO> getAllActivities();
     List<ActivityDTO> searchActivitiesByMonthYear(int month, int year);
+    List<ActivityDTO> getActivitiesByDate(java.time.LocalDate date);
+    List<ActivityDTO> getActivitiesByDateRange(java.time.LocalDate start, java.time.LocalDate end);
     // Participants
     List<ActivityParticipantDTO> addParticipants(Long activityId, List<ActivityParticipantDTO> participants);
     void removeParticipant(Long activityId, String participantType, Long participantId);
     List<ActivityDTO> getActivitiesForUser(Integer userId);
+    void pinActivity(Long id, boolean pinned);
 }

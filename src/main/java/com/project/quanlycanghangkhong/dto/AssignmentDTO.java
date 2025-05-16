@@ -14,6 +14,9 @@ public class AssignmentDTO {
     private Integer completedBy;
     private Integer status;
     private String note;
+    private UserDTO assignedByUser;
+    private UserDTO completedByUser;
+    private UserDTO recipientUser;
 
     public Integer getAssignmentId() {
         return assignmentId;
@@ -101,5 +104,29 @@ public class AssignmentDTO {
 
     public void setStatus(Integer status) {
         this.status = status;
+    }
+
+    public UserDTO getAssignedByUser() {
+        return assignedByUser;
+    }
+
+    public void setAssignedByUser(UserDTO assignedByUser) {
+        this.assignedByUser = assignedByUser;
+    }
+
+    public UserDTO getCompletedByUser() {
+        return completedByUser;
+    }
+
+    public void setCompletedByUser(UserDTO completedByUser) {
+        this.completedByUser = completedByUser;
+    }
+
+    public UserDTO getRecipientUser() {
+        return recipientUser;
+    }
+
+    public void setRecipientUser(UserDTO recipientUser) {
+        this.recipientUser = recipientUser;
     }
 }

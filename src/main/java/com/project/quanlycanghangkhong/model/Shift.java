@@ -12,6 +12,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.JoinColumn;
 
 @Entity
 @Table(name = "shifts")
@@ -36,6 +38,10 @@ public class Shift {
     @Column(name = "description")
     private String description;
 
+    @ManyToOne
+    @JoinColumn(name = "team_id", nullable = false)
+    private Team team;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -48,12 +54,13 @@ public class Shift {
     public Shift() {
     }
 
-    public Shift(String shiftCode, LocalTime startTime, LocalTime endTime, String location, String description) {
+    public Shift(String shiftCode, LocalTime startTime, LocalTime endTime, String location, String description, Team team) {
         this.shiftCode = shiftCode;
         this.startTime = startTime;
         this.endTime = endTime;
         this.location = location;
         this.description = description;
+        this.team = team;
     }
 
     // Getters & Setters
@@ -103,6 +110,14 @@ public class Shift {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public Team getTeam() {
+        return team;
+    }
+
+    public void setTeam(Team team) {
+        this.team = team;
     }
 
     public LocalDateTime getCreatedAt() {

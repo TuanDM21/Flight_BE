@@ -24,6 +24,9 @@ public class Activity {
     @Column(nullable = false)
     private LocalDateTime endTime;
 
+    @Column(nullable = false)
+    private Boolean pinned = false;
+
     @Column
     private String notes;
 
@@ -75,6 +78,12 @@ public class Activity {
     }
     public void setEndTime(LocalDateTime endTime) {
         this.endTime = endTime;
+    }
+    public Boolean getPinned() {
+        return pinned;
+    }
+    public void setPinned(Boolean pinned) {
+        this.pinned = pinned;
     }
     public String getNotes() {
         return notes;

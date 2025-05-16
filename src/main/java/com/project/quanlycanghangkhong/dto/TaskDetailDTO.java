@@ -11,6 +11,7 @@ public class TaskDetailDTO {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Integer createdBy;
+    private UserDTO createdByUser;
     private List<AssignmentDTO> assignments;
     private List<DocumentDetailDTO> documents;
 
@@ -68,6 +69,14 @@ public class TaskDetailDTO {
 
     public void setCreatedBy(Integer createdBy) {
         this.createdBy = createdBy;
+    }
+
+    public UserDTO getCreatedByUser() {
+        return createdByUser;
+    }
+
+    public void setCreatedByUser(UserDTO createdByUser) {
+        this.createdByUser = createdByUser;
     }
 
     public List<AssignmentDTO> getAssignments() {

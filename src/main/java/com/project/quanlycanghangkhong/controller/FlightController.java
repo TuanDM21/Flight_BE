@@ -187,4 +187,26 @@ public class FlightController {
         );
         return ResponseEntity.ok(Map.of("success", true, "message", "Đã gửi notification cho " + userIds.size() + " nhân viên."));
     }
+
+    @GetMapping("/live-tracking-group")
+    public ResponseEntity<List<FlightDTO>> getLiveTrackingGroup() {
+        LocalDate today = LocalDate.now();
+        LocalDate yesterday = today.minusDays(1);
+        List<FlightDTO> allToday = flightService.getFlightsByExactDate(today);
+        List<FlightDTO> allYesterday = flightService.getFlightsByExactDate(yesterday);
+        // Hôm nay: chỉ cần 1 trong 2 trường actualDepartureTime hoặc actualArrivalTime có data
+        List<FlightDTO> todayFiltered = allToday.stream()
+            .filter(f -> f.getActualDepartureTime() != null || f.getActualArrivalTime() != null)
+            .toList();
+        // Hôm qua: actualDepartureTimeAtArrival == null và cả 2 trường actualDepartureTime, actualArrivalTime đều có data
+        List<FlightDTO> yesterdayFiltered = allYesterday.stream()
+            .filter(f -> f.getActualDepartureTimeAtArrival() == null
+                      && f.getActualDepartureTime() != null
+                      && f.getActualArrivalTime() != null)
+            .toList();
+        List<FlightDTO> result = new java.util.ArrayList<>();
+        result.addAll(todayFiltered);
+        result.addAll(yesterdayFiltered);
+        return ResponseEntity.ok(result);
+    }
 }

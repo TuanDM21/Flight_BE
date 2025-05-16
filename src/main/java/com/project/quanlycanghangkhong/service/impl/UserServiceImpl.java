@@ -16,6 +16,8 @@ import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
 import com.project.quanlycanghangkhong.model.User;
 import com.project.quanlycanghangkhong.repository.UserRepository;
 import com.project.quanlycanghangkhong.service.UserService;
+import com.project.quanlycanghangkhong.repository.UserPermissionRepository;
+import com.project.quanlycanghangkhong.model.UserPermission;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -24,6 +26,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private UserDAO userDAO;
+
+    @Autowired
+    private UserPermissionRepository userPermissionRepository;
 
     @Override
     public List<UserDTO> getAllUsers() {
@@ -74,7 +79,17 @@ public class UserServiceImpl implements UserService {
     public ApiResponseCustom<UserDTO> getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
-        return ApiResponseCustom.success(DTOConverter.convertUser(user));
+        UserDTO dto = new UserDTO(user);
+        // Lấy quyền động từ user_permission
+        List<UserPermission> perms = userPermissionRepository.findByUserId(user.getId());
+        List<String> permCodes = perms.stream()
+            .filter(UserPermission::getValue)
+            .map(UserPermission::getPermissionCode)
+            .collect(Collectors.toList());
+        dto.setPermissions(permCodes);
+        // Giữ lại canCreateActivity cho tương thích cũ
+        dto.setCanCreateActivity(permCodes.contains("CAN_CREATE_ACTIVITY"));
+        return ApiResponseCustom.success(dto);
     }
 
     @Override

@@ -16,11 +16,11 @@ import org.springframework.stereotype.Repository;
 import com.project.quanlycanghangkhong.dto.ScheduleDTO;
 
 @Repository
-public class ScheduleDAO {
+public class ScheduleRepository {
 
     private DataSource dataSource;
 
-    public ScheduleDAO(DataSource dataSource) {
+    public ScheduleRepository(DataSource dataSource) {
         this.dataSource = dataSource;
     }
 

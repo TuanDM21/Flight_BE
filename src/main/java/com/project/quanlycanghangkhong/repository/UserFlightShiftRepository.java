@@ -47,7 +47,9 @@ public interface UserFlightShiftRepository extends JpaRepository<UserFlightShift
 			"ufs.flight.departureTime, " +
 			"ufs.flight.arrivalTime, " +
 			"ufs.flight.departureAirport.airportCode, " +
-			"ufs.flight.arrivalAirport.airportCode" +
+			"ufs.flight.arrivalAirport.airportCode, " +
+			"ufs.flight.id, " +
+			"ufs.user.id" +
 			") " +
 			"FROM UserFlightShift ufs " +
 			"WHERE ufs.shiftDate = :shiftDate " +

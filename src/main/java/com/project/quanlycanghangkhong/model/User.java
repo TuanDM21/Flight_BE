@@ -38,6 +38,9 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserFlightShift> userFlightShifts;
 
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UserPermission> userPermissions;
+
     // Getters and Setters
     public Integer getId() {
         return id;
@@ -109,5 +112,13 @@ public class User {
 
     public void setUserFlightShifts(List<UserFlightShift> userFlightShifts) {
         this.userFlightShifts = userFlightShifts;
+    }
+
+    public List<UserPermission> getUserPermissions() {
+        return userPermissions;
+    }
+
+    public void setUserPermissions(List<UserPermission> userPermissions) {
+        this.userPermissions = userPermissions;
     }
 }

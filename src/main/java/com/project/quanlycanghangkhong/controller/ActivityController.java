@@ -11,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.function.ServerResponse.SseBuilder;
 
 import java.util.List;
 import java.util.Optional;
@@ -65,6 +64,19 @@ public class ActivityController {
         return ResponseEntity.ok(activityService.searchActivitiesByMonthYear(month, year));
     }
 
+    @GetMapping("/search-by-date")
+    public ResponseEntity<List<ActivityDTO>> getActivitiesByDate(@RequestParam String date) {
+        java.time.LocalDate localDate = java.time.LocalDate.parse(date);
+        return ResponseEntity.ok(activityService.getActivitiesByDate(localDate));
+    }
+
+    @GetMapping("/search-by-range")
+    public ResponseEntity<List<ActivityDTO>> getActivitiesByDateRange(@RequestParam String startDate, @RequestParam String endDate) {
+        java.time.LocalDate start = java.time.LocalDate.parse(startDate);
+        java.time.LocalDate end = java.time.LocalDate.parse(endDate);
+        return ResponseEntity.ok(activityService.getActivitiesByDateRange(start, end));
+    }
+
     @PostMapping("/{id}/participants")
     public ResponseEntity<List<ActivityParticipantDTO>> addParticipants(
             @PathVariable Long id,
@@ -91,5 +103,19 @@ public class ActivityController {
         }
         Integer userId = userOpt.get().getId();
         return ResponseEntity.ok(activityService.getActivitiesForUser(userId));
+    }
+
+    @PutMapping("/{id}/pin")
+    public ResponseEntity<Void> pinActivity(@PathVariable Long id, @RequestParam boolean pinned) {
+        activityService.pinActivity(id, pinned);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/pinned")
+    public ResponseEntity<List<ActivityDTO>> getPinnedActivities() {
+        List<ActivityDTO> pinned = activityService.getAllActivities().stream()
+            .filter(ActivityDTO::getPinned)
+            .toList();
+        return ResponseEntity.ok(pinned);
     }
 }

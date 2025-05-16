@@ -39,4 +39,7 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
 
     @Query("SELECT a FROM Activity a WHERE a.startTime BETWEEN :from AND :to")
     List<Activity> findActivitiesStartingBetween(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
+    @Query("SELECT a FROM Activity a WHERE a.startTime >= :startDate AND a.endTime <= :endDate")
+    List<Activity> findByDateRange(@Param("startDate") java.time.LocalDateTime startDate, @Param("endDate") java.time.LocalDateTime endDate);
 }

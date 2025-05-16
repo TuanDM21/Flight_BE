@@ -17,7 +17,8 @@ import com.project.quanlycanghangkhong.dto.UserShiftDTO;
 import com.project.quanlycanghangkhong.model.Shift;
 import com.project.quanlycanghangkhong.model.User;
 import com.project.quanlycanghangkhong.model.UserShift;
-import com.project.quanlycanghangkhong.repository.ScheduleDAO;
+import com.project.quanlycanghangkhong.dao.ScheduleDAO;
+import com.project.quanlycanghangkhong.repository.ScheduleRepository;
 import com.project.quanlycanghangkhong.repository.ShiftRepository;
 import com.project.quanlycanghangkhong.repository.UserRepository;
 import com.project.quanlycanghangkhong.repository.UserShiftRepository;
@@ -37,6 +38,10 @@ public class UserShiftServiceImpl implements UserShiftService {
     
     @Autowired
     private ScheduleDAO scheduleDAO;
+
+    @Autowired
+    private ScheduleRepository scheduleRepository;
+
     
     @Override
     public UserShiftDTO assignShiftToUser(Integer userId, LocalDate date, Integer shiftId) {
@@ -103,7 +108,7 @@ public class UserShiftServiceImpl implements UserShiftService {
     public List<ScheduleDTO> getSchedulesByCriteria(LocalDate shiftDate, Integer teamId, Integer unitId) {
         try {
             // Nếu shiftDate là null, trả về tất cả lịch trực, hoặc bạn có thể thêm logic khác.
-            return scheduleDAO.getSchedulesByDateTeamUnit(shiftDate, teamId, unitId);
+            return scheduleRepository.getSchedulesByDateTeamUnit(shiftDate, teamId, unitId);
         } catch (Exception ex) {
             throw new RuntimeException("Error fetching schedules", ex);
         }
@@ -148,5 +153,13 @@ public class UserShiftServiceImpl implements UserShiftService {
                 .map(shift -> shift.getUser().getId())
                 .distinct()
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ScheduleDTO> getSchedulesByUserAndDateRange(Integer userId, LocalDate startDate, LocalDate endDate) {
+        // Gọi DAO hoặc repository để lấy danh sách lịch trực theo userId và khoảng ngày
+        List<ScheduleDTO> result = scheduleDAO.getSchedulesByUserAndDateRange(userId, startDate, endDate);
+        System.out.println("[LOG] getSchedulesByUserAndDateRange result: " + result);
+        return result;
     }
 }

@@ -2,6 +2,7 @@ package com.project.quanlycanghangkhong.dto;
 
 import com.project.quanlycanghangkhong.model.User;
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.util.List;
 
 public class UserDTO {
 	@Schema(description = "ID of the user", required = true)
@@ -31,6 +32,10 @@ public class UserDTO {
 	@Schema(description = "Unit ID of the user", required = true)
 	private Integer unitId;
 
+	private Boolean canCreateActivity;
+
+	private List<String> permissions;
+
 	// Bổ sung constructor không tham số để hỗ trợ serialization/deserialization
 	public UserDTO() {}
 
@@ -47,6 +52,7 @@ public class UserDTO {
 		this.roleId = null;
 		this.teamId = null;
 		this.unitId = null;
+		this.canCreateActivity = null; // default, sẽ set ở service khi convert
 
 		// Safely access nested properties
 		if (user.getRole() != null) {
@@ -65,13 +71,14 @@ public class UserDTO {
 		}
 	}
 
-	public UserDTO(Integer id, String name, String email, Integer roleId, Integer teamId, Integer unitId) {
+	public UserDTO(Integer id, String name, String email, Integer roleId, Integer teamId, Integer unitId, Boolean canCreateActivity) {
 		this.id = id;
 		this.name = name;
 		this.email = email;
 		this.roleId = roleId;
 		this.teamId = teamId;
 		this.unitId = unitId;
+		this.canCreateActivity = canCreateActivity;
 		// Initialize other properties to null
 		this.roleName = null;
 		this.teamName = null;
@@ -148,6 +155,22 @@ public class UserDTO {
 
 	public void setUnitId(Integer unitId) {
 		this.unitId = unitId;
+	}
+
+	public Boolean getCanCreateActivity() {
+		return canCreateActivity;
+	}
+
+	public void setCanCreateActivity(Boolean canCreateActivity) {
+		this.canCreateActivity = canCreateActivity;
+	}
+
+	public List<String> getPermissions() {
+		return permissions;
+	}
+
+	public void setPermissions(List<String> permissions) {
+		this.permissions = permissions;
 	}
 
 	// Getter & Setter

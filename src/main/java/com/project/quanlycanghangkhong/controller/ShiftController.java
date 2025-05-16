@@ -15,9 +15,13 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import com.project.quanlycanghangkhong.model.Shift;
+import com.project.quanlycanghangkhong.model.User;
 import com.project.quanlycanghangkhong.service.ShiftService;
+import com.project.quanlycanghangkhong.repository.UserRepository;
+import com.project.quanlycanghangkhong.dto.ShiftDTO;
 
 @CrossOrigin(origins = "*")
 @RestController
@@ -27,15 +31,18 @@ public class ShiftController {
     @Autowired
     private ShiftService shiftService;
 
+    @Autowired
+    private UserRepository userRepository;
+
     @GetMapping
-    public List<Shift> getAllShifts() {
-        return shiftService.getAllShifts();
+    public List<ShiftDTO> getAllShifts() {
+        return shiftService.getAllShiftsForCurrentUser();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Shift> getShiftById(@PathVariable Integer id) {
+    public ResponseEntity<ShiftDTO> getShiftById(@PathVariable Integer id) {
         return shiftService.getShiftById(id)
-                .map(ResponseEntity::ok)
+                .map(shift -> ResponseEntity.ok(shiftService.toDTO(shift)))
                 .orElse(ResponseEntity.notFound().build());
     }
 
@@ -47,8 +54,15 @@ public class ShiftController {
                     .body("Mã lịch trực đã tồn tại. Vui lòng chọn mã khác.");
         }
         try {
+            // Lấy user hiện tại và set team cho shift
+            String email = SecurityContextHolder.getContext().getAuthentication().getName();
+            User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
+            if (user.getTeam() == null) {
+                return ResponseEntity.badRequest().body("User không thuộc team nào!");
+            }
+            shift.setTeam(user.getTeam());
             Shift newShift = shiftService.createShift(shift);
-            return ResponseEntity.ok(newShift);
+            return ResponseEntity.ok(shiftService.toDTO(newShift)); // Trả về ShiftDTO thay vì entity Shift
         } catch (Exception ex) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Đã xảy ra lỗi khi tạo lịch trực.");
@@ -64,13 +78,11 @@ public class ShiftController {
              return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body("Mã lịch trực đã tồn tại. Vui lòng chọn mã khác.");
         }
-        
         Shift updatedShift = shiftService.updateShift(id, shiftData);
         return updatedShift != null 
-                ? ResponseEntity.ok(updatedShift) 
+                ? ResponseEntity.ok(shiftService.toDTO(updatedShift)) // Trả về ShiftDTO thay vì entity Shift
                 : ResponseEntity.notFound().build();
     }
-
 
 
     @DeleteMapping("/{id}")

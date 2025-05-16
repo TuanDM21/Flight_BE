@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import com.project.quanlycanghangkhong.dto.ApplyShiftMultiDTO;
 import com.project.quanlycanghangkhong.dto.AssignShiftRequest;
@@ -97,6 +98,20 @@ public class UserShiftController {
         } catch (RuntimeException ex) {
             return ResponseEntity.status(409).body(ex.getMessage());
         }
+    }
+
+    @GetMapping("/filter-by-user-and-range")
+    public ResponseEntity<List<ScheduleDTO>> filterByUserAndRange(
+        @RequestParam("userId") Integer userId,
+        @RequestParam("startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) String startDateStr,
+        @RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) String endDateStr
+    ) {
+        // Chuyển đổi string sang LocalDate
+        LocalDate startDate = LocalDate.parse(startDateStr);
+        LocalDate endDate = LocalDate.parse(endDateStr);
+        // Gọi service để lấy danh sách lịch trực theo user và khoảng ngày
+        List<ScheduleDTO> dtos = userShiftService.getSchedulesByUserAndDateRange(userId, startDate, endDate);
+        return ResponseEntity.ok(dtos);
     }
 
 }

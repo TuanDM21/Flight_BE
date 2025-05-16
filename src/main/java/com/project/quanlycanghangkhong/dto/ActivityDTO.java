@@ -23,6 +23,7 @@ public class ActivityDTO {
     private List<ActivityParticipantDTO> participants;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Boolean pinned;
 
     public Long getId() {
         return id;
@@ -77,5 +78,11 @@ public class ActivityDTO {
     }
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+    public Boolean getPinned() {
+        return pinned;
+    }
+    public void setPinned(Boolean pinned) {
+        this.pinned = pinned;
     }
 }
