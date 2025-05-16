@@ -152,22 +152,27 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public void deleteTask(Integer id) {
-        taskRepository.deleteById(id);
+        Optional<Task> optionalTask = taskRepository.findById(id);
+        if (optionalTask.isPresent()) {
+            Task task = optionalTask.get();
+            task.setDeleted(true);
+            taskRepository.save(task);
+        }
     }
 
     @Override
     public TaskDTO getTaskById(Integer id) {
-        return taskRepository.findById(id).map(this::convertToDTO).orElse(null);
+        return taskRepository.findByIdAndDeletedFalse(id).map(this::convertToDTO).orElse(null);
     }
 
     @Override
     public List<TaskDTO> getAllTasks() {
-        return taskRepository.findAll().stream().map(this::convertToDTO).collect(Collectors.toList());
+        return taskRepository.findAllByDeletedFalse().stream().map(this::convertToDTO).collect(Collectors.toList());
     }
 
     @Override
     public TaskDetailDTO getTaskDetailById(Integer id) {
-        Task task = taskRepository.findById(id).orElse(null);
+        Task task = taskRepository.findByIdAndDeletedFalse(id).orElse(null);
         if (task == null) return null;
         TaskDetailDTO dto = new TaskDetailDTO();
         dto.setId(task.getId());
@@ -238,7 +243,7 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public List<TaskDetailDTO> getAllTaskDetails() {
-        return taskRepository.findAll().stream()
+        return taskRepository.findAllByDeletedFalse().stream()
             .map(task -> getTaskDetailById(task.getId()))
             .toList();
     }

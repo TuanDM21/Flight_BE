@@ -60,4 +60,17 @@ echo "==> Test lấy danh sách task..."
 curl -s -X GET "$API_URL/tasks" \
   -H "Authorization: Bearer $TOKEN" | jq
 
+echo "==> Test xoá mềm task id=$TASK_ID..."
+DELETE_TASK_RESPONSE=$(curl -s -X DELETE "$API_URL/tasks/$TASK_ID" \
+  -H "Authorization: Bearer $TOKEN")
+echo "Response xoá task: $DELETE_TASK_RESPONSE"
+
+echo "==> Test lấy chi tiết task id=$TASK_ID sau khi xoá..."
+curl -s -X GET "$API_URL/tasks/$TASK_ID" \
+  -H "Authorization: Bearer $TOKEN" | jq
+
+echo "==> Test lấy danh sách task sau khi xoá..."
+curl -s -X GET "$API_URL/tasks" \
+  -H "Authorization: Bearer $TOKEN" | jq
+
 echo "==> Đã test xong các API Task!"

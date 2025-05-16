@@ -43,6 +43,9 @@ public class Task {
     @JoinColumn(name = "created_by", nullable = false)
     private User createdBy;
 
+    @Column(name = "deleted", nullable = false)
+    private boolean deleted = false;
+
     // Getters and setters
     public Integer getId() {
         return id;
@@ -98,5 +101,13 @@ public class Task {
 
     public void setCreatedBy(User createdBy) {
         this.createdBy = createdBy;
+    }
+
+    public boolean isDeleted() {
+        return deleted;
+    }
+
+    public void setDeleted(boolean deleted) {
+        this.deleted = deleted;
     }
 }
