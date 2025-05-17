@@ -34,6 +34,7 @@ public class AssignmentServiceImpl implements AssignmentService {
         dto.setTaskId(a.getTask() != null ? a.getTask().getId() : null);
         // Không set recipientId, assignedBy, completedBy vào DTO nữa
         dto.setRecipientType(a.getRecipientType());
+        dto.setRecipientId(a.getRecipientId()); // Đảm bảo luôn set recipientId cho DTO
         dto.setAssignedAt(a.getAssignedAt() != null ? Timestamp.valueOf(a.getAssignedAt()) : null);
         dto.setDueAt(a.getDueAt() != null ? Timestamp.valueOf(a.getDueAt()) : null);
         dto.setCompletedAt(a.getCompletedAt() != null ? Timestamp.valueOf(a.getCompletedAt()) : null);
@@ -69,13 +70,28 @@ public class AssignmentServiceImpl implements AssignmentService {
         a.setAssignedAt(a.getAssignedAt() == null ? java.time.LocalDateTime.now() : a.getAssignedAt());
         // Xử lý tự động set recipientId là userId của leader nếu recipientType là team hoặc unit
         if ("team".equalsIgnoreCase(dto.getRecipientType()) && dto.getRecipientId() != null) {
+            System.out.println("[DEBUG] createAssignment: recipientType=team, teamId=" + dto.getRecipientId());
             userRepository.findTeamLeadByTeamId(dto.getRecipientId())
-                .ifPresent(leader -> a.setRecipientId(leader.getId()));
+                .ifPresentOrElse(
+                    leader -> {
+                        a.setRecipientId(leader.getId());
+                        System.out.println("[DEBUG] createAssignment: found teamlead userId=" + leader.getId());
+                    },
+                    () -> System.out.println("[DEBUG] createAssignment: teamlead not found for teamId=" + dto.getRecipientId())
+                );
         } else if ("unit".equalsIgnoreCase(dto.getRecipientType()) && dto.getRecipientId() != null) {
+            System.out.println("[DEBUG] createAssignment: recipientType=unit, unitId=" + dto.getRecipientId());
             userRepository.findUnitLeadByUnitId(dto.getRecipientId())
-                .ifPresent(leader -> a.setRecipientId(leader.getId()));
+                .ifPresentOrElse(
+                    leader -> {
+                        a.setRecipientId(leader.getId());
+                        System.out.println("[DEBUG] createAssignment: found unitlead userId=" + leader.getId());
+                    },
+                    () -> System.out.println("[DEBUG] createAssignment: unitlead not found for unitId=" + dto.getRecipientId())
+                );
         } else if ("user".equalsIgnoreCase(dto.getRecipientType()) && dto.getRecipientId() != null) {
             a.setRecipientId(dto.getRecipientId());
+            System.out.println("[DEBUG] createAssignment: recipientType=user, userId=" + dto.getRecipientId());
         }
         return toDTO(assignmentRepository.save(a));
     }
@@ -92,15 +108,30 @@ public class AssignmentServiceImpl implements AssignmentService {
         }
         // Xử lý tự động set recipientId là userId của leader nếu recipientType là team hoặc unit
         if ("team".equalsIgnoreCase(request.getRecipientType()) && request.getRecipientId() != null) {
+            System.out.println("[DEBUG] updateAssignment: recipientType=team, teamId=" + request.getRecipientId());
             userRepository.findTeamLeadByTeamId(request.getRecipientId())
-                .ifPresent(leader -> assignment.setRecipientId(leader.getId()));
+                .ifPresentOrElse(
+                    leader -> {
+                        assignment.setRecipientId(leader.getId());
+                        System.out.println("[DEBUG] updateAssignment: found teamlead userId=" + leader.getId());
+                    },
+                    () -> System.out.println("[DEBUG] updateAssignment: teamlead not found for teamId=" + request.getRecipientId())
+                );
             recipientChanged = true;
         } else if ("unit".equalsIgnoreCase(request.getRecipientType()) && request.getRecipientId() != null) {
+            System.out.println("[DEBUG] updateAssignment: recipientType=unit, unitId=" + request.getRecipientId());
             userRepository.findUnitLeadByUnitId(request.getRecipientId())
-                .ifPresent(leader -> assignment.setRecipientId(leader.getId()));
+                .ifPresentOrElse(
+                    leader -> {
+                        assignment.setRecipientId(leader.getId());
+                        System.out.println("[DEBUG] updateAssignment: found unitlead userId=" + leader.getId());
+                    },
+                    () -> System.out.println("[DEBUG] updateAssignment: unitlead not found for unitId=" + request.getRecipientId())
+                );
             recipientChanged = true;
         } else if ("user".equalsIgnoreCase(request.getRecipientType()) && request.getRecipientUser() != null && request.getRecipientUser().getId() != null) {
             assignment.setRecipientId(request.getRecipientUser().getId());
+            System.out.println("[DEBUG] updateAssignment: recipientType=user, userId=" + request.getRecipientUser().getId());
             recipientChanged = true;
         }
         if (request.getDueAt() != null) {

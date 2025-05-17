@@ -26,9 +26,8 @@ CREATE_ASSIGNMENT_RESPONSE=$(curl -s -X POST "$API_URL/assignments" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "taskId": 1,
-    "recipientId": 4,
-    "recipientType": "user",
-    "assignedBy": 1,
+    "recipientId": 1,
+    "recipientType": "Team",
     "status": 0,
     "note": "Giao cho user 4 qua script"
   }')
