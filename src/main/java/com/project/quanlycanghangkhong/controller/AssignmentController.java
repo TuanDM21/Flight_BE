@@ -2,6 +2,7 @@ package com.project.quanlycanghangkhong.controller;
 
 import com.project.quanlycanghangkhong.dto.AssignmentDTO;
 import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
+import com.project.quanlycanghangkhong.dto.request.UpdateAssignmentRequest;
 import com.project.quanlycanghangkhong.service.AssignmentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -26,8 +27,8 @@ public class AssignmentController {
 
     // Cập nhật giao công việc
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponseCustom<AssignmentDTO>> updateAssignment(@PathVariable Integer id, @RequestBody AssignmentDTO dto) {
-        AssignmentDTO result = assignmentService.updateAssignment(id, dto);
+    public ResponseEntity<ApiResponseCustom<AssignmentDTO>> updateAssignment(@PathVariable Integer id, @RequestBody UpdateAssignmentRequest request) {
+        AssignmentDTO result = assignmentService.updateAssignment(id, request);
         if (result == null) return ResponseEntity.status(404).body(ApiResponseCustom.error(HttpStatus.NOT_FOUND, "Không tìm thấy assignment"));
         return ResponseEntity.ok(ApiResponseCustom.success("Cập nhật thành công", result));
     }

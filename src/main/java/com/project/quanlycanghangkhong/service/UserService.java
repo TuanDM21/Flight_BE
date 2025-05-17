@@ -23,4 +23,6 @@ public interface UserService {
     ApiResponseCustom<UserDTO> getCurrentUser();
 
     List<UserDTO> searchUsersByKeyword(String keyword);
+
+    List<UserDTO> getUsersByRoles(List<String> roleNames);
 }

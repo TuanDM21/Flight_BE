@@ -99,4 +99,10 @@ public class UserServiceImpl implements UserService {
                 .map(DTOConverter::convertUser)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    public List<UserDTO> getUsersByRoles(List<String> roleNames) {
+        List<User> users = userRepository.findByRoleNames(roleNames);
+        return users.stream().map(DTOConverter::convertUser).collect(Collectors.toList());
+    }
 }

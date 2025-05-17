@@ -7,6 +7,7 @@ import com.project.quanlycanghangkhong.repository.AssignmentRepository;
 import com.project.quanlycanghangkhong.repository.TaskRepository;
 import com.project.quanlycanghangkhong.repository.UserRepository;
 import com.project.quanlycanghangkhong.service.AssignmentService;
+import com.project.quanlycanghangkhong.dto.request.UpdateAssignmentRequest;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ import java.sql.Timestamp;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.time.ZoneId;
 
 @Service
 public class AssignmentServiceImpl implements AssignmentService {
@@ -69,12 +71,44 @@ public class AssignmentServiceImpl implements AssignmentService {
     }
 
     @Override
-    public AssignmentDTO updateAssignment(Integer assignmentId, AssignmentDTO dto) {
-        Optional<Assignment> opt = assignmentRepository.findById(assignmentId);
-        if (opt.isEmpty()) return null;
-        Assignment a = opt.get();
-        updateEntityFromDTO(a, dto);
-        return toDTO(assignmentRepository.save(a));
+    public AssignmentDTO updateAssignment(Integer assignmentId, UpdateAssignmentRequest request) {
+        Assignment assignment = assignmentRepository.findById(assignmentId).orElse(null);
+        if (assignment == null) return null;
+
+        boolean recipientChanged = false;
+        if (request.getRecipientType() != null && !request.getRecipientType().equals(assignment.getRecipientType())) {
+            assignment.setRecipientType(request.getRecipientType());
+            recipientChanged = true;
+        }
+        if (request.getRecipientUser() != null && request.getRecipientUser().getId() != null) {
+            assignment.setRecipientId(request.getRecipientUser().getId());
+            recipientChanged = true;
+        }
+        if (request.getDueAt() != null) {
+            assignment.setDueAt(request.getDueAt().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime());
+        }
+        if (request.getNote() != null) {
+            assignment.setNote(request.getNote());
+        }
+        if (request.getStatus() != null) {
+            assignment.setStatus(request.getStatus());
+            // Nếu chuyển sang completed thì set completedAt, completedBy
+            if (request.getStatus() == 2) { // 2 = Completed
+                assignment.setCompletedAt(java.time.LocalDateTime.now());
+                // assignment.setCompletedBy(currentUser); // Lấy user hiện tại nếu cần
+            } else {
+                assignment.setCompletedAt(null);
+                assignment.setCompletedBy(null);
+            }
+        }
+        // Nếu thay đổi recipient thì reset completedAt, completedBy, status
+        if (recipientChanged) {
+            assignment.setCompletedAt(null);
+            assignment.setCompletedBy(null);
+            assignment.setStatus(0); // Pending
+        }
+        assignmentRepository.save(assignment);
+        return toDTO(assignment);
     }
 
     @Override

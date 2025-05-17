@@ -247,4 +247,19 @@ public class UserController {
                 return ResponseEntity.badRequest().body("User not found");
         }
 
+        @GetMapping("/directors")
+        @Operation(summary = "Get users with role DIRECTOR or VICE_DIRECTOR", description = "Retrieve a list of users with role DIRECTOR or VICE_DIRECTOR")
+        @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully retrieved directors and vice directors", content = @Content(schema = @Schema(implementation = ApiAllUsersResponse.class)))
+        })
+        public ResponseEntity<ApiAllUsersResponse> getDirectorsAndViceDirectors() {
+            List<UserDTO> dtos = userService.getUsersByRoles(List.of("DIRECTOR", "VICE_DIRECTOR"));
+            ApiAllUsersResponse response = new ApiAllUsersResponse();
+            response.setMessage("Thành công");
+            response.setStatusCode(200);
+            response.setData(dtos);
+            response.setSuccess(true);
+            return ResponseEntity.ok(response);
+        }
+
 }
