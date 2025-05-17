@@ -35,6 +35,7 @@ public class AssignmentServiceImpl implements AssignmentService {
         // Không set recipientId, assignedBy, completedBy vào DTO nữa
         dto.setRecipientType(a.getRecipientType());
         dto.setRecipientId(a.getRecipientId()); // Đảm bảo luôn set recipientId cho DTO
+        System.out.println("[DEBUG] toDTO: assignmentId=" + a.getAssignmentId() + ", recipientType=" + a.getRecipientType() + ", recipientId=" + a.getRecipientId());
         dto.setAssignedAt(a.getAssignedAt() != null ? Timestamp.valueOf(a.getAssignedAt()) : null);
         dto.setDueAt(a.getDueAt() != null ? Timestamp.valueOf(a.getDueAt()) : null);
         dto.setCompletedAt(a.getCompletedAt() != null ? Timestamp.valueOf(a.getCompletedAt()) : null);

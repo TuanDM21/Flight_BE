@@ -191,6 +191,8 @@ public class TaskServiceImpl implements TaskService {
                 AssignmentDTO adto = new AssignmentDTO();
                 adto.setAssignmentId(a.getAssignmentId());
                 adto.setRecipientType(a.getRecipientType());
+                adto.setRecipientId(a.getRecipientId()); // BỔ SUNG recipientId
+                adto.setTaskId(a.getTask() != null ? a.getTask().getId() : null); // BỔ SUNG taskId nếu cần
                 if (a.getAssignedBy() != null) {
                     adto.setAssignedByUser(new UserDTO(a.getAssignedBy()));
                 }
