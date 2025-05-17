@@ -132,18 +132,14 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public TaskDTO updateTask(Integer id, TaskDTO taskDTO) {
+    public TaskDTO updateTask(Integer id, UpdateTaskDTO updateTaskDTO) {
         Optional<Task> optionalTask = taskRepository.findById(id);
         if (optionalTask.isPresent()) {
             Task task = optionalTask.get();
-            task.setContent(taskDTO.getContent());
-            task.setInstructions(taskDTO.getInstructions());
-            task.setNotes(taskDTO.getNotes());
+            task.setContent(updateTaskDTO.getContent());
+            task.setInstructions(updateTaskDTO.getInstructions());
+            task.setNotes(updateTaskDTO.getNotes());
             task.setUpdatedAt(LocalDateTime.now());
-            if (taskDTO.getCreatedBy() != null) {
-                Optional<User> userOpt = userRepository.findById(taskDTO.getCreatedBy());
-                userOpt.ifPresent(task::setCreatedBy);
-            }
             Task updated = taskRepository.save(task);
             return convertToDTO(updated);
         }

@@ -3,6 +3,7 @@ package com.project.quanlycanghangkhong.controller;
 import com.project.quanlycanghangkhong.dto.CreateTaskRequest;
 import com.project.quanlycanghangkhong.dto.TaskDTO;
 import com.project.quanlycanghangkhong.dto.TaskDetailDTO;
+import com.project.quanlycanghangkhong.dto.UpdateTaskDTO;
 import com.project.quanlycanghangkhong.dto.response.task.ApiAllTasksResponse;
 import com.project.quanlycanghangkhong.dto.response.task.ApiTaskResponse;
 import com.project.quanlycanghangkhong.dto.response.task.ApiTaskDetailResponse;
@@ -42,8 +43,8 @@ public class TaskController {
         @ApiResponse(responseCode = "200", description = "Cập nhật thành công", content = @Content(schema = @Schema(implementation = ApiTaskResponse.class))),
         @ApiResponse(responseCode = "404", description = "Không tìm thấy công việc", content = @Content(schema = @Schema(implementation = ApiTaskResponse.class)))
     })
-    public ResponseEntity<ApiTaskResponse> updateTask(@PathVariable Integer id, @RequestBody TaskDTO taskDTO) {
-        TaskDTO updated = taskService.updateTask(id, taskDTO);
+    public ResponseEntity<ApiTaskResponse> updateTask(@PathVariable Integer id, @RequestBody UpdateTaskDTO updateTaskDTO) {
+        TaskDTO updated = taskService.updateTask(id, updateTaskDTO);
         if (updated == null) return ResponseEntity.status(404).body(new ApiTaskResponse("Không tìm thấy công việc", 404, null, false));
         return ResponseEntity.ok(new ApiTaskResponse("Cập nhật thành công", 200, updated, true));
     }

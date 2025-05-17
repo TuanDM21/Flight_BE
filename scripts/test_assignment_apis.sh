@@ -27,7 +27,7 @@ CREATE_ASSIGNMENT_RESPONSE=$(curl -s -X POST "$API_URL/assignments" \
   -d '{
     "taskId": 1,
     "recipientId": 1,
-    "recipientType": "Team",
+    "recipientType": "team",
     "status": 0,
     "note": "Giao cho user 4 qua script"
   }')
