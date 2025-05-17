@@ -6,6 +6,7 @@ import com.project.quanlycanghangkhong.dto.UserDTO;
 public class UpdateAssignmentRequest {
     private String recipientType; // 'team', 'unit', 'user'
     private UserDTO recipientUser; // user nhận việc (nếu recipientType là 'user')
+    private Integer recipientId; // Id của team hoặc unit nếu recipientType là 'team' hoặc 'unit'
     private Date dueAt;
     private Integer status;
     private String note;
@@ -22,6 +23,12 @@ public class UpdateAssignmentRequest {
     }
     public void setRecipientUser(UserDTO recipientUser) {
         this.recipientUser = recipientUser;
+    }
+    public Integer getRecipientId() {
+        return recipientId;
+    }
+    public void setRecipientId(Integer recipientId) {
+        this.recipientId = recipientId;
     }
     public Date getDueAt() {
         return dueAt;

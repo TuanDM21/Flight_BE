@@ -67,6 +67,16 @@ public class AssignmentServiceImpl implements AssignmentService {
         }
         updateEntityFromDTO(a, dto);
         a.setAssignedAt(a.getAssignedAt() == null ? java.time.LocalDateTime.now() : a.getAssignedAt());
+        // Xử lý tự động set recipientId là userId của leader nếu recipientType là team hoặc unit
+        if ("team".equalsIgnoreCase(dto.getRecipientType()) && dto.getRecipientId() != null) {
+            userRepository.findTeamLeadByTeamId(dto.getRecipientId())
+                .ifPresent(leader -> a.setRecipientId(leader.getId()));
+        } else if ("unit".equalsIgnoreCase(dto.getRecipientType()) && dto.getRecipientId() != null) {
+            userRepository.findUnitLeadByUnitId(dto.getRecipientId())
+                .ifPresent(leader -> a.setRecipientId(leader.getId()));
+        } else if ("user".equalsIgnoreCase(dto.getRecipientType()) && dto.getRecipientId() != null) {
+            a.setRecipientId(dto.getRecipientId());
+        }
         return toDTO(assignmentRepository.save(a));
     }
 
@@ -80,7 +90,16 @@ public class AssignmentServiceImpl implements AssignmentService {
             assignment.setRecipientType(request.getRecipientType());
             recipientChanged = true;
         }
-        if (request.getRecipientUser() != null && request.getRecipientUser().getId() != null) {
+        // Xử lý tự động set recipientId là userId của leader nếu recipientType là team hoặc unit
+        if ("team".equalsIgnoreCase(request.getRecipientType()) && request.getRecipientId() != null) {
+            userRepository.findTeamLeadByTeamId(request.getRecipientId())
+                .ifPresent(leader -> assignment.setRecipientId(leader.getId()));
+            recipientChanged = true;
+        } else if ("unit".equalsIgnoreCase(request.getRecipientType()) && request.getRecipientId() != null) {
+            userRepository.findUnitLeadByUnitId(request.getRecipientId())
+                .ifPresent(leader -> assignment.setRecipientId(leader.getId()));
+            recipientChanged = true;
+        } else if ("user".equalsIgnoreCase(request.getRecipientType()) && request.getRecipientUser() != null && request.getRecipientUser().getId() != null) {
             assignment.setRecipientId(request.getRecipientUser().getId());
             recipientChanged = true;
         }

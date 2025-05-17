@@ -14,6 +14,7 @@ public class AssignmentDTO {
     private UserDTO assignedByUser;
     private UserDTO completedByUser;
     private UserDTO recipientUser;
+    private Integer recipientId; // Id của team hoặc unit nếu recipientType là 'team' hoặc 'unit'
 
     public Integer getAssignmentId() {
         return assignmentId;
@@ -101,5 +102,13 @@ public class AssignmentDTO {
 
     public void setRecipientUser(UserDTO recipientUser) {
         this.recipientUser = recipientUser;
+    }
+
+    public Integer getRecipientId() {
+        return recipientId;
+    }
+
+    public void setRecipientId(Integer recipientId) {
+        this.recipientId = recipientId;
     }
 }
