@@ -21,8 +21,10 @@ public class TaskDocumentController {
     }
 
     @PostMapping("/attach")
-    public ResponseEntity<Void> attachDocument(@RequestParam Integer taskId, @RequestParam Integer documentId) {
-        taskDocumentService.attachDocumentToTask(taskId, documentId);
+    public ResponseEntity<Void> attachDocuments(@RequestParam Integer taskId, @RequestParam List<Integer> documentIds) {
+        for (Integer documentId : documentIds) {
+            taskDocumentService.attachDocumentToTask(taskId, documentId);
+        }
         return ResponseEntity.ok().build();
     }
 
