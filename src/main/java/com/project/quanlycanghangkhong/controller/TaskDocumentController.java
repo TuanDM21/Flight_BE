@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/task-documents")
 @CrossOrigin(origins = "*")
@@ -13,19 +15,20 @@ public class TaskDocumentController {
     @Autowired
     private TaskDocumentService taskDocumentService;
 
+    @GetMapping
+    public ResponseEntity<List<DocumentDTO>> getDocumentsByTask(@RequestParam Integer taskId) {
+        return ResponseEntity.ok(taskDocumentService.getDocumentsByTaskId(taskId));
+    }
+
     @PostMapping("/attach")
-    public ResponseEntity<DocumentDTO> attachDocument(@RequestParam Integer taskId, @RequestBody DocumentDTO documentDTO) {
-        return ResponseEntity.ok(taskDocumentService.attachDocumentToTask(taskId, documentDTO));
+    public ResponseEntity<Void> attachDocument(@RequestParam Integer taskId, @RequestParam Integer documentId) {
+        taskDocumentService.attachDocumentToTask(taskId, documentId);
+        return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("/remove")
     public ResponseEntity<Void> removeDocument(@RequestParam Integer taskId, @RequestParam Integer documentId) {
         taskDocumentService.removeDocumentFromTask(taskId, documentId);
         return ResponseEntity.ok().build();
-    }
-
-    @PutMapping("/update")
-    public ResponseEntity<DocumentDTO> updateDocument(@RequestParam Integer taskId, @RequestParam Integer documentId, @RequestBody DocumentDTO documentDTO) {
-        return ResponseEntity.ok(taskDocumentService.updateDocumentInTask(taskId, documentId, documentDTO));
     }
 }

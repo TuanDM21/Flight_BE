@@ -1,57 +1,59 @@
 #!/bin/bash
-# Script test các API gắn, xóa, cập nhật văn bản cho công việc (TaskDocument)
-# Yêu cầu: Đã chạy backend trên http://localhost:8080
+# Script test_task_document_apis.sh: Test các API quản lý document của task có xác thực và tự động lấy ID
+
 API_URL="http://localhost:8080/api"
 USERNAME="domtuan22@gmail.com"
 PASSWORD="123456"
+
+log() {
+  echo -e "\033[1;34m$1\033[0m"
+}
 
 echo "==> Đăng nhập lấy access token..."
 LOGIN_RESPONSE=$(curl -s -X POST "$API_URL/auth/login" \
   -H "Content-Type: application/json" \
   -d '{"email":"'$USERNAME'","password":"'$PASSWORD'"}')
-TOKEN=$(echo $LOGIN_RESPONSE | grep -o '"accessToken":"[^"]*' | grep -o '[^\"]*$')
+TOKEN=$(echo $LOGIN_RESPONSE | grep -o '"accessToken":"[^"]*' | grep -o '[^"]*$')
 
 if [ -z "$TOKEN" ]; then
-  echo "Không lấy được token! Response: $LOGIN_RESPONSE"
+  log "Không lấy được token! Response: $LOGIN_RESPONSE"
   exit 1
 fi
 
-echo "Token: $TOKEN"
+log "Token: $TOKEN"
 
-API_URL="http://localhost:8080/api/task-documents"
-AUTH_HEADER="Authorization: Bearer $TOKEN"
+# Lấy TASK_ID thực tế
+log "==> Lấy TASK_ID thực tế"
+TASK_ID=$(curl -s -X GET "$API_URL/tasks" -H "Authorization: Bearer $TOKEN" | jq -r '.data[0].id')
+if [ "$TASK_ID" == "null" ] || [ -z "$TASK_ID" ]; then
+  log "Không tìm thấy Task nào để test!"
+  exit 1
+fi
+log "TASK_ID: $TASK_ID"
 
-# 1. Gắn văn bản mới vào công việc (taskId=1)
-echo "\n--- Attach NEW document to task 1 ---"
-curl -X POST "$API_URL/attach?taskId=1" \
-    -H "Content-Type: application/json" \
-    -H "$AUTH_HEADER" \
-    -d '{
-        "documentType": "TEST_TYPE",
-        "content": "Test document content",
-        "notes": "Test note"
-    }'
+# Lấy DOCUMENT_ID thực tế
+log "==> Lấy DOCUMENT_ID thực tế"
+DOCUMENT_ID=$(curl -s -X GET "$API_URL/documents" -H "Authorization: Bearer $TOKEN" | jq -r '.data[0].id')
+if [ "$DOCUMENT_ID" == "null" ] || [ -z "$DOCUMENT_ID" ]; then
+  log "Không tìm thấy Document nào để test!"
+  exit 1
+fi
+log "DOCUMENT_ID: $DOCUMENT_ID"
 
-echo "\n--- Attach EXISTING document (id=2) to task 1 ---"
-curl -X POST "$API_URL/attach?taskId=1" \
-    -H "Content-Type: application/json" \
-    -H "$AUTH_HEADER" \
-    -d '{
-        "id": 2
-    }'
+# 1. Lấy danh sách document của task
+log "==> Lấy danh sách document của task $TASK_ID"
+curl -s -X GET "$API_URL/task-documents?taskId=$TASK_ID" -H "Authorization: Bearer $TOKEN" | jq
 
-# 2. Cập nhật văn bản trong công việc
-echo "\n--- Update document (id=2) in task 1 ---"
-curl -X PUT "$API_URL/update?taskId=1&documentId=2" \
-    -H "Content-Type: application/json" \
-    -H "$AUTH_HEADER" \
-    -d '{
-        "documentType": "UPDATED_TYPE",
-        "content": "Updated content",
-        "notes": "Updated note"
-    }'
-
-# 3. Xóa văn bản khỏi công việc
-echo "\n--- Remove document (id=2) from task 1 ---"
-curl -X DELETE "$API_URL/remove?taskId=1&documentId=2" \
-    -H "$AUTH_HEADER"
+echo "---"
+# 2. Gắn document vào task
+log "==> Gắn document $DOCUMENT_ID vào task $TASK_ID"
+curl -s -X POST "$API_URL/task-documents/attach?taskId=$TASK_ID&documentId=$DOCUMENT_ID" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json"
+echo "---"
+# 3. Xóa document khỏi task
+log "==> Xóa document $DOCUMENT_ID khỏi task $TASK_ID"
+curl -s -X DELETE "$API_URL/task-documents/remove?taskId=$TASK_ID&documentId=$DOCUMENT_ID" -H "Authorization: Bearer $TOKEN"
+echo "---"
+# 4. Lấy lại danh sách document của task sau khi xóa
+log "==> Lấy lại danh sách document của task $TASK_ID sau khi xóa"
+curl -s -X GET "$API_URL/task-documents?taskId=$TASK_ID" -H "Authorization: Bearer $TOKEN" | jq
+echo "---"

@@ -13,6 +13,8 @@ import com.project.quanlycanghangkhong.service.TaskDocumentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class TaskDocumentServiceImpl implements TaskDocumentService {
@@ -22,29 +24,6 @@ public class TaskDocumentServiceImpl implements TaskDocumentService {
     private DocumentRepository documentRepository;
     @Autowired
     private TaskDocumentRepository taskDocumentRepository;
-
-    @Override
-    public DocumentDTO attachDocumentToTask(Integer taskId, DocumentDTO documentDTO) {
-        Task task = taskRepository.findById(taskId).orElseThrow();
-        Document document;
-        if (documentDTO.getId() != null) {
-            document = documentRepository.findById(documentDTO.getId()).orElseThrow();
-        } else {
-            document = new Document();
-            document.setDocumentType(documentDTO.getDocumentType());
-            document.setContent(documentDTO.getContent());
-            document.setNotes(documentDTO.getNotes());
-            document.setCreatedAt(LocalDateTime.now());
-            document.setUpdatedAt(LocalDateTime.now());
-            document = documentRepository.save(document);
-        }
-        TaskDocument taskDocument = new TaskDocument();
-        taskDocument.setTask(task);
-        taskDocument.setDocument(document);
-        taskDocument.setCreatedAt(LocalDateTime.now());
-        taskDocumentRepository.save(taskDocument);
-        return DTOConverter.convertDocument(document);
-    }
 
     @Override
     public void removeDocumentFromTask(Integer taskId, Integer documentId) {
@@ -63,5 +42,26 @@ public class TaskDocumentServiceImpl implements TaskDocumentService {
         document.setUpdatedAt(LocalDateTime.now());
         document = documentRepository.save(document);
         return DTOConverter.convertDocument(document);
+    }
+
+    @Override
+    public List<DocumentDTO> getDocumentsByTaskId(Integer taskId) {
+        Task task = taskRepository.findById(taskId).orElseThrow();
+        List<TaskDocument> taskDocuments = taskDocumentRepository.findAll();
+        return taskDocuments.stream()
+                .filter(td -> td.getTask().getId().equals(taskId))
+                .map(td -> DTOConverter.convertDocument(td.getDocument()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public void attachDocumentToTask(Integer taskId, Integer documentId) {
+        Task task = taskRepository.findById(taskId).orElseThrow();
+        Document document = documentRepository.findById(documentId).orElseThrow();
+        TaskDocument taskDocument = new TaskDocument();
+        taskDocument.setTask(task);
+        taskDocument.setDocument(document);
+        taskDocument.setCreatedAt(LocalDateTime.now());
+        taskDocumentRepository.save(taskDocument);
     }
 }
