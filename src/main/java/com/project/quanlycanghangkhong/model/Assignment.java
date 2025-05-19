@@ -37,8 +37,9 @@ public class Assignment {
     @JoinColumn(name = "completed_by")
     private User completedBy;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private Integer status = 0;
+    private AssignmentStatus status = AssignmentStatus.ASSIGNED;
 
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
@@ -116,11 +117,11 @@ public class Assignment {
         this.completedBy = completedBy;
     }
 
-    public Integer getStatus() {
+    public AssignmentStatus getStatus() {
         return status;
     }
 
-    public void setStatus(Integer status) {
+    public void setStatus(AssignmentStatus status) {
         this.status = status;
     }
 

@@ -262,4 +262,16 @@ public class UserController {
             return ResponseEntity.ok(response);
         }
 
+        @GetMapping("/assignable")
+        @Operation(summary = "Get assignable users", description = "Lấy danh sách user mà user hiện tại có thể giao việc cho theo phân quyền")
+        public ResponseEntity<ApiAllUsersResponse> getAssignableUsers() {
+            List<UserDTO> dtos = userService.getAssignableUsersForCurrentUser();
+            ApiAllUsersResponse response = new ApiAllUsersResponse();
+            response.setMessage("Thành công");
+            response.setStatusCode(200);
+            response.setData(dtos);
+            response.setSuccess(true);
+            return ResponseEntity.ok(response);
+        }
+
 }

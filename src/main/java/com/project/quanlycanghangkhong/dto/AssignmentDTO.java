@@ -1,6 +1,7 @@
 package com.project.quanlycanghangkhong.dto;
 
 import java.util.Date;
+import com.project.quanlycanghangkhong.model.AssignmentStatus;
 
 public class AssignmentDTO {
     private Integer assignmentId;
@@ -9,7 +10,7 @@ public class AssignmentDTO {
     private Date assignedAt;
     private Date dueAt;
     private Date completedAt;
-    private Integer status;
+    private AssignmentStatus status;
     private String note;
     private UserDTO assignedByUser;
     private UserDTO completedByUser;
@@ -72,11 +73,11 @@ public class AssignmentDTO {
         this.completedAt = completedAt;
     }
 
-    public Integer getStatus() {
+    public AssignmentStatus getStatus() {
         return status;
     }
 
-    public void setStatus(Integer status) {
+    public void setStatus(AssignmentStatus status) {
         this.status = status;
     }
 

@@ -16,4 +16,5 @@ public interface TaskService {
     List<TaskDTO> getAllTasks();
     TaskDetailDTO getTaskDetailById(Integer id);
     List<TaskDetailDTO> getAllTaskDetails();
+    void updateTaskStatus(com.project.quanlycanghangkhong.model.Task task);
 }

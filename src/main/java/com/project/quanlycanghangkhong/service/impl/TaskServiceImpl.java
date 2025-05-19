@@ -107,7 +107,7 @@ public class TaskServiceImpl implements TaskService {
                 assignment.setNote(a.getNote());
                 assignment.setAssignedAt(LocalDateTime.now());
                 assignment.setAssignedBy(creator); // Đảm bảo luôn set người giao việc
-                assignment.setStatus(0);
+                assignment.setStatus(AssignmentStatus.ASSIGNED);
                 if (a.getDueAt() != null) {
                     assignment.setDueAt(new java.sql.Timestamp(a.getDueAt().getTime()).toLocalDateTime());
                 }
@@ -244,5 +244,53 @@ public class TaskServiceImpl implements TaskService {
         return taskRepository.findAllByDeletedFalse().stream()
             .map(task -> getTaskDetailById(task.getId()))
             .toList();
+    }
+
+    // Logic cập nhật trạng thái Task dựa trên trạng thái các Assignment con
+    public void updateTaskStatus(Task task) {
+        List<Assignment> assignments = assignmentRepository.findAll().stream()
+            .filter(a -> a.getTask().getId().equals(task.getId()))
+            .collect(Collectors.toList());
+        if (assignments == null || assignments.isEmpty()) {
+            task.setStatus(TaskStatus.NEW);
+            taskRepository.save(task);
+            return;
+        }
+        boolean allCancelled = assignments.stream()
+                .allMatch(a -> a.getStatus() == AssignmentStatus.CANCELLED);
+        boolean allCompletedOrLate = assignments.stream()
+                .allMatch(a -> a.getStatus() == AssignmentStatus.COMPLETED
+                        || a.getStatus() == AssignmentStatus.LATE_COMPLETED);
+        boolean anyLate = assignments.stream()
+                .anyMatch(a -> a.getStatus() == AssignmentStatus.LATE_COMPLETED);
+        boolean anyCompletedOrLate = assignments.stream()
+                .anyMatch(a -> a.getStatus() == AssignmentStatus.COMPLETED
+                        || a.getStatus() == AssignmentStatus.LATE_COMPLETED);
+        boolean anyInProgress = assignments.stream()
+                .anyMatch(a -> a.getStatus() == AssignmentStatus.IN_PROGRESS);
+        boolean anySubmittedOrReviewing = assignments.stream()
+                .anyMatch(a -> a.getStatus() == AssignmentStatus.SUBMITTED
+                        || a.getStatus() == AssignmentStatus.REVIEWING);
+        boolean anyRejected = assignments.stream()
+                .anyMatch(a -> a.getStatus() == AssignmentStatus.REJECTED);
+
+        if (allCancelled) {
+            task.setStatus(TaskStatus.CANCELLED);
+        } else if (allCompletedOrLate) {
+            if (anyLate) {
+                task.setStatus(TaskStatus.LATE_COMPLETED);
+            } else {
+                task.setStatus(TaskStatus.COMPLETED);
+            }
+        } else if (anyCompletedOrLate && (anyInProgress || anySubmittedOrReviewing || anyRejected)) {
+            task.setStatus(TaskStatus.PARTIALLY_COMPLETED);
+        } else if (anySubmittedOrReviewing) {
+            task.setStatus(TaskStatus.UNDER_REVIEW);
+        } else if (anyInProgress) {
+            task.setStatus(TaskStatus.IN_PROGRESS);
+        } else {
+            task.setStatus(TaskStatus.ASSIGNED);
+        }
+        taskRepository.save(task);
     }
 }

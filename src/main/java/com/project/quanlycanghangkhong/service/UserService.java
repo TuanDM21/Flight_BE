@@ -25,4 +25,9 @@ public interface UserService {
     List<UserDTO> searchUsersByKeyword(String keyword);
 
     List<UserDTO> getUsersByRoles(List<String> roleNames);
+
+    /**
+     * Lấy danh sách user mà user hiện tại có thể giao việc cho (theo phân quyền).
+     */
+    List<UserDTO> getAssignableUsersForCurrentUser();
 }

@@ -1,6 +1,7 @@
 package com.project.quanlycanghangkhong.dto;
 
 import java.time.LocalDateTime;
+import com.project.quanlycanghangkhong.model.TaskStatus;
 
 public class TaskDTO {
     private Integer id;
@@ -10,6 +11,7 @@ public class TaskDTO {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Integer createdBy; // userId
+    private TaskStatus status;
 
     // Getters and setters
     public Integer getId() {
@@ -66,5 +68,13 @@ public class TaskDTO {
 
     public void setCreatedBy(Integer createdBy) {
         this.createdBy = createdBy;
+    }
+
+    public TaskStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(TaskStatus status) {
+        this.status = status;
     }
 }

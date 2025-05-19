@@ -8,6 +8,7 @@ import com.project.quanlycanghangkhong.repository.TaskRepository;
 import com.project.quanlycanghangkhong.repository.UserRepository;
 import com.project.quanlycanghangkhong.service.AssignmentService;
 import com.project.quanlycanghangkhong.dto.request.UpdateAssignmentRequest;
+import com.project.quanlycanghangkhong.service.TaskService;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,8 @@ public class AssignmentServiceImpl implements AssignmentService {
     private TaskRepository taskRepository;
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private TaskService taskService;
 
     private AssignmentDTO toDTO(Assignment a) {
         AssignmentDTO dto = new AssignmentDTO();
@@ -94,7 +97,11 @@ public class AssignmentServiceImpl implements AssignmentService {
             a.setRecipientId(dto.getRecipientId());
             System.out.println("[DEBUG] createAssignment: recipientType=user, userId=" + dto.getRecipientId());
         }
-        return toDTO(assignmentRepository.save(a));
+        Assignment saved = assignmentRepository.save(a);
+        if (saved.getTask() != null) {
+            taskService.updateTaskStatus(saved.getTask());
+        }
+        return toDTO(saved);
     }
 
     @Override
@@ -144,7 +151,7 @@ public class AssignmentServiceImpl implements AssignmentService {
         if (request.getStatus() != null) {
             assignment.setStatus(request.getStatus());
             // Nếu chuyển sang completed thì set completedAt, completedBy
-            if (request.getStatus() == 2) { // 2 = Completed
+            if (request.getStatus() == com.project.quanlycanghangkhong.model.AssignmentStatus.COMPLETED) {
                 assignment.setCompletedAt(java.time.LocalDateTime.now());
                 // assignment.setCompletedBy(currentUser); // Lấy user hiện tại nếu cần
             } else {
@@ -156,15 +163,25 @@ public class AssignmentServiceImpl implements AssignmentService {
         if (recipientChanged) {
             assignment.setCompletedAt(null);
             assignment.setCompletedBy(null);
-            assignment.setStatus(0); // Pending
+            assignment.setStatus(com.project.quanlycanghangkhong.model.AssignmentStatus.ASSIGNED);
         }
-        assignmentRepository.save(assignment);
-        return toDTO(assignment);
+        Assignment saved = assignmentRepository.save(assignment);
+        if (saved.getTask() != null) {
+            taskService.updateTaskStatus(saved.getTask());
+        }
+        return toDTO(saved);
     }
 
     @Override
     public void deleteAssignment(Integer assignmentId) {
-        assignmentRepository.deleteById(assignmentId);
+        Assignment assignment = assignmentRepository.findById(assignmentId).orElse(null);
+        if (assignment != null) {
+            Task task = assignment.getTask();
+            assignmentRepository.deleteById(assignmentId);
+            if (task != null) {
+                taskService.updateTaskStatus(task);
+            }
+        }
     }
 
     @Override
