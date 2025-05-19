@@ -13,6 +13,7 @@ public class TaskDetailDTO {
     private UserDTO createdByUser;
     private List<AssignmentDTO> assignments;
     private List<DocumentDetailDTO> documents;
+    private com.project.quanlycanghangkhong.model.TaskStatus status;
 
     public Integer getId() {
         return id;
@@ -84,5 +85,13 @@ public class TaskDetailDTO {
 
     public void setDocuments(List<DocumentDetailDTO> documents) {
         this.documents = documents;
+    }
+
+    public com.project.quanlycanghangkhong.model.TaskStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(com.project.quanlycanghangkhong.model.TaskStatus status) {
+        this.status = status;
     }
 }

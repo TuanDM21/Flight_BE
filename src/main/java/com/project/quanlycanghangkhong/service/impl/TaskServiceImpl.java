@@ -177,6 +177,7 @@ public class TaskServiceImpl implements TaskService {
         dto.setNotes(task.getNotes());
         dto.setCreatedAt(task.getCreatedAt());
         dto.setUpdatedAt(task.getUpdatedAt());
+        dto.setStatus(task.getStatus()); // Mapping status enum
         if (task.getCreatedBy() != null) {
             dto.setCreatedByUser(new UserDTO(task.getCreatedBy()));
         }
