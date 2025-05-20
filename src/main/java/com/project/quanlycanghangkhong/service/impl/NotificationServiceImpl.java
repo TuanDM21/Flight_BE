@@ -82,7 +82,8 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public long countUnread(Integer userId) {
         LocalDateTime oneWeekAgo = LocalDateTime.now().minusDays(7);
-        return notificationRepository.countByUserIdAndIsReadFalseAndCreatedAtAfter(userId, oneWeekAgo);
+        List<String> allowedTypes = List.of("ACTIVITY", "FLIGHT");
+        return notificationRepository.countUnreadByUserIdAndTypes(userId, oneWeekAgo, allowedTypes);
     }
 
     @Override

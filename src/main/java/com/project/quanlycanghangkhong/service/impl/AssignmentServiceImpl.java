@@ -9,11 +9,15 @@ import com.project.quanlycanghangkhong.repository.UserRepository;
 import com.project.quanlycanghangkhong.service.AssignmentService;
 import com.project.quanlycanghangkhong.dto.request.UpdateAssignmentRequest;
 import com.project.quanlycanghangkhong.service.TaskService;
+import com.project.quanlycanghangkhong.model.AssignmentStatusHistory;
+import com.project.quanlycanghangkhong.repository.AssignmentStatusHistoryRepository;
+import com.project.quanlycanghangkhong.model.AssignmentStatus;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -29,6 +33,8 @@ public class AssignmentServiceImpl implements AssignmentService {
     private UserRepository userRepository;
     @Autowired
     private TaskService taskService;
+    @Autowired
+    private AssignmentStatusHistoryRepository assignmentStatusHistoryRepository;
 
     private AssignmentDTO toDTO(Assignment a) {
         AssignmentDTO dto = new AssignmentDTO();
@@ -192,5 +198,27 @@ public class AssignmentServiceImpl implements AssignmentService {
     @Override
     public List<AssignmentDTO> getAssignmentsByTaskId(Integer taskId) {
         return assignmentRepository.findByTask_Id(taskId).stream().map(this::toDTO).collect(Collectors.toList());
+    }
+
+    @Override
+    public void updateAssignmentStatus(Integer assignmentId, String status, String comment, String fileUrl, Long userId) {
+        Assignment assignment = assignmentRepository.findById(assignmentId).orElse(null);
+        if (assignment == null) return;
+        AssignmentStatus statusEnum = AssignmentStatus.valueOf(status);
+        assignment.setStatus(statusEnum);
+        if (AssignmentStatus.COMPLETED.equals(statusEnum)) {
+            assignment.setCompletedAt(LocalDateTime.now());
+            // assignment.setCompletedBy(userId != null ? userRepository.findById(userId).orElse(null) : null);
+        }
+        assignmentRepository.save(assignment);
+        // Lưu lịch sử thay đổi trạng thái
+        AssignmentStatusHistory history = new AssignmentStatusHistory();
+        history.setAssignmentId(Long.valueOf(assignmentId));
+        history.setUserId(userId);
+        history.setStatus(status);
+        history.setComment(comment);
+        history.setAttachmentUrl(fileUrl != null ? fileUrl : null); // fileUrl là link mock hoặc null
+        history.setChangedAt(LocalDateTime.now());
+        assignmentStatusHistoryRepository.save(history);
     }
 }

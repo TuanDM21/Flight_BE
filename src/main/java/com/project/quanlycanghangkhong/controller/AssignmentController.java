@@ -3,13 +3,26 @@ package com.project.quanlycanghangkhong.controller;
 import com.project.quanlycanghangkhong.dto.AssignmentDTO;
 import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
 import com.project.quanlycanghangkhong.dto.request.UpdateAssignmentRequest;
+import com.project.quanlycanghangkhong.dto.AssignmentStatusHistoryDTO;
+import com.project.quanlycanghangkhong.model.AssignmentStatusHistory;
+import com.project.quanlycanghangkhong.repository.AssignmentStatusHistoryRepository;
 import com.project.quanlycanghangkhong.service.AssignmentService;
+import com.project.quanlycanghangkhong.dto.response.assignment.ApiAssignmentResponse;
+import com.project.quanlycanghangkhong.dto.response.assignment.ApiAssignmentListResponse;
+import com.project.quanlycanghangkhong.dto.response.assignment.ApiAssignmentStatusHistoryResponse;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
 @RestController
 @RequestMapping("/api/assignments")
@@ -18,40 +31,102 @@ public class AssignmentController {
     @Autowired
     private AssignmentService assignmentService;
 
+    @Autowired
+    private AssignmentStatusHistoryRepository assignmentStatusHistoryRepository;
+
     // Giao công việc (tạo mới assignment)
     @PostMapping
-    public ResponseEntity<ApiResponseCustom<AssignmentDTO>> createAssignment(@RequestBody AssignmentDTO dto) {
+    @Operation(summary = "Tạo assignment", description = "Tạo mới một assignment")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "Tạo assignment thành công", content = @Content(schema = @Schema(implementation = ApiAssignmentResponse.class)))
+    })
+    public ResponseEntity<ApiAssignmentResponse> createAssignment(@RequestBody AssignmentDTO dto) {
         AssignmentDTO result = assignmentService.createAssignment(dto);
-        return ResponseEntity.status(201).body(ApiResponseCustom.created(result));
+        ApiAssignmentResponse response = new ApiAssignmentResponse("Tạo thành công", 201, result, true);
+        return ResponseEntity.status(201).body(response);
     }
 
     // Cập nhật giao công việc
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponseCustom<AssignmentDTO>> updateAssignment(@PathVariable Integer id, @RequestBody UpdateAssignmentRequest request) {
+    @Operation(summary = "Cập nhật assignment", description = "Cập nhật thông tin assignment")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Cập nhật assignment thành công", content = @Content(schema = @Schema(implementation = ApiAssignmentResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy assignment", content = @Content(schema = @Schema(implementation = ApiAssignmentResponse.class)))
+    })
+    public ResponseEntity<ApiAssignmentResponse> updateAssignment(@PathVariable Integer id, @RequestBody UpdateAssignmentRequest request) {
         AssignmentDTO result = assignmentService.updateAssignment(id, request);
-        if (result == null) return ResponseEntity.status(404).body(ApiResponseCustom.error(HttpStatus.NOT_FOUND, "Không tìm thấy assignment"));
-        return ResponseEntity.ok(ApiResponseCustom.success("Cập nhật thành công", result));
+        if (result == null) return ResponseEntity.status(404).body(new ApiAssignmentResponse("Không tìm thấy assignment", 404, null, false));
+        ApiAssignmentResponse response = new ApiAssignmentResponse("Cập nhật thành công", 200, result, true);
+        return ResponseEntity.ok(response);
     }
 
     // Xoá giao công việc
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponseCustom<Void>> deleteAssignment(@PathVariable Integer id) {
+    @Operation(summary = "Xoá assignment", description = "Xoá một assignment theo id")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Xoá assignment thành công", content = @Content(schema = @Schema(implementation = ApiAssignmentResponse.class)))
+    })
+    public ResponseEntity<ApiAssignmentResponse> deleteAssignment(@PathVariable Integer id) {
         assignmentService.deleteAssignment(id);
-        return ResponseEntity.ok(ApiResponseCustom.success("Xoá thành công", null));
+        ApiAssignmentResponse response = new ApiAssignmentResponse("Xoá thành công", 200, null, true);
+        return ResponseEntity.ok(response);
     }
 
     // Xem chi tiết giao công việc
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponseCustom<AssignmentDTO>> getAssignmentById(@PathVariable Integer id) {
+    @Operation(summary = "Lấy chi tiết assignment", description = "Lấy chi tiết một assignment theo id")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Lấy assignment thành công", content = @Content(schema = @Schema(implementation = ApiAssignmentResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy assignment", content = @Content(schema = @Schema(implementation = ApiAssignmentResponse.class)))
+    })
+    public ResponseEntity<ApiAssignmentResponse> getAssignmentById(@PathVariable Integer id) {
         AssignmentDTO result = assignmentService.getAssignmentById(id);
-        if (result == null) return ResponseEntity.status(404).body(ApiResponseCustom.error(HttpStatus.NOT_FOUND, "Không tìm thấy assignment"));
-        return ResponseEntity.ok(ApiResponseCustom.success(result));
+        if (result == null) return ResponseEntity.status(404).body(new ApiAssignmentResponse("Không tìm thấy assignment", 404, null, false));
+        ApiAssignmentResponse response = new ApiAssignmentResponse("Thành công", 200, result, true);
+        return ResponseEntity.ok(response);
     }   
 
     // Lấy danh sách giao công việc theo task
     @GetMapping("/task/{taskId}")
-    public ResponseEntity<ApiResponseCustom<List<AssignmentDTO>>> getAssignmentsByTaskId(@PathVariable Integer taskId) {
+    @Operation(summary = "Lấy danh sách assignment theo task", description = "Lấy danh sách assignment theo taskId")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Lấy danh sách assignment thành công", content = @Content(schema = @Schema(implementation = ApiAssignmentListResponse.class)))
+    })
+    public ResponseEntity<ApiAssignmentListResponse> getAssignmentsByTaskId(@PathVariable Integer taskId) {
         List<AssignmentDTO> result = assignmentService.getAssignmentsByTaskId(taskId);
-        return ResponseEntity.ok(ApiResponseCustom.success(result));
+        ApiAssignmentListResponse response = new ApiAssignmentListResponse("Thành công", 200, result, true);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{id}/status")
+    @Operation(summary = "Cập nhật trạng thái assignment", description = "Cập nhật trạng thái assignment kèm comment và file đính kèm")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Cập nhật trạng thái thành công", content = @Content(schema = @Schema(implementation = ApiAssignmentResponse.class)))
+    })
+    public ResponseEntity<ApiAssignmentResponse> updateAssignmentStatus(
+            @PathVariable Integer id,
+            @RequestParam String status,
+            @RequestParam(required = false) String comment,
+            @RequestParam(required = false) String fileUrl,
+            @RequestParam Long userId) {
+        assignmentService.updateAssignmentStatus(id, status, comment, fileUrl, userId);
+        ApiAssignmentResponse response = new ApiAssignmentResponse("Cập nhật trạng thái thành công", 200, null, true);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{id}/status-history")
+    @Operation(summary = "Lấy lịch sử trạng thái assignment", description = "Lấy lịch sử thay đổi trạng thái của assignment")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Lấy lịch sử trạng thái thành công", content = @Content(schema = @Schema(implementation = ApiAssignmentStatusHistoryResponse.class)))
+    })
+    public ResponseEntity<ApiAssignmentStatusHistoryResponse> getAssignmentStatusHistory(@PathVariable Integer id) {
+        List<AssignmentStatusHistory> historyList = assignmentStatusHistoryRepository.findByAssignmentIdOrderByChangedAtDesc(Long.valueOf(id));
+        List<AssignmentStatusHistoryDTO> dtoList = historyList.stream().map(h -> {
+            AssignmentStatusHistoryDTO dto = new AssignmentStatusHistoryDTO();
+            BeanUtils.copyProperties(h, dto);
+            return dto;
+        }).toList();
+        ApiAssignmentStatusHistoryResponse response = new ApiAssignmentStatusHistoryResponse("Thành công", 200, dtoList, true);
+        return ResponseEntity.ok(response);
     }
 }

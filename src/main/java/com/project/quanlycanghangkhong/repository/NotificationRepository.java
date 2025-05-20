@@ -22,4 +22,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Inte
     List<Notification> findRecentByUserTypeRelatedId(@Param("userId") Integer userId, @Param("type") String type, @Param("relatedId") Integer relatedId, @Param("after") LocalDateTime after);
 
     boolean existsByTypeAndRelatedIdAndUserId(String type, Integer relatedId, Integer userId);
+
+    @Query("SELECT COUNT(n) FROM Notification n WHERE n.userId = :userId AND n.isRead = false AND n.createdAt > :after AND n.type IN :types")
+    long countUnreadByUserIdAndTypes(@Param("userId") Integer userId, @Param("after") LocalDateTime after, @Param("types") List<String> types);
 }
