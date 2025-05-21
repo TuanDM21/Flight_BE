@@ -1,7 +1,6 @@
 package com.project.quanlycanghangkhong.controller;
 
 import com.project.quanlycanghangkhong.dto.AssignmentDTO;
-import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
 import com.project.quanlycanghangkhong.dto.request.UpdateAssignmentRequest;
 import com.project.quanlycanghangkhong.dto.AssignmentStatusHistoryDTO;
 import com.project.quanlycanghangkhong.model.AssignmentStatusHistory;
@@ -10,9 +9,9 @@ import com.project.quanlycanghangkhong.service.AssignmentService;
 import com.project.quanlycanghangkhong.dto.response.assignment.ApiAssignmentResponse;
 import com.project.quanlycanghangkhong.dto.response.assignment.ApiAssignmentListResponse;
 import com.project.quanlycanghangkhong.dto.response.assignment.ApiAssignmentStatusHistoryResponse;
+import com.project.quanlycanghangkhong.dto.AssignmentCommentRequest;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -98,32 +97,35 @@ public class AssignmentController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/{id}/status")
-    @Operation(summary = "Cập nhật trạng thái assignment", description = "Cập nhật trạng thái assignment kèm comment và file đính kèm")
+    @PostMapping("/{id}/comment")
+    @Operation(summary = "Thêm comment cho assignment", description = "Thêm comment vào assignment, nhận JSON {\"comment\": \"...\"}")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Cập nhật trạng thái thành công", content = @Content(schema = @Schema(implementation = ApiAssignmentResponse.class)))
+        @ApiResponse(responseCode = "200", description = "Thêm comment thành công", content = @Content(schema = @Schema(implementation = ApiAssignmentResponse.class)))
     })
-    public ResponseEntity<ApiAssignmentResponse> updateAssignmentStatus(
+    public ResponseEntity<ApiAssignmentResponse> addAssignmentComment(
             @PathVariable Integer id,
-            @RequestParam String status,
-            @RequestParam(required = false) String comment,
-            @RequestParam(required = false) String fileUrl,
-            @RequestParam Long userId) {
-        assignmentService.updateAssignmentStatus(id, status, comment, fileUrl, userId);
-        ApiAssignmentResponse response = new ApiAssignmentResponse("Cập nhật trạng thái thành công", 200, null, true);
+            @RequestBody AssignmentCommentRequest request) {
+        assignmentService.addAssignmentComment(id, request.getComment());
+        ApiAssignmentResponse response = new ApiAssignmentResponse("Thêm comment thành công", 200, null, true);
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{id}/status-history")
-    @Operation(summary = "Lấy lịch sử trạng thái assignment", description = "Lấy lịch sử thay đổi trạng thái của assignment")
+    // Đã xoá endpoint lấy lịch sử trạng thái assignment (GET /{id}/status-history) vì chỉ lấy comment.
+
+    @GetMapping("/{id}/comments")
+    @Operation(summary = "Lấy danh sách comment của assignment", description = "Lấy tất cả comment của assignment, chỉ gồm id, assignmentId, comment, changedAt, userId")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Lấy lịch sử trạng thái thành công", content = @Content(schema = @Schema(implementation = ApiAssignmentStatusHistoryResponse.class)))
+        @ApiResponse(responseCode = "200", description = "Lấy danh sách comment thành công", content = @Content(schema = @Schema(implementation = ApiAssignmentStatusHistoryResponse.class)))
     })
-    public ResponseEntity<ApiAssignmentStatusHistoryResponse> getAssignmentStatusHistory(@PathVariable Integer id) {
+    public ResponseEntity<ApiAssignmentStatusHistoryResponse> getAssignmentComments(@PathVariable Integer id) {
         List<AssignmentStatusHistory> historyList = assignmentStatusHistoryRepository.findByAssignmentIdOrderByChangedAtDesc(Long.valueOf(id));
         List<AssignmentStatusHistoryDTO> dtoList = historyList.stream().map(h -> {
             AssignmentStatusHistoryDTO dto = new AssignmentStatusHistoryDTO();
-            BeanUtils.copyProperties(h, dto);
+            dto.setId(h.getId());
+            dto.setAssignmentId(h.getAssignmentId());
+            dto.setComment(h.getComment());
+            dto.setChangedAt(h.getChangedAt());
+            dto.setUserId(h.getUserId());
             return dto;
         }).toList();
         ApiAssignmentStatusHistoryResponse response = new ApiAssignmentStatusHistoryResponse("Thành công", 200, dtoList, true);

@@ -83,4 +83,21 @@ public class DocumentServiceImpl implements DocumentService {
     public List<DocumentDTO> getAllDocuments() {
         return documentRepository.findAll().stream().map(this::toDTO).collect(Collectors.toList());
     }
+
+    @Override
+    public List<DocumentDTO> bulkInsertDocuments(List<DocumentDTO> dtos) {
+        List<Document> docs = dtos.stream().map(this::toEntity).collect(Collectors.toList());
+        LocalDateTime now = LocalDateTime.now();
+        docs.forEach(doc -> {
+            doc.setCreatedAt(now);
+            doc.setUpdatedAt(now);
+        });
+        List<Document> savedDocs = documentRepository.saveAll(docs);
+        return savedDocs.stream().map(this::toDTO).collect(Collectors.toList());
+    }
+
+    @Override
+    public void bulkDeleteDocuments(List<Integer> ids) {
+        documentRepository.deleteAllById(ids);
+    }
 }

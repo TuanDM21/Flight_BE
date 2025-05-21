@@ -15,6 +15,9 @@ import com.project.quanlycanghangkhong.model.AssignmentStatus;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import com.project.quanlycanghangkhong.model.User;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
@@ -201,24 +204,21 @@ public class AssignmentServiceImpl implements AssignmentService {
     }
 
     @Override
-    public void updateAssignmentStatus(Integer assignmentId, String status, String comment, String fileUrl, Long userId) {
+    public void addAssignmentComment(Integer assignmentId, String comment) {
         Assignment assignment = assignmentRepository.findById(assignmentId).orElse(null);
         if (assignment == null) return;
-        AssignmentStatus statusEnum = AssignmentStatus.valueOf(status);
-        assignment.setStatus(statusEnum);
-        if (AssignmentStatus.COMPLETED.equals(statusEnum)) {
-            assignment.setCompletedAt(LocalDateTime.now());
-            // assignment.setCompletedBy(userId != null ? userRepository.findById(userId).orElse(null) : null);
+        // Lấy userId từ user đang login hiện tại
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Long userId = null;
+        if (authentication != null && authentication.getPrincipal() instanceof User) {
+            userId = ((User) authentication.getPrincipal()).getId().longValue();
         }
-        assignmentRepository.save(assignment);
-        // Lưu lịch sử thay đổi trạng thái
+        if (userId == null) throw new RuntimeException("Không xác định được user đang đăng nhập");
         AssignmentStatusHistory history = new AssignmentStatusHistory();
         history.setAssignmentId(Long.valueOf(assignmentId));
-        history.setUserId(userId);
-        history.setStatus(status);
         history.setComment(comment);
-        history.setAttachmentUrl(fileUrl != null ? fileUrl : null); // fileUrl là link mock hoặc null
         history.setChangedAt(LocalDateTime.now());
+        history.setUserId(userId);
         assignmentStatusHistoryRepository.save(history);
     }
 }

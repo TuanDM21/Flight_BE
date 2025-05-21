@@ -79,5 +79,27 @@ public class DocumentController {
         ApiDocumentListResponse response = new ApiDocumentListResponse("Thành công", 200, result, true);
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/bulk")
+    @Operation(summary = "Bulk insert documents", description = "Tạo nhiều document cùng lúc")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "Tạo documents thành công", content = @Content(schema = @Schema(implementation = ApiDocumentListResponse.class)))
+    })
+    public ResponseEntity<ApiDocumentListResponse> bulkInsertDocuments(@RequestBody List<DocumentDTO> dtos) {
+        List<DocumentDTO> result = documentService.bulkInsertDocuments(dtos);
+        ApiDocumentListResponse response = new ApiDocumentListResponse("Tạo thành công", 201, result, true);
+        return ResponseEntity.status(201).body(response);
+    }
+
+    @DeleteMapping("/bulk")
+    @Operation(summary = "Bulk delete documents", description = "Xoá nhiều document cùng lúc")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Xoá documents thành công", content = @Content(schema = @Schema(implementation = ApiDocumentResponse.class)))
+    })
+    public ResponseEntity<ApiDocumentResponse> bulkDeleteDocuments(@RequestBody List<Integer> ids) {
+        documentService.bulkDeleteDocuments(ids);
+        ApiDocumentResponse response = new ApiDocumentResponse("Xoá thành công", 200, null, true);
+        return ResponseEntity.ok(response);
+    }
 }
 

@@ -9,4 +9,6 @@ public interface DocumentService {
     void deleteDocument(Integer id);
     DocumentDTO getDocumentById(Integer id);
     List<DocumentDTO> getAllDocuments();
+    List<DocumentDTO> bulkInsertDocuments(List<DocumentDTO> dtos);
+    void bulkDeleteDocuments(List<Integer> ids);
 }
