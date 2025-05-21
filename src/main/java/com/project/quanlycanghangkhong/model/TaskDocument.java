@@ -4,7 +4,9 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "TaskDocument")
+@Table(name = "TaskDocument", uniqueConstraints = {
+    @UniqueConstraint(columnNames = {"task_id", "document_id"})
+})
 public class TaskDocument {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

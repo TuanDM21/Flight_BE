@@ -60,11 +60,15 @@ public class TaskDocumentServiceImpl implements TaskDocumentService {
     public void attachDocumentToTask(Integer taskId, Integer documentId) {
         Task task = taskRepository.findById(taskId).orElseThrow();
         Document document = documentRepository.findById(documentId).orElseThrow();
-        TaskDocument taskDocument = new TaskDocument();
-        taskDocument.setTask(task);
-        taskDocument.setDocument(document);
-        taskDocument.setCreatedAt(LocalDateTime.now());
-        taskDocumentRepository.save(taskDocument);
+        // Kiểm tra trùng lặp trước khi tạo mới
+        boolean exists = !taskDocumentRepository.findAllByTaskAndDocument(task, document).isEmpty();
+        if (!exists) {
+            TaskDocument taskDocument = new TaskDocument();
+            taskDocument.setTask(task);
+            taskDocument.setDocument(document);
+            taskDocument.setCreatedAt(LocalDateTime.now());
+            taskDocumentRepository.save(taskDocument);
+        }
     }
 
     @Override
