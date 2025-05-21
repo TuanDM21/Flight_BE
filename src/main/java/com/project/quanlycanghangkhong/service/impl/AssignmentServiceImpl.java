@@ -9,9 +9,6 @@ import com.project.quanlycanghangkhong.repository.UserRepository;
 import com.project.quanlycanghangkhong.service.AssignmentService;
 import com.project.quanlycanghangkhong.dto.request.UpdateAssignmentRequest;
 import com.project.quanlycanghangkhong.service.TaskService;
-import com.project.quanlycanghangkhong.model.AssignmentStatusHistory;
-import com.project.quanlycanghangkhong.repository.AssignmentStatusHistoryRepository;
-import com.project.quanlycanghangkhong.model.AssignmentStatus;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -36,8 +33,6 @@ public class AssignmentServiceImpl implements AssignmentService {
     private UserRepository userRepository;
     @Autowired
     private TaskService taskService;
-    @Autowired
-    private AssignmentStatusHistoryRepository assignmentStatusHistoryRepository;
 
     private AssignmentDTO toDTO(Assignment a) {
         AssignmentDTO dto = new AssignmentDTO();
@@ -214,11 +209,5 @@ public class AssignmentServiceImpl implements AssignmentService {
             userId = ((User) authentication.getPrincipal()).getId().longValue();
         }
         if (userId == null) throw new RuntimeException("Không xác định được user đang đăng nhập");
-        AssignmentStatusHistory history = new AssignmentStatusHistory();
-        history.setAssignmentId(Long.valueOf(assignmentId));
-        history.setComment(comment);
-        history.setChangedAt(LocalDateTime.now());
-        history.setUserId(userId);
-        assignmentStatusHistoryRepository.save(history);
     }
 }

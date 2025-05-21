@@ -11,8 +11,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "assignment_status_history")
-public class AssignmentStatusHistory {
+@Table(name = "assignment_comment_history")
+public class AssignmentCommentHistory {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -23,8 +23,8 @@ public class AssignmentStatusHistory {
     @Column(name = "comment")
     private String comment;
 
-    @Column(name = "changed_at", nullable = false)
-    private LocalDateTime changedAt;
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
 
     @Column(name = "user_id", nullable = false)
     private Long userId;
@@ -54,12 +54,12 @@ public class AssignmentStatusHistory {
         this.comment = comment;
     }
 
-    public LocalDateTime getChangedAt() {
-        return changedAt;
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
     }
 
-    public void setChangedAt(LocalDateTime changedAt) {
-        this.changedAt = changedAt;
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 
     public Long getUserId() {
