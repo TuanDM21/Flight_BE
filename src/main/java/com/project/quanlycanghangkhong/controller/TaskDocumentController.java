@@ -46,6 +46,17 @@ public class TaskDocumentController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/attach-bulk")
+    @Operation(summary = "Gắn nhiều document vào task", description = "Gắn nhiều document vào một task (bulk)")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Gắn document thành công", content = @Content(schema = @Schema(implementation = ApiTaskDocumentActionResponse.class)))
+    })
+    public ResponseEntity<ApiTaskDocumentActionResponse> attachDocumentsBulk(@RequestParam Integer taskId, @RequestBody List<Integer> documentIds) {
+        taskDocumentService.bulkAttachDocumentsToTask(taskId, documentIds);
+        ApiTaskDocumentActionResponse response = new ApiTaskDocumentActionResponse("Gắn document thành công", 200, true);
+        return ResponseEntity.ok(response);
+    }
+
     @DeleteMapping("/remove")
     @Operation(summary = "Gỡ document khỏi task", description = "Gỡ một document khỏi task")
     @ApiResponses(value = {
@@ -53,6 +64,17 @@ public class TaskDocumentController {
     })
     public ResponseEntity<ApiTaskDocumentActionResponse> removeDocument(@RequestParam Integer taskId, @RequestParam Integer documentId) {
         taskDocumentService.removeDocumentFromTask(taskId, documentId);
+        ApiTaskDocumentActionResponse response = new ApiTaskDocumentActionResponse("Gỡ document thành công", 200, true);
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/remove-bulk")
+    @Operation(summary = "Gỡ nhiều document khỏi task", description = "Gỡ nhiều document khỏi một task (bulk)")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Gỡ document thành công", content = @Content(schema = @Schema(implementation = ApiTaskDocumentActionResponse.class)))
+    })
+    public ResponseEntity<ApiTaskDocumentActionResponse> removeDocumentsBulk(@RequestParam Integer taskId, @RequestBody List<Integer> documentIds) {
+        taskDocumentService.bulkRemoveDocumentsFromTask(taskId, documentIds);
         ApiTaskDocumentActionResponse response = new ApiTaskDocumentActionResponse("Gỡ document thành công", 200, true);
         return ResponseEntity.ok(response);
     }

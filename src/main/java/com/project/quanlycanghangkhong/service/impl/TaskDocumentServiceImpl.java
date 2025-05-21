@@ -64,4 +64,18 @@ public class TaskDocumentServiceImpl implements TaskDocumentService {
         taskDocument.setCreatedAt(LocalDateTime.now());
         taskDocumentRepository.save(taskDocument);
     }
+
+    @Override
+    public void bulkAttachDocumentsToTask(Integer taskId, List<Integer> documentIds) {
+        for (Integer documentId : documentIds) {
+            attachDocumentToTask(taskId, documentId);
+        }
+    }
+
+    @Override
+    public void bulkRemoveDocumentsFromTask(Integer taskId, List<Integer> documentIds) {
+        for (Integer documentId : documentIds) {
+            removeDocumentFromTask(taskId, documentId);
+        }
+    }
 }

@@ -8,4 +8,6 @@ public interface TaskDocumentService {
     void attachDocumentToTask(Integer taskId, Integer documentId);
     void removeDocumentFromTask(Integer taskId, Integer documentId);
     DocumentDTO updateDocumentInTask(Integer taskId, Integer documentId, DocumentDTO documentDTO);
+    void bulkAttachDocumentsToTask(Integer taskId, List<Integer> documentIds);
+    void bulkRemoveDocumentsFromTask(Integer taskId, List<Integer> documentIds);
 }
