@@ -9,6 +9,7 @@ import com.project.quanlycanghangkhong.dto.AssignmentCommentHistoryDTO;
 import com.project.quanlycanghangkhong.dto.response.assignment.ApiAssignmentCommentHistoryResponse;
 import com.project.quanlycanghangkhong.service.AssignmentService;
 import com.project.quanlycanghangkhong.service.AssignmentCommentHistoryService;
+import com.project.quanlycanghangkhong.dto.CreateAssignmentRequest;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -38,8 +39,8 @@ public class AssignmentController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "Tạo assignment thành công", content = @Content(schema = @Schema(implementation = ApiAssignmentResponse.class)))
     })
-    public ResponseEntity<ApiAssignmentResponse> createAssignment(@RequestBody AssignmentDTO dto) {
-        AssignmentDTO result = assignmentService.createAssignment(dto);
+    public ResponseEntity<ApiAssignmentResponse> createAssignment(@RequestBody CreateAssignmentRequest request) {
+        AssignmentDTO result = assignmentService.createAssignment(request);
         ApiAssignmentResponse response = new ApiAssignmentResponse("Tạo thành công", 201, result, true);
         return ResponseEntity.status(201).body(response);
     }

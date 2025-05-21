@@ -1,13 +1,11 @@
 package com.project.quanlycanghangkhong.dto.request;
 
 import java.util.Date;
-import com.project.quanlycanghangkhong.dto.UserDTO;
 import com.project.quanlycanghangkhong.model.AssignmentStatus;
 
 public class UpdateAssignmentRequest {
     private String recipientType; // 'team', 'unit', 'user'
-    private UserDTO recipientUser; // user nhận việc (nếu recipientType là 'user')
-    private Integer recipientId; // Id của team hoặc unit nếu recipientType là 'team' hoặc 'unit'
+    private Integer recipientId; // Id của team hoặc unit hoặc user
     private Date dueAt;
     private AssignmentStatus status;
     private String note;
@@ -18,12 +16,6 @@ public class UpdateAssignmentRequest {
     }
     public void setRecipientType(String recipientType) {
         this.recipientType = recipientType;
-    }
-    public UserDTO getRecipientUser() {
-        return recipientUser;
-    }
-    public void setRecipientUser(UserDTO recipientUser) {
-        this.recipientUser = recipientUser;
     }
     public Integer getRecipientId() {
         return recipientId;
