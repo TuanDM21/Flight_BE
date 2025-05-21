@@ -13,6 +13,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import com.project.quanlycanghangkhong.dto.CreateDocumentRequest;
+import com.project.quanlycanghangkhong.dto.UpdateDocumentRequest;
 
 @RestController
 @RequestMapping("/api/documents")
@@ -26,8 +28,8 @@ public class DocumentController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "Tạo document thành công", content = @Content(schema = @Schema(implementation = ApiDocumentResponse.class)))
     })
-    public ResponseEntity<ApiDocumentResponse> createDocument(@RequestBody DocumentDTO dto) {
-        DocumentDTO result = documentService.createDocument(dto);
+    public ResponseEntity<ApiDocumentResponse> createDocument(@RequestBody CreateDocumentRequest request) {
+        DocumentDTO result = documentService.createDocument(request);
         ApiDocumentResponse response = new ApiDocumentResponse("Tạo thành công", 201, result, true);
         return ResponseEntity.status(201).body(response);
     }
@@ -38,8 +40,8 @@ public class DocumentController {
         @ApiResponse(responseCode = "200", description = "Cập nhật document thành công", content = @Content(schema = @Schema(implementation = ApiDocumentResponse.class))),
         @ApiResponse(responseCode = "404", description = "Không tìm thấy document", content = @Content(schema = @Schema(implementation = ApiDocumentResponse.class)))
     })
-    public ResponseEntity<ApiDocumentResponse> updateDocument(@PathVariable Integer id, @RequestBody DocumentDTO dto) {
-        DocumentDTO result = documentService.updateDocument(id, dto);
+    public ResponseEntity<ApiDocumentResponse> updateDocument(@PathVariable Integer id, @RequestBody UpdateDocumentRequest request) {
+        DocumentDTO result = documentService.updateDocument(id, request);
         if (result == null) return ResponseEntity.status(404).body(new ApiDocumentResponse("Không tìm thấy văn bản", 404, null, false));
         ApiDocumentResponse response = new ApiDocumentResponse("Cập nhật thành công", 200, result, true);
         return ResponseEntity.ok(response);
