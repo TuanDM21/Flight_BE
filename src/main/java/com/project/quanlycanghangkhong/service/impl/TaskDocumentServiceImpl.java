@@ -29,8 +29,10 @@ public class TaskDocumentServiceImpl implements TaskDocumentService {
     public void removeDocumentFromTask(Integer taskId, Integer documentId) {
         Task task = taskRepository.findById(taskId).orElseThrow();
         Document document = documentRepository.findById(documentId).orElseThrow();
-        TaskDocument taskDocument = taskDocumentRepository.findByTaskAndDocument(task, document).orElseThrow();
-        taskDocumentRepository.delete(taskDocument);
+        List<TaskDocument> taskDocuments = taskDocumentRepository.findAllByTaskAndDocument(task, document);
+        for (TaskDocument td : taskDocuments) {
+            taskDocumentRepository.delete(td);
+        }
     }
 
     @Override

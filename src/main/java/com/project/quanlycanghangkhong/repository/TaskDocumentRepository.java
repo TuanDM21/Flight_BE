@@ -12,4 +12,5 @@ import com.project.quanlycanghangkhong.model.Document;
 public interface TaskDocumentRepository extends JpaRepository<TaskDocument, Integer> {
     Optional<TaskDocument> findByTaskAndDocument(Task task, Document document);
     List<TaskDocument> findAllByTask_Id(Integer taskId);
+    List<TaskDocument> findAllByTaskAndDocument(Task task, Document document);
 }
