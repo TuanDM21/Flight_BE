@@ -62,7 +62,6 @@ public class AssignmentServiceImpl implements AssignmentService {
     // Xoá hàm updateEntityFromDTO vì không dùng đến
 
     private Assignment toEntity(CreateAssignmentRequest request) {
-        // Không còn getTaskId ở đây, chỉ dùng cho createAssignment đơn lẻ
         Assignment a = new Assignment();
         a.setRecipientType(request.getRecipientType());
         a.setDueAt(request.getDueAt() != null ? new java.sql.Timestamp(request.getDueAt().getTime()).toLocalDateTime() : null);
@@ -71,6 +70,13 @@ public class AssignmentServiceImpl implements AssignmentService {
             a.setRecipientId(request.getRecipientId());
         }
         a.setAssignedAt(java.time.LocalDateTime.now());
+        // Lấy email hiện tại và set assignedBy
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication != null ? authentication.getName() : null;
+        User creator = (email != null) ? userRepository.findByEmail(email).orElse(null) : null;
+        if (creator != null) {
+            a.setAssignedBy(creator);
+        }
         return a;
     }
 
@@ -87,6 +93,13 @@ public class AssignmentServiceImpl implements AssignmentService {
             a.setRecipientId(request.getRecipientId());
         }
         a.setAssignedAt(java.time.LocalDateTime.now());
+        // Lấy email hiện tại và set assignedBy
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication != null ? authentication.getName() : null;
+        User creator = (email != null) ? userRepository.findByEmail(email).orElse(null) : null;
+        if (creator != null) {
+            a.setAssignedBy(creator);
+        }
         return a;
     }
 
