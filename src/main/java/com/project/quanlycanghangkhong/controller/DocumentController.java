@@ -1,6 +1,7 @@
 package com.project.quanlycanghangkhong.controller;
 
 import com.project.quanlycanghangkhong.dto.DocumentDTO;
+import com.project.quanlycanghangkhong.service.AttachmentService;
 import com.project.quanlycanghangkhong.service.DocumentService;
 import com.project.quanlycanghangkhong.dto.response.document.ApiDocumentResponse;
 import com.project.quanlycanghangkhong.dto.response.document.ApiDocumentListResponse;
@@ -15,6 +16,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import com.project.quanlycanghangkhong.dto.CreateDocumentRequest;
 import com.project.quanlycanghangkhong.dto.UpdateDocumentRequest;
+import com.project.quanlycanghangkhong.dto.request.AttachmentAssignRequest;
+import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
 
 @RestController
 @RequestMapping("/api/documents")
@@ -22,6 +25,9 @@ import com.project.quanlycanghangkhong.dto.UpdateDocumentRequest;
 public class DocumentController {
     @Autowired
     private DocumentService documentService;
+
+    @Autowired
+    private AttachmentService attachmentService;
 
     @PostMapping
     @Operation(summary = "Tạo document", description = "Tạo mới một document")
@@ -82,26 +88,44 @@ public class DocumentController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/bulk")
-    @Operation(summary = "Bulk insert documents", description = "Tạo nhiều document cùng lúc")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Tạo documents thành công", content = @Content(schema = @Schema(implementation = ApiDocumentListResponse.class)))
-    })
-    public ResponseEntity<ApiDocumentListResponse> bulkInsertDocuments(@RequestBody List<DocumentDTO> dtos) {
-        List<DocumentDTO> result = documentService.bulkInsertDocuments(dtos);
-        ApiDocumentListResponse response = new ApiDocumentListResponse("Tạo thành công", 201, result, true);
-        return ResponseEntity.status(201).body(response);
+    // @PostMapping("/bulk")
+    // @Operation(summary = "Bulk insert documents", description = "Tạo nhiều document cùng lúc")
+    // @ApiResponses(value = {
+    //     @ApiResponse(responseCode = "201", description = "Tạo documents thành công", content = @Content(schema = @Schema(implementation = ApiDocumentListResponse.class)))
+    // })
+    // public ResponseEntity<ApiDocumentListResponse> bulkInsertDocuments(@RequestBody List<DocumentDTO> dtos) {
+    //     List<DocumentDTO> result = documentService.bulkInsertDocuments(dtos);
+    //     ApiDocumentListResponse response = new ApiDocumentListResponse("Tạo thành công", 201, result, true);
+    //     return ResponseEntity.status(201).body(response);
+    // }
+
+    // @DeleteMapping("/bulk")
+    // @Operation(summary = "Bulk delete documents", description = "Xoá nhiều document cùng lúc")
+    // @ApiResponses(value = {
+    //     @ApiResponse(responseCode = "200", description = "Xoá documents thành công", content = @Content(schema = @Schema(implementation = ApiDocumentResponse.class)))
+    // })
+    // public ResponseEntity<ApiDocumentResponse> bulkDeleteDocuments(@RequestBody List<Integer> ids) {
+    //     documentService.bulkDeleteDocuments(ids);
+    //     ApiDocumentResponse response = new ApiDocumentResponse("Xoá thành công", 200, null, true);
+    //     return ResponseEntity.ok(response);
+    // }
+
+    @PostMapping("/{documentId}/attachments/assign")
+    @Operation(summary = "Gán nhiều file đính kèm vào document", description = "Gán các attachment đã upload vào document theo documentId")
+    public ResponseEntity<ApiResponseCustom<Void>> assignAttachmentsToDocument(
+            @PathVariable Integer documentId,
+            @RequestBody AttachmentAssignRequest request) {
+        attachmentService.assignAttachmentsToDocument(documentId, request);
+        return ResponseEntity.ok(new ApiResponseCustom<>("Gán file thành công", 200, null, true));
     }
 
-    @DeleteMapping("/bulk")
-    @Operation(summary = "Bulk delete documents", description = "Xoá nhiều document cùng lúc")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Xoá documents thành công", content = @Content(schema = @Schema(implementation = ApiDocumentResponse.class)))
-    })
-    public ResponseEntity<ApiDocumentResponse> bulkDeleteDocuments(@RequestBody List<Integer> ids) {
-        documentService.bulkDeleteDocuments(ids);
-        ApiDocumentResponse response = new ApiDocumentResponse("Xoá thành công", 200, null, true);
-        return ResponseEntity.ok(response);
+    @PatchMapping("/{documentId}/attachments/remove")
+    @Operation(summary = "Gỡ nhiều file đính kèm khỏi document", description = "Gỡ các attachment khỏi document theo documentId")
+    public ResponseEntity<ApiResponseCustom<Void>> removeAttachmentsFromDocument(
+            @PathVariable Integer documentId,
+            @RequestBody AttachmentAssignRequest request) {
+        attachmentService.removeAttachmentsFromDocument(documentId, request);
+        return ResponseEntity.ok(new ApiResponseCustom<>("Gỡ file thành công", 200, null, true));
     }
 }
 

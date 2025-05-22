@@ -12,7 +12,7 @@ public class Attachment {
     private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "document_id", nullable = false)
+    @JoinColumn(name = "document_id", nullable = true) // Cho phép null để upload file rời
     private Document document;
 
     @Column(name = "file_path", nullable = false, length = 500)
@@ -27,6 +27,9 @@ public class Attachment {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "is_deleted", nullable = false)
+    private boolean isDeleted = false;
 
     // Getters and setters
     public Integer getId() {
@@ -75,5 +78,13 @@ public class Attachment {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public boolean isDeleted() {
+        return isDeleted;
+    }
+
+    public void setDeleted(boolean deleted) {
+        isDeleted = deleted;
     }
 }

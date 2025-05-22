@@ -74,6 +74,14 @@ public class DocumentServiceImpl implements DocumentService {
         doc.setCreatedAt(LocalDateTime.now());
         doc.setUpdatedAt(LocalDateTime.now());
         Document saved = documentRepository.save(doc);
+        // Gán các attachment đã upload vào document này
+        if (request.getAttachmentIds() != null && !request.getAttachmentIds().isEmpty()) {
+            List<Attachment> atts = attachmentRepository.findAllByIdIn(request.getAttachmentIds());
+            for (Attachment att : atts) {
+                att.setDocument(saved);
+            }
+            attachmentRepository.saveAll(atts);
+        }
         return toDTO(saved);
     }
     @Override
@@ -83,6 +91,21 @@ public class DocumentServiceImpl implements DocumentService {
         updateEntity(doc, request);
         doc.setUpdatedAt(LocalDateTime.now());
         Document saved = documentRepository.save(doc);
+        // Cập nhật lại các attachment cho document này
+        if (request.getAttachmentIds() != null) {
+            // Gỡ các attachment cũ khỏi document này
+            List<Attachment> oldAtts = attachmentRepository.findByDocument_IdAndIsDeletedFalse(id);
+            for (Attachment att : oldAtts) {
+                att.setDocument(null);
+            }
+            attachmentRepository.saveAll(oldAtts);
+            // Gán các attachment mới vào document này
+            List<Attachment> newAtts = attachmentRepository.findAllByIdIn(request.getAttachmentIds());
+            for (Attachment att : newAtts) {
+                att.setDocument(saved);
+            }
+            attachmentRepository.saveAll(newAtts);
+        }
         return toDTO(saved);
     }
     @Override
