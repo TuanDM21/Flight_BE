@@ -10,6 +10,7 @@ import com.project.quanlycanghangkhong.dto.response.assignment.ApiAssignmentComm
 import com.project.quanlycanghangkhong.service.AssignmentService;
 import com.project.quanlycanghangkhong.service.AssignmentCommentHistoryService;
 import com.project.quanlycanghangkhong.dto.CreateAssignmentRequest;
+import com.project.quanlycanghangkhong.dto.request.CreateAssignmentsRequest;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -35,13 +36,13 @@ public class AssignmentController {
 
     // Giao công việc (tạo mới assignment)
     @PostMapping
-    @Operation(summary = "Tạo assignment", description = "Tạo mới một assignment")
+    @Operation(summary = "Tạo assignment cho nhiều người", description = "Tạo mới nhiều assignment cùng lúc cho nhiều người nhận việc")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Tạo assignment thành công", content = @Content(schema = @Schema(implementation = ApiAssignmentResponse.class)))
+        @ApiResponse(responseCode = "201", description = "Tạo assignment thành công", content = @Content(schema = @Schema(implementation = ApiAssignmentListResponse.class)))
     })
-    public ResponseEntity<ApiAssignmentResponse> createAssignment(@RequestBody CreateAssignmentRequest request) {
-        AssignmentDTO result = assignmentService.createAssignment(request);
-        ApiAssignmentResponse response = new ApiAssignmentResponse("Tạo thành công", 201, result, true);
+    public ResponseEntity<ApiAssignmentListResponse> createAssignments(@RequestBody CreateAssignmentsRequest request) {
+        List<AssignmentDTO> result = assignmentService.createAssignments(request);
+        ApiAssignmentListResponse response = new ApiAssignmentListResponse("Tạo thành công", 201, result, true);
         return ResponseEntity.status(201).body(response);
     }
 

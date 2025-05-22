@@ -10,6 +10,7 @@ import com.project.quanlycanghangkhong.service.AssignmentService;
 import com.project.quanlycanghangkhong.dto.request.UpdateAssignmentRequest;
 import com.project.quanlycanghangkhong.service.TaskService;
 import com.project.quanlycanghangkhong.dto.CreateAssignmentRequest;
+import com.project.quanlycanghangkhong.dto.request.CreateAssignmentsRequest;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -58,31 +59,34 @@ public class AssignmentServiceImpl implements AssignmentService {
         return dto;
     }
 
-    private void updateEntityFromDTO(Assignment a, AssignmentDTO dto) {
-        // Không set recipientId, assignedBy, completedBy từ DTO nữa
-        a.setRecipientType(dto.getRecipientType());
-        a.setAssignedAt(dto.getAssignedAt() != null ? new Timestamp(dto.getAssignedAt().getTime()).toLocalDateTime() : a.getAssignedAt());
-        a.setDueAt(dto.getDueAt() != null ? new Timestamp(dto.getDueAt().getTime()).toLocalDateTime() : null);
-        a.setCompletedAt(dto.getCompletedAt() != null ? new Timestamp(dto.getCompletedAt().getTime()).toLocalDateTime() : null);
-        a.setStatus(dto.getStatus());
-        a.setNote(dto.getNote());
-    }
+    // Xoá hàm updateEntityFromDTO vì không dùng đến
 
     private Assignment toEntity(CreateAssignmentRequest request) {
+        // Không còn getTaskId ở đây, chỉ dùng cho createAssignment đơn lẻ
         Assignment a = new Assignment();
-        if (request.getTaskId() != null) {
-            Optional<Task> taskOpt = taskRepository.findById(request.getTaskId());
+        a.setRecipientType(request.getRecipientType());
+        a.setDueAt(request.getDueAt() != null ? new java.sql.Timestamp(request.getDueAt().getTime()).toLocalDateTime() : null);
+        a.setNote(request.getNote());
+        if (request.getRecipientId() != null) {
+            a.setRecipientId(request.getRecipientId());
+        }
+        a.setAssignedAt(java.time.LocalDateTime.now());
+        return a;
+    }
+
+    private Assignment toEntity(CreateAssignmentRequest request, Integer taskId) {
+        Assignment a = new Assignment();
+        if (taskId != null) {
+            Optional<Task> taskOpt = taskRepository.findById(taskId);
             taskOpt.ifPresent(a::setTask);
         }
         a.setRecipientType(request.getRecipientType());
         a.setDueAt(request.getDueAt() != null ? new java.sql.Timestamp(request.getDueAt().getTime()).toLocalDateTime() : null);
         a.setNote(request.getNote());
-        // Xử lý recipientId
         if (request.getRecipientId() != null) {
             a.setRecipientId(request.getRecipientId());
         }
         a.setAssignedAt(java.time.LocalDateTime.now());
-        // status mặc định là ASSIGNED
         return a;
     }
 
@@ -174,5 +178,19 @@ public class AssignmentServiceImpl implements AssignmentService {
             userId = ((User) authentication.getPrincipal()).getId().longValue();
         }
         if (userId == null) throw new RuntimeException("Không xác định được user đang đăng nhập");
+    }
+
+    @Override
+    public List<AssignmentDTO> createAssignments(CreateAssignmentsRequest request) {
+        List<CreateAssignmentRequest> reqs = request.getAssignments();
+        Integer taskId = request.getTaskId();
+        return reqs.stream().map(req -> {
+            Assignment a = toEntity(req, taskId);
+            Assignment saved = assignmentRepository.save(a);
+            if (saved.getTask() != null) {
+                taskService.updateTaskStatus(saved.getTask());
+            }
+            return toDTO(saved);
+        }).collect(Collectors.toList());
     }
 }

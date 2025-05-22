@@ -3,10 +3,12 @@ package com.project.quanlycanghangkhong.service;
 import com.project.quanlycanghangkhong.dto.AssignmentDTO;
 import com.project.quanlycanghangkhong.dto.request.UpdateAssignmentRequest;
 import com.project.quanlycanghangkhong.dto.CreateAssignmentRequest;
+import com.project.quanlycanghangkhong.dto.request.CreateAssignmentsRequest;
 import java.util.List;
 
 public interface AssignmentService {
     AssignmentDTO createAssignment(CreateAssignmentRequest request);
+    List<AssignmentDTO> createAssignments(CreateAssignmentsRequest request);
     AssignmentDTO updateAssignment(Integer assignmentId, UpdateAssignmentRequest request);
     void deleteAssignment(Integer assignmentId);
     AssignmentDTO getAssignmentById(Integer assignmentId);

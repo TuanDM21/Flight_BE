@@ -7,8 +7,7 @@ public class CreateAssignmentRequest {
     private Integer recipientId; // Id của team, unit hoặc user
     private Date dueAt;
     private String note;
-    private Integer taskId;
-    // Không cần recipientUser
+    // Đã xoá taskId, chỉ nhận taskId ở object cha
 
     public String getRecipientType() { return recipientType; }
     public void setRecipientType(String recipientType) { this.recipientType = recipientType; }
@@ -18,6 +17,4 @@ public class CreateAssignmentRequest {
     public void setDueAt(Date dueAt) { this.dueAt = dueAt; }
     public String getNote() { return note; }
     public void setNote(String note) { this.note = note; }
-    public Integer getTaskId() { return taskId; }
-    public void setTaskId(Integer taskId) { this.taskId = taskId; }
 }
