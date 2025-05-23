@@ -267,13 +267,8 @@ public class TaskServiceImpl implements TaskService {
         boolean anyCompletedOrLate = assignments.stream()
                 .anyMatch(a -> a.getStatus() == AssignmentStatus.COMPLETED
                         || a.getStatus() == AssignmentStatus.LATE_COMPLETED);
-        boolean anyInProgress = assignments.stream()
-                .anyMatch(a -> a.getStatus() == AssignmentStatus.IN_PROGRESS);
-        boolean anySubmittedOrReviewing = assignments.stream()
-                .anyMatch(a -> a.getStatus() == AssignmentStatus.SUBMITTED
-                        || a.getStatus() == AssignmentStatus.REVIEWING);
-        boolean anyRejected = assignments.stream()
-                .anyMatch(a -> a.getStatus() == AssignmentStatus.REJECTED);
+        boolean anyNotCompleted = assignments.stream()
+                .anyMatch(a -> a.getStatus() != AssignmentStatus.COMPLETED && a.getStatus() != AssignmentStatus.LATE_COMPLETED && a.getStatus() != AssignmentStatus.CANCELLED);
 
         if (allCancelled) {
             task.setStatus(TaskStatus.CANCELLED);
@@ -283,14 +278,21 @@ public class TaskServiceImpl implements TaskService {
             } else {
                 task.setStatus(TaskStatus.COMPLETED);
             }
-        } else if (anyCompletedOrLate && (anyInProgress || anySubmittedOrReviewing || anyRejected)) {
+        } else if (anyCompletedOrLate && anyNotCompleted) {
             task.setStatus(TaskStatus.PARTIALLY_COMPLETED);
-        } else if (anySubmittedOrReviewing) {
-            task.setStatus(TaskStatus.UNDER_REVIEW);
-        } else if (anyInProgress) {
-            task.setStatus(TaskStatus.IN_PROGRESS);
         } else {
-            task.setStatus(TaskStatus.ASSIGNED);
+            boolean anySubmittedOrReviewing = assignments.stream()
+                    .anyMatch(a -> a.getStatus() == AssignmentStatus.SUBMITTED
+                            || a.getStatus() == AssignmentStatus.REVIEWING);
+            boolean anyInProgress = assignments.stream()
+                    .anyMatch(a -> a.getStatus() == AssignmentStatus.IN_PROGRESS);
+            if (anySubmittedOrReviewing) {
+                task.setStatus(TaskStatus.UNDER_REVIEW);
+            } else if (anyInProgress) {
+                task.setStatus(TaskStatus.IN_PROGRESS);
+            } else {
+                task.setStatus(TaskStatus.ASSIGNED);
+            }
         }
         taskRepository.save(task);
     }

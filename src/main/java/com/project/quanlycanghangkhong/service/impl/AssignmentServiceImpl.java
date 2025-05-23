@@ -55,6 +55,10 @@ public class AssignmentServiceImpl implements AssignmentService {
         if (a.getCompletedBy() != null) dto.setCompletedByUser(new com.project.quanlycanghangkhong.dto.UserDTO(a.getCompletedBy()));
         if ("user".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null) {
             userRepository.findById(a.getRecipientId()).ifPresent(u -> dto.setRecipientUser(new com.project.quanlycanghangkhong.dto.UserDTO(u)));
+        } else if ("team".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null) {
+            userRepository.findTeamLeadByTeamId(a.getRecipientId()).ifPresent(u -> dto.setRecipientUser(new com.project.quanlycanghangkhong.dto.UserDTO(u)));
+        } else if ("unit".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null) {
+            userRepository.findUnitLeadByUnitId(a.getRecipientId()).ifPresent(u -> dto.setRecipientUser(new com.project.quanlycanghangkhong.dto.UserDTO(u)));
         }
         return dto;
     }
