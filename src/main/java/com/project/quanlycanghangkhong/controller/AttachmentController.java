@@ -1,12 +1,10 @@
 package com.project.quanlycanghangkhong.controller;
 
 import com.project.quanlycanghangkhong.dto.AttachmentDTO;
-import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
 import com.project.quanlycanghangkhong.service.AttachmentService;
 import com.project.quanlycanghangkhong.dto.response.attachment.ApiAttachmentResponse;
 import com.project.quanlycanghangkhong.dto.response.attachment.ApiAttachmentListResponse;
 import com.project.quanlycanghangkhong.service.AzureBlobService;
-import com.project.quanlycanghangkhong.dto.request.AttachmentAssignRequest;
 import com.project.quanlycanghangkhong.dto.request.UpdateAttachmentFileNameRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -14,7 +12,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;

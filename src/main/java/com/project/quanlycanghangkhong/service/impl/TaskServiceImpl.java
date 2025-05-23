@@ -188,8 +188,8 @@ public class TaskServiceImpl implements TaskService {
                 AssignmentDTO adto = new AssignmentDTO();
                 adto.setAssignmentId(a.getAssignmentId());
                 adto.setRecipientType(a.getRecipientType());
-                adto.setRecipientId(a.getRecipientId()); // BỔ SUNG recipientId
-                adto.setTaskId(a.getTask() != null ? a.getTask().getId() : null); // BỔ SUNG taskId nếu cần
+                adto.setRecipientId(a.getRecipientId());
+                adto.setTaskId(a.getTask() != null ? a.getTask().getId() : null);
                 if (a.getAssignedBy() != null) {
                     adto.setAssignedByUser(new UserDTO(a.getAssignedBy()));
                 }
@@ -201,9 +201,13 @@ public class TaskServiceImpl implements TaskService {
                     adto.setCompletedByUser(new UserDTO(a.getCompletedBy()));
                 }
                 adto.setStatus(a.getStatus());
-                // recipientUser chỉ set nếu recipientType là 'user' và recipientId != null
+                // recipientUser: user, team, unit
                 if ("user".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null) {
                     userRepository.findById(a.getRecipientId()).ifPresent(u -> adto.setRecipientUser(new UserDTO(u)));
+                } else if ("team".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null) {
+                    userRepository.findTeamLeadByTeamId(a.getRecipientId()).ifPresent(u -> adto.setRecipientUser(new UserDTO(u)));
+                } else if ("unit".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null) {
+                    userRepository.findUnitLeadByUnitId(a.getRecipientId()).ifPresent(u -> adto.setRecipientUser(new UserDTO(u)));
                 }
                 return adto;
             }).toList();

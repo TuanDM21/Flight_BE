@@ -12,10 +12,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.project.quanlycanghangkhong.dto.UnitDTO;
 import com.project.quanlycanghangkhong.service.UnitService;
-import com.project.quanlycanghangkhong.dto.ApiResponse;
 import com.project.quanlycanghangkhong.dto.response.units.ApiAllUnitsResponse;
 
-import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.media.Content;
