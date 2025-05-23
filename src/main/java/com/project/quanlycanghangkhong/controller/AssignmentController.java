@@ -10,8 +10,12 @@ import com.project.quanlycanghangkhong.dto.response.assignment.ApiAssignmentComm
 import com.project.quanlycanghangkhong.service.AssignmentService;
 import com.project.quanlycanghangkhong.service.AssignmentCommentHistoryService;
 import com.project.quanlycanghangkhong.dto.request.CreateAssignmentsRequest;
+import com.project.quanlycanghangkhong.model.User;
+import com.project.quanlycanghangkhong.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,6 +35,9 @@ public class AssignmentController {
 
     @Autowired
     private AssignmentCommentHistoryService assignmentCommentHistoryService;
+
+    @Autowired
+    private UserRepository userRepository;
 
     // Giao công việc (tạo mới assignment)
     @PostMapping
@@ -104,7 +111,15 @@ public class AssignmentController {
     public ResponseEntity<ApiAssignmentCommentHistoryResponse> addAssignmentComment(
             @PathVariable Integer id,
             @RequestBody AssignmentCommentRequest request) {
-        assignmentCommentHistoryService.addComment(Long.valueOf(id), request.getComment(), 1L);
+        
+        // Lấy thông tin user đang đăng nhập
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+        User currentUser = userRepository.findByEmail(email)
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin user đang đăng nhập"));
+        
+        assignmentCommentHistoryService.addComment(Long.valueOf(id), request.getComment(), currentUser.getId().longValue());
+        
         // Lấy lại danh sách comment mới nhất sau khi thêm
         List<AssignmentCommentHistoryDTO> dtoList = assignmentCommentHistoryService.getCommentsByAssignmentId(Long.valueOf(id));
         ApiAssignmentCommentHistoryResponse response = new ApiAssignmentCommentHistoryResponse("Thêm comment thành công", 200, dtoList, true);
