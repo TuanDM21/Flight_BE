@@ -1,27 +1,20 @@
 package com.project.quanlycanghangkhong.dto.response.assignment;
 
 import com.project.quanlycanghangkhong.dto.AssignmentCommentHistoryDTO;
+import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+
 import java.util.List;
 
-public class ApiAssignmentCommentHistoryResponse {
-    private String message;
-    private int statusCode;
-    private List<AssignmentCommentHistoryDTO> data;
-    private boolean success;
-
+@Data
+@NoArgsConstructor
+@EqualsAndHashCode(callSuper = true)
+@Schema(description = "API response for assignment comment history", required = true)
+public class ApiAssignmentCommentHistoryResponse extends ApiResponseCustom<List<AssignmentCommentHistoryDTO>> {
     public ApiAssignmentCommentHistoryResponse(String message, int statusCode, List<AssignmentCommentHistoryDTO> data, boolean success) {
-        this.message = message;
-        this.statusCode = statusCode;
-        this.data = data;
-        this.success = success;
+        super(message, statusCode, data, success);
     }
-    // Getters and setters
-    public String getMessage() { return message; }
-    public void setMessage(String message) { this.message = message; }
-    public int getStatusCode() { return statusCode; }
-    public void setStatusCode(int statusCode) { this.statusCode = statusCode; }
-    public List<AssignmentCommentHistoryDTO> getData() { return data; }
-    public void setData(List<AssignmentCommentHistoryDTO> data) { this.data = data; }
-    public boolean isSuccess() { return success; }
-    public void setSuccess(boolean success) { this.success = success; }
 }
