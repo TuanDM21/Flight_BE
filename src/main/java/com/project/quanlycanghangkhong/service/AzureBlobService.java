@@ -1,25 +1,25 @@
 package com.project.quanlycanghangkhong.service;
 
 import com.azure.storage.blob.*;
-import com.azure.storage.blob.models.*;
 import com.project.quanlycanghangkhong.dto.AttachmentDTO;
 import com.project.quanlycanghangkhong.model.Attachment;
 import com.project.quanlycanghangkhong.repository.AttachmentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import io.github.cdimascio.dotenv.Dotenv;
 
 import java.io.InputStream;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class AzureBlobService {
-    private final Dotenv dotenv = Dotenv.load();
-    private final String connectionString = dotenv.get("AZURE_STORAGE_CONNECTION_STRING");
-    private final String containerName = dotenv.get("AZURE_STORAGE_CONTAINER_NAME");
+    @Value("${AZURE_STORAGE_CONNECTION_STRING}")
+    private String connectionString;
+    
+    @Value("${AZURE_STORAGE_CONTAINER_NAME}")
+    private String containerName;
 
     @Autowired
     private AttachmentRepository attachmentRepository;
