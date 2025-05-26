@@ -10,16 +10,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.project.quanlycanghangkhong.dto.*;
 import com.project.quanlycanghangkhong.model.*;
 import com.project.quanlycanghangkhong.repository.*;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.ArrayList;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -249,6 +249,95 @@ public class TaskServiceImpl implements TaskService {
         return taskRepository.findAllByDeletedFalse().stream()
             .map(task -> getTaskDetailById(task.getId()))
             .toList();
+    }
+
+    @Override
+    public List<TaskDetailDTO> getMyTasks(String type) {
+        // Lấy user hiện tại từ SecurityContextHolder
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication != null ? authentication.getName() : null;
+        User currentUser = (email != null) ? userRepository.findByEmail(email).orElse(null) : null;
+        
+        if (currentUser == null) {
+            return List.of();
+        }
+        
+        Integer currentUserId = currentUser.getId();
+        List<Task> tasks = new ArrayList<>();
+        
+        switch (type.toLowerCase()) {
+            case "created":
+                // Công việc đã tạo của tôi
+                tasks = taskRepository.findAllByDeletedFalse().stream()
+                    .filter(task -> task.getCreatedBy() != null && 
+                           task.getCreatedBy().getId().equals(currentUserId))
+                    .collect(Collectors.toList());
+                break;
+                
+            case "assigned":
+                // Công việc đã giao của tôi (tôi là assignedBy trong Assignment)
+                List<Assignment> assignedByMe = assignmentRepository.findAll().stream()
+                    .filter(assignment -> assignment.getAssignedBy() != null && 
+                           assignment.getAssignedBy().getId().equals(currentUserId))
+                    .collect(Collectors.toList());
+                
+                Set<Integer> assignedTaskIds = assignedByMe.stream()
+                    .map(assignment -> assignment.getTask().getId())
+                    .collect(Collectors.toSet());
+                
+                tasks = taskRepository.findAllByDeletedFalse().stream()
+                    .filter(task -> assignedTaskIds.contains(task.getId()))
+                    .collect(Collectors.toList());
+                break;
+                
+            case "received":
+                // Công việc tôi được giao (tôi là recipient trong Assignment)
+                List<Assignment> assignedToMe = assignmentRepository.findAll().stream()
+                    .filter(assignment -> {
+                        if ("user".equalsIgnoreCase(assignment.getRecipientType())) {
+                            // Trực tiếp giao cho user
+                            return assignment.getRecipientId() != null && 
+                                   assignment.getRecipientId().equals(currentUserId);
+                        } else if ("team".equalsIgnoreCase(assignment.getRecipientType())) {
+                            // Chỉ TEAM_LEAD mới được nhận công việc giao cho team (không bao gồm TEAM_VICE_LEAD)
+                            if (currentUser.getRole() != null && 
+                                "TEAM_LEAD".equals(currentUser.getRole().getRoleName()) &&
+                                currentUser.getTeam() != null &&
+                                assignment.getRecipientId() != null) {
+                                return currentUser.getTeam().getId().equals(assignment.getRecipientId());
+                            }
+                            return false;
+                        } else if ("unit".equalsIgnoreCase(assignment.getRecipientType())) {
+                            // Chỉ UNIT_LEAD mới được nhận công việc giao cho unit (không bao gồm UNIT_VICE_LEAD)
+                            if (currentUser.getRole() != null && 
+                                "UNIT_LEAD".equals(currentUser.getRole().getRoleName()) &&
+                                currentUser.getUnit() != null &&
+                                assignment.getRecipientId() != null) {
+                                return currentUser.getUnit().getId().equals(assignment.getRecipientId());
+                            }
+                            return false;
+                        }
+                        return false;
+                    })
+                    .collect(Collectors.toList());
+                
+                Set<Integer> receivedTaskIds = assignedToMe.stream()
+                    .map(assignment -> assignment.getTask().getId())
+                    .collect(Collectors.toSet());
+                
+                tasks = taskRepository.findAllByDeletedFalse().stream()
+                    .filter(task -> receivedTaskIds.contains(task.getId()))
+                    .collect(Collectors.toList());
+                break;
+                
+            default:
+                return List.of();
+        }
+        
+        return tasks.stream()
+            .map(task -> getTaskDetailById(task.getId()))
+            .filter(taskDetail -> taskDetail != null)
+            .collect(Collectors.toList());
     }
 
     // Logic cập nhật trạng thái Task dựa trên trạng thái các Assignment con

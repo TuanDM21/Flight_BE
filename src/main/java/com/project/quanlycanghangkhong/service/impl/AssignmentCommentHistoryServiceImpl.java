@@ -23,7 +23,7 @@ public class AssignmentCommentHistoryServiceImpl implements AssignmentCommentHis
 
     @Override
     public List<AssignmentCommentHistoryDTO> getCommentsByAssignmentId(Long assignmentId) {
-        List<AssignmentCommentHistory> historyList = commentHistoryRepository.findByAssignmentIdOrderByCreatedAtDesc(assignmentId);
+        List<AssignmentCommentHistory> historyList = commentHistoryRepository.findByAssignmentIdOrderByCreatedAtAsc(assignmentId);
         return historyList.stream().map(this::toDTO).collect(Collectors.toList());
     }
 

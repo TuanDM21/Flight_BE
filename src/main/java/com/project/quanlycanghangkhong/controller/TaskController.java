@@ -80,4 +80,28 @@ public class TaskController {
         List<TaskDetailDTO> tasks = taskService.getAllTaskDetails();
         return ResponseEntity.ok(new ApiAllTasksResponse("Thành công", 200, tasks, true));
     }
+
+    @GetMapping("/my")
+    @Operation(summary = "Lấy công việc của tôi theo loại", description = "Lấy danh sách công việc theo loại: created (đã tạo), assigned (đã giao), received (được giao)")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiAllTasksResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Tham số type không hợp lệ", content = @Content(schema = @Schema(implementation = ApiAllTasksResponse.class)))
+    })
+    public ResponseEntity<ApiAllTasksResponse> getMyTasks(@RequestParam String type) {
+        if (!type.matches("created|assigned|received")) {
+            return ResponseEntity.badRequest().body(
+                new ApiAllTasksResponse("Tham số type phải là: created, assigned, hoặc received", 400, null, false)
+            );
+        }
+        
+        List<TaskDetailDTO> tasks = taskService.getMyTasks(type);
+        String message = switch (type.toLowerCase()) {
+            case "created" -> "Danh sách công việc đã tạo";
+            case "assigned" -> "Danh sách công việc đã giao";
+            case "received" -> "Danh sách công việc được giao";
+            default -> "Thành công";
+        };
+        
+        return ResponseEntity.ok(new ApiAllTasksResponse(message, 200, tasks, true));
+    }
 }

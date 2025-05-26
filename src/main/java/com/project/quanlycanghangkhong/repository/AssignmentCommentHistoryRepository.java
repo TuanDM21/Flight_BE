@@ -8,5 +8,5 @@ import java.util.List;
 
 @Repository
 public interface AssignmentCommentHistoryRepository extends JpaRepository<AssignmentCommentHistory, Long> {
-    List<AssignmentCommentHistory> findByAssignmentIdOrderByCreatedAtDesc(Long assignmentId);
+    List<AssignmentCommentHistory> findByAssignmentIdOrderByCreatedAtAsc(Long assignmentId);
 }

@@ -3,7 +3,6 @@ package com.project.quanlycanghangkhong.service;
 import com.project.quanlycanghangkhong.dto.CreateTaskRequest;
 import com.project.quanlycanghangkhong.dto.TaskDTO;
 import com.project.quanlycanghangkhong.dto.TaskDetailDTO;
-import com.project.quanlycanghangkhong.dto.DocumentDetailDTO;
 import com.project.quanlycanghangkhong.dto.UpdateTaskDTO;
 import java.util.List;
 
@@ -17,4 +16,7 @@ public interface TaskService {
     TaskDetailDTO getTaskDetailById(Integer id);
     List<TaskDetailDTO> getAllTaskDetails();
     void updateTaskStatus(com.project.quanlycanghangkhong.model.Task task);
+    
+    // Method mới để lấy task theo loại
+    List<TaskDetailDTO> getMyTasks(String type);
 }

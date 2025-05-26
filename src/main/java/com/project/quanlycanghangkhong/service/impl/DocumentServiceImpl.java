@@ -9,8 +9,13 @@ import com.project.quanlycanghangkhong.model.Attachment;
 import com.project.quanlycanghangkhong.repository.DocumentRepository;
 import com.project.quanlycanghangkhong.service.DocumentService;
 import com.project.quanlycanghangkhong.repository.AttachmentRepository;
+import com.project.quanlycanghangkhong.model.TaskDocument;
+import com.project.quanlycanghangkhong.repository.TaskDocumentRepository;
+import com.project.quanlycanghangkhong.repository.EvaluationIssueDocumentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -21,6 +26,10 @@ public class DocumentServiceImpl implements DocumentService {
     private DocumentRepository documentRepository;
     @Autowired
     private AttachmentRepository attachmentRepository;
+    @Autowired
+    private TaskDocumentRepository taskDocumentRepository;
+    @Autowired
+    private EvaluationIssueDocumentRepository evaluationIssueDocumentRepository;
 
     private DocumentDTO toDTO(Document doc) {
         DocumentDTO dto = new DocumentDTO();
@@ -108,8 +117,34 @@ public class DocumentServiceImpl implements DocumentService {
         }
         return toDTO(saved);
     }
+    @Transactional
     @Override
     public void deleteDocument(Integer id) {
+        // Tìm document trước để đảm bảo nó tồn tại
+        Document document = documentRepository.findById(id).orElse(null);
+        if (document == null) {
+            throw new RuntimeException("Không tìm thấy document với id: " + id);
+        }
+        
+        // Gỡ document khỏi tất cả evaluation issues trước
+        evaluationIssueDocumentRepository.deleteAllByDocument_Id(id);
+        
+        // Tìm tất cả các task đang sử dụng document này
+        List<TaskDocument> taskDocuments = taskDocumentRepository.findAllByDocument_Id(id);
+        
+        // Gỡ document khỏi tất cả các task trước
+        for (TaskDocument taskDoc : taskDocuments) {
+            taskDocumentRepository.delete(taskDoc);
+        }
+        
+        // Gỡ liên kết tất cả Attachment khỏi Document để giữ chúng
+        List<Attachment> attachments = attachmentRepository.findByDocument_IdAndIsDeletedFalse(id);
+        for (Attachment att : attachments) {
+            att.setDocument(null); // Gỡ liên kết với document
+        }
+        attachmentRepository.saveAll(attachments);
+        
+        // Xóa document (bây giờ không còn attachment nào bị xóa theo)
         documentRepository.deleteById(id);
     }
     @Override
@@ -134,7 +169,28 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     @Override
+    @Transactional
     public void bulkDeleteDocuments(List<Integer> ids) {
+        // Xử lý từng document để gỡ tất cả liên kết trước
+        for (Integer id : ids) {
+            // Gỡ document khỏi tất cả evaluation issues
+            evaluationIssueDocumentRepository.deleteAllByDocument_Id(id);
+            
+            // Gỡ document khỏi tất cả tasks
+            List<TaskDocument> taskDocuments = taskDocumentRepository.findAllByDocument_Id(id);
+            for (TaskDocument taskDoc : taskDocuments) {
+                taskDocumentRepository.delete(taskDoc);
+            }
+            
+            // Gỡ liên kết tất cả Attachment khỏi Document để giữ chúng
+            List<Attachment> attachments = attachmentRepository.findByDocument_IdAndIsDeletedFalse(id);
+            for (Attachment att : attachments) {
+                att.setDocument(null); // Gỡ liên kết với document
+            }
+            attachmentRepository.saveAll(attachments);
+        }
+        
+        // Cuối cùng mới xóa tất cả documents
         documentRepository.deleteAllById(ids);
     }
 }

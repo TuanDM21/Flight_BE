@@ -30,7 +30,7 @@ public class Document {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    @OneToMany(mappedBy = "document", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "document", fetch = FetchType.LAZY)
     private List<Attachment> attachments;
 
     // Getters and setters
