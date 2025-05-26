@@ -1,18 +1,18 @@
 package com.project.quanlycanghangkhong.service;
 
 import com.project.quanlycanghangkhong.dto.AttachmentDTO;
-import com.project.quanlycanghangkhong.dto.response.presigned.PreSignedUrlResponse;
+import com.project.quanlycanghangkhong.dto.response.presigned.FlexiblePreSignedUrlResponse;
+import com.project.quanlycanghangkhong.dto.request.FlexibleUploadRequest;
+import java.util.List;
 
 public interface AzurePreSignedUrlService {
     
     /**
-     * Tạo pre-signed URL cho việc upload file
-     * @param fileName Tên file gốc
-     * @param fileSize Kích thước file (bytes)
-     * @param contentType Loại content của file (ví dụ: image/jpeg, application/pdf)
-     * @return PreSignedUrlResponse chứa URL để upload và thông tin file
+     * Tạo pre-signed URL linh hoạt cho việc upload file (single hoặc multiple)
+     * @param request FlexibleUploadRequest chứa thông tin file(s) cần upload
+     * @return FlexiblePreSignedUrlResponse chứa URL(s) để upload và thông tin file(s)
      */
-    PreSignedUrlResponse generateUploadUrl(String fileName, Long fileSize, String contentType);
+    FlexiblePreSignedUrlResponse generateFlexibleUploadUrls(FlexibleUploadRequest request);
     
     /**
      * Tạo pre-signed URL cho việc download file
@@ -22,13 +22,11 @@ public interface AzurePreSignedUrlService {
     String generateDownloadUrl(Integer attachmentId);
     
     /**
-     * Xác nhận file đã được upload thành công
-     * Kiểm tra file có tồn tại trên Azure Blob không và cập nhật thông tin
-     * @param attachmentId ID của attachment cần xác nhận
-     * @return AttachmentDTO với thông tin đã cập nhật
-     * @throws RuntimeException nếu file không tồn tại hoặc upload thất bại
+     * Xác nhận upload linh hoạt (single hoặc multiple files)
+     * @param attachmentIds Danh sách ID của attachment cần xác nhận
+     * @return List<AttachmentDTO> với thông tin các file đã được xác nhận
      */
-    AttachmentDTO confirmUpload(Integer attachmentId);
+    List<AttachmentDTO> confirmFlexibleUpload(List<Integer> attachmentIds);
     
     /**
      * Xóa file khỏi Azure Blob Storage và database

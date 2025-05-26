@@ -5,8 +5,9 @@ import com.project.quanlycanghangkhong.service.AttachmentService;
 import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
 import com.project.quanlycanghangkhong.service.AzurePreSignedUrlService;
 import com.project.quanlycanghangkhong.dto.request.UpdateAttachmentFileNameRequest;
-import com.project.quanlycanghangkhong.dto.request.GenerateUploadUrlRequest;
-import com.project.quanlycanghangkhong.dto.response.presigned.PreSignedUrlResponse;
+import com.project.quanlycanghangkhong.dto.request.FlexibleUploadRequest;
+import com.project.quanlycanghangkhong.dto.request.ConfirmFlexibleUploadRequest;
+import com.project.quanlycanghangkhong.dto.response.presigned.FlexiblePreSignedUrlResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -17,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.ArrayList;
 import javax.validation.Valid;
 
 @RestController
@@ -31,27 +33,24 @@ public class AttachmentController {
     @Autowired
     private AzurePreSignedUrlService preSignedUrlService;
 
-    // ==================== PRE-SIGNED URL ENDPOINTS ====================
+    // ==================== FLEXIBLE PRE-SIGNED URL ENDPOINTS ====================
     
-    @PostMapping("/generate-upload-url")
+    @PostMapping("/generate-upload-urls")
     @Operation(summary = "Tạo pre-signed URL để upload file", 
-               description = "Tạo pre-signed URL để client upload file trực tiếp lên Azure Blob Storage")
+               description = "Tạo pre-signed URL để client upload file trực tiếp lên Azure Blob Storage. " +
+                            "Tự động detect và xử lý cả single file (1 file) và multiple files (nhiều file)")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Tạo pre-signed URL thành công", 
                     content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
         @ApiResponse(responseCode = "400", description = "Dữ liệu đầu vào không hợp lệ"),
         @ApiResponse(responseCode = "500", description = "Lỗi server khi tạo pre-signed URL")
     })
-    public ResponseEntity<ApiResponseCustom<PreSignedUrlResponse>> generateUploadUrl(
-            @Valid @RequestBody GenerateUploadUrlRequest request) {
+    public ResponseEntity<ApiResponseCustom<FlexiblePreSignedUrlResponse>> generateUploadUrls(
+            @Valid @RequestBody FlexibleUploadRequest request) {
         try {
-            PreSignedUrlResponse result = preSignedUrlService.generateUploadUrl(
-                    request.getFileName(), 
-                    request.getFileSize(), 
-                    request.getContentType()
-            );
+            FlexiblePreSignedUrlResponse result = preSignedUrlService.generateFlexibleUploadUrls(request);
             
-            return ResponseEntity.ok(ApiResponseCustom.success("Tạo pre-signed URL thành công", result));
+            return ResponseEntity.ok(ApiResponseCustom.success(result.getMessage(), result));
             
         } catch (Exception e) {
             return ResponseEntity.status(500).body(
@@ -61,20 +60,26 @@ public class AttachmentController {
         }
     }
     
-    @PostMapping("/confirm-upload/{attachmentId}")
+    @PostMapping("/confirm-upload")
     @Operation(summary = "Xác nhận upload thành công", 
-               description = "Xác nhận file đã được upload thành công qua pre-signed URL")
+               description = "Xác nhận file đã được upload thành công qua pre-signed URL. " +
+                            "Tự động detect và xử lý cả single file và multiple files")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Xác nhận upload thành công", 
                     content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
         @ApiResponse(responseCode = "404", description = "Không tìm thấy file hoặc upload thất bại"),
         @ApiResponse(responseCode = "500", description = "Lỗi server khi xác nhận upload")
     })
-    public ResponseEntity<ApiResponseCustom<AttachmentDTO>> confirmUpload(@PathVariable Integer attachmentId) {
+    public ResponseEntity<ApiResponseCustom<List<AttachmentDTO>>> confirmUpload(
+            @Valid @RequestBody ConfirmFlexibleUploadRequest request) {
         try {
-            AttachmentDTO result = preSignedUrlService.confirmUpload(attachmentId);
+            List<AttachmentDTO> result = preSignedUrlService.confirmFlexibleUpload(request.getAttachmentIds());
             
-            return ResponseEntity.ok(ApiResponseCustom.success("Xác nhận upload thành công", result));
+            String message = request.isSingleFile() ? 
+                "Xác nhận upload thành công" : 
+                "Xác nhận upload thành công " + result.size() + " file";
+            
+            return ResponseEntity.ok(ApiResponseCustom.success(message, result));
             
         } catch (RuntimeException e) {
             if (e.getMessage().contains("Không tìm thấy") || e.getMessage().contains("chưa được upload")) {
@@ -164,6 +169,44 @@ public class AttachmentController {
             return ResponseEntity.status(500).body(
                 ApiResponseCustom.error(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR, 
                     "Lỗi khi xóa file: " + e.getMessage())
+            );
+        }
+    }
+
+    @DeleteMapping("/bulk-delete")
+    @Operation(summary = "Xóa nhiều file đính kèm", 
+               description = "Xóa nhiều file đính kèm khỏi Azure Blob Storage và database")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Xóa file thành công"),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy một hoặc nhiều file đính kèm"),
+        @ApiResponse(responseCode = "500", description = "Lỗi server khi xóa file")
+    })
+    public ResponseEntity<ApiResponseCustom<String>> bulkDeleteAttachments(
+            @Valid @RequestBody ConfirmFlexibleUploadRequest request) {
+        try {
+            int successCount = 0;
+            List<String> errors = new ArrayList<>();
+            
+            for (Integer attachmentId : request.getAttachmentIds()) {
+                try {
+                    preSignedUrlService.deleteFile(attachmentId);
+                    successCount++;
+                } catch (Exception e) {
+                    errors.add("ID " + attachmentId + ": " + e.getMessage());
+                }
+            }
+            
+            String message = "Đã xóa thành công " + successCount + " file";
+            if (!errors.isEmpty()) {
+                message += ". Lỗi: " + String.join(", ", errors);
+            }
+            
+            return ResponseEntity.ok(ApiResponseCustom.success(message, null));
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(
+                ApiResponseCustom.error(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR, 
+                    "Lỗi khi xóa bulk file: " + e.getMessage())
             );
         }
     }

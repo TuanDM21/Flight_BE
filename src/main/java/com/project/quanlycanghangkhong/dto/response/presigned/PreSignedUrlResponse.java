@@ -44,4 +44,9 @@ public class PreSignedUrlResponse {
      */
     private String instructions = "Sử dụng uploadUrl để upload file trực tiếp lên Azure Blob. " +
                                  "Sau khi upload thành công, gọi API confirm với attachmentId để xác nhận.";
+    
+    /**
+     * Thông báo lỗi (sử dụng cho bulk operations)
+     */
+    private String error;
 }

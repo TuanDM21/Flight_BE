@@ -9,19 +9,27 @@ import com.azure.storage.blob.sas.BlobSasPermission;
 import com.azure.storage.blob.sas.BlobServiceSasSignatureValues;
 import com.project.quanlycanghangkhong.dto.AttachmentDTO;
 import com.project.quanlycanghangkhong.dto.response.presigned.PreSignedUrlResponse;
+import com.project.quanlycanghangkhong.dto.response.presigned.FlexiblePreSignedUrlResponse;
+import com.project.quanlycanghangkhong.dto.request.FlexibleUploadRequest;
 import com.project.quanlycanghangkhong.model.Attachment;
 import com.project.quanlycanghangkhong.repository.AttachmentRepository;
 import com.project.quanlycanghangkhong.service.AzurePreSignedUrlService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.UUID;
+import java.util.List;
+import java.util.ArrayList;
 
 @Service
 public class AzurePreSignedUrlServiceImpl implements AzurePreSignedUrlService {
+    
+    private static final Logger logger = LoggerFactory.getLogger(AzurePreSignedUrlServiceImpl.class);
     
     @Value("${AZURE_STORAGE_CONNECTION_STRING}")
     private String connectionString;
@@ -33,14 +41,141 @@ public class AzurePreSignedUrlServiceImpl implements AzurePreSignedUrlService {
     private AttachmentRepository attachmentRepository;
     
     /**
-     * Tạo pre-signed URL cho việc upload file
+     * Tạo pre-signed URL cho việc download file
+     * @param attachmentId ID của attachment
+     * @return URL để download file
+     */
+    @Override
+    public String generateDownloadUrl(Integer attachmentId) {
+        try {
+            // Tìm attachment trong database
+            Attachment attachment = attachmentRepository.findById(attachmentId)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy file đính kèm"));
+            
+            // Tạo BlobServiceClient
+            BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
+                    .connectionString(connectionString)
+                    .buildClient();
+            
+            BlobContainerClient containerClient = blobServiceClient.getBlobContainerClient(containerName);
+            
+            // Lấy blob name từ filePath
+            String blobName = extractBlobNameFromUrl(attachment.getFilePath());
+            BlobClient blobClient = containerClient.getBlobClient(blobName);
+            
+            // Kiểm tra file có tồn tại không
+            if (!blobClient.exists()) {
+                throw new RuntimeException("File không tồn tại trên Azure Blob Storage");
+            }
+            
+            // Tạo SAS permissions cho download (read)
+            BlobSasPermission permissions = new BlobSasPermission()
+                    .setReadPermission(true);
+            
+            // Thiết lập thời gian hết hạn cho URL (1 giờ)
+            OffsetDateTime expiryTime = OffsetDateTime.now().plusHours(1);
+            
+            // Tạo SAS signature với Content-Disposition để force download
+            BlobServiceSasSignatureValues sasValues = new BlobServiceSasSignatureValues(expiryTime, permissions)
+                    .setContentDisposition("attachment; filename=\"" + attachment.getFileName() + "\"");
+            
+            // Tạo pre-signed URL cho download
+            return blobClient.getBlobUrl() + "?" + blobClient.generateSas(sasValues);
+            
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi khi tạo pre-signed URL cho download: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Xóa file và record trong database
+     * @param attachmentId ID của attachment
+     */
+    @Override
+    public void deleteFile(Integer attachmentId) {
+        try {
+            // Tìm attachment trong database
+            Attachment attachment = attachmentRepository.findById(attachmentId)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy file đính kèm"));
+            
+            // Tạo BlobServiceClient
+            BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
+                    .connectionString(connectionString)
+                    .buildClient();
+            
+            BlobContainerClient containerClient = blobServiceClient.getBlobContainerClient(containerName);
+            String blobName = extractBlobNameFromUrl(attachment.getFilePath());
+            BlobClient blobClient = containerClient.getBlobClient(blobName);
+            
+            // Xóa file trên Azure Blob nếu tồn tại
+            if (blobClient.exists()) {
+                blobClient.delete();
+            }
+            
+            // Xóa record trong database
+            attachmentRepository.deleteById(attachmentId);
+            
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi khi xóa file: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Tạo pre-signed URL linh hoạt cho việc upload file (single hoặc multiple)
+     * @param request FlexibleUploadRequest chứa thông tin file(s) cần upload
+     * @return FlexiblePreSignedUrlResponse chứa URL(s) để upload và thông tin file(s)
+     */
+    @Override
+    public FlexiblePreSignedUrlResponse generateFlexibleUploadUrls(FlexibleUploadRequest request) {
+        if (request.isSingleFile()) {
+            // Optimized path for single file
+            FlexibleUploadRequest.FileUploadInfo fileInfo = request.getSingleFile();
+            try {
+                PreSignedUrlResponse response = createPreSignedUrlForFile(
+                    fileInfo.getFileName(),
+                    fileInfo.getFileSize(),
+                    fileInfo.getContentType()
+                );
+                return new FlexiblePreSignedUrlResponse(response);
+            } catch (Exception e) {
+                logger.error("Error generating upload URL for single file: " + fileInfo.getFileName(), e);
+                throw new RuntimeException("Lỗi tạo URL cho file: " + e.getMessage());
+            }
+        } else {
+            // Batch processing for multiple files
+            List<PreSignedUrlResponse> results = new ArrayList<>();
+            
+            for (FlexibleUploadRequest.FileUploadInfo fileInfo : request.getFiles()) {
+                try {
+                    PreSignedUrlResponse response = createPreSignedUrlForFile(
+                        fileInfo.getFileName(),
+                        fileInfo.getFileSize(),
+                        fileInfo.getContentType()
+                    );
+                    results.add(response);
+                } catch (Exception e) {
+                    logger.error("Error generating upload URL for file: " + fileInfo.getFileName(), e);
+                    
+                    // Create error response for this file
+                    PreSignedUrlResponse errorResponse = new PreSignedUrlResponse();
+                    errorResponse.setFileName(fileInfo.getFileName());
+                    errorResponse.setError("Lỗi tạo URL: " + e.getMessage());
+                    results.add(errorResponse);
+                }
+            }
+            
+            return new FlexiblePreSignedUrlResponse(results);
+        }
+    }
+
+    /**
+     * Tạo pre-signed URL cho một file cụ thể (private helper method)
      * @param fileName Tên file gốc
      * @param fileSize Kích thước file
      * @param contentType Loại content của file
      * @return PreSignedUrlResponse chứa URL để upload và thông tin file
      */
-    @Override
-    public PreSignedUrlResponse generateUploadUrl(String fileName, Long fileSize, String contentType) {
+    private PreSignedUrlResponse createPreSignedUrlForFile(String fileName, Long fileSize, String contentType) {
         try {
             // Tạo BlobServiceClient
             BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
@@ -94,61 +229,56 @@ public class AzurePreSignedUrlServiceImpl implements AzurePreSignedUrlService {
             throw new RuntimeException("Lỗi khi tạo pre-signed URL: " + e.getMessage(), e);
         }
     }
-    
+
     /**
-     * Tạo pre-signed URL cho việc download file
-     * @param attachmentId ID của attachment
-     * @return URL để download file
+     * Xác nhận upload linh hoạt (single hoặc multiple files)
+     * @param attachmentIds Danh sách ID của attachment cần xác nhận
+     * @return List<AttachmentDTO> với thông tin các file đã được xác nhận
      */
     @Override
-    public String generateDownloadUrl(Integer attachmentId) {
-        try {
-            // Tìm attachment trong database
-            Attachment attachment = attachmentRepository.findById(attachmentId)
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy file đính kèm"));
+    public List<AttachmentDTO> confirmFlexibleUpload(List<Integer> attachmentIds) {
+        if (attachmentIds.size() == 1) {
+            // Optimized path for single file
+            try {
+                AttachmentDTO confirmed = confirmSingleUpload(attachmentIds.get(0));
+                return List.of(confirmed);
+            } catch (Exception e) {
+                logger.error("Error confirming upload for attachment ID: " + attachmentIds.get(0), e);
+                throw new RuntimeException("Lỗi xác nhận upload: " + e.getMessage());
+            }
+        } else {
+            // Batch processing for multiple files
+            List<AttachmentDTO> results = new ArrayList<>();
+            List<String> errors = new ArrayList<>();
             
-            // Tạo BlobServiceClient
-            BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
-                    .connectionString(connectionString)
-                    .buildClient();
-            
-            BlobContainerClient containerClient = blobServiceClient.getBlobContainerClient(containerName);
-            
-            // Lấy blob name từ filePath
-            String blobName = extractBlobNameFromUrl(attachment.getFilePath());
-            BlobClient blobClient = containerClient.getBlobClient(blobName);
-            
-            // Kiểm tra file có tồn tại không
-            if (!blobClient.exists()) {
-                throw new RuntimeException("File không tồn tại trên Azure Blob Storage");
+            for (Integer attachmentId : attachmentIds) {
+                try {
+                    AttachmentDTO confirmed = confirmSingleUpload(attachmentId);
+                    results.add(confirmed);
+                } catch (Exception e) {
+                    logger.error("Error confirming upload for attachment ID: " + attachmentId, e);
+                    errors.add("AttachmentId " + attachmentId + ": " + e.getMessage());
+                }
             }
             
-            // Tạo SAS permissions cho download (read)
-            BlobSasPermission permissions = new BlobSasPermission()
-                    .setReadPermission(true);
+            if (!errors.isEmpty() && results.isEmpty()) {
+                throw new RuntimeException("Không thể xác nhận upload cho bất kỳ file nào: " + String.join(", ", errors));
+            }
             
-            // Thiết lập thời gian hết hạn cho URL (1 giờ)
-            OffsetDateTime expiryTime = OffsetDateTime.now().plusHours(1);
+            if (!errors.isEmpty()) {
+                logger.warn("Some files failed to confirm upload: " + String.join(", ", errors));
+            }
             
-            // Tạo SAS signature với Content-Disposition để force download
-            BlobServiceSasSignatureValues sasValues = new BlobServiceSasSignatureValues(expiryTime, permissions)
-                    .setContentDisposition("attachment; filename=\"" + attachment.getFileName() + "\"");
-            
-            // Tạo pre-signed URL cho download
-            return blobClient.getBlobUrl() + "?" + blobClient.generateSas(sasValues);
-            
-        } catch (Exception e) {
-            throw new RuntimeException("Lỗi khi tạo pre-signed URL cho download: " + e.getMessage(), e);
+            return results;
         }
     }
-    
+
     /**
-     * Xác nhận file đã được upload thành công
+     * Xác nhận upload cho một file cụ thể (private helper method)
      * @param attachmentId ID của attachment
      * @return AttachmentDTO
      */
-    @Override
-    public AttachmentDTO confirmUpload(Integer attachmentId) {
+    private AttachmentDTO confirmSingleUpload(Integer attachmentId) {
         try {
             // Tìm attachment trong database
             Attachment attachment = attachmentRepository.findById(attachmentId)
@@ -182,39 +312,6 @@ public class AzurePreSignedUrlServiceImpl implements AzurePreSignedUrlService {
             
         } catch (Exception e) {
             throw new RuntimeException("Lỗi khi xác nhận upload: " + e.getMessage(), e);
-        }
-    }
-    
-    /**
-     * Xóa file và record trong database
-     * @param attachmentId ID của attachment
-     */
-    @Override
-    public void deleteFile(Integer attachmentId) {
-        try {
-            // Tìm attachment trong database
-            Attachment attachment = attachmentRepository.findById(attachmentId)
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy file đính kèm"));
-            
-            // Tạo BlobServiceClient
-            BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
-                    .connectionString(connectionString)
-                    .buildClient();
-            
-            BlobContainerClient containerClient = blobServiceClient.getBlobContainerClient(containerName);
-            String blobName = extractBlobNameFromUrl(attachment.getFilePath());
-            BlobClient blobClient = containerClient.getBlobClient(blobName);
-            
-            // Xóa file trên Azure Blob nếu tồn tại
-            if (blobClient.exists()) {
-                blobClient.delete();
-            }
-            
-            // Xóa record trong database
-            attachmentRepository.deleteById(attachmentId);
-            
-        } catch (Exception e) {
-            throw new RuntimeException("Lỗi khi xóa file: " + e.getMessage(), e);
         }
     }
     
