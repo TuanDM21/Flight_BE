@@ -2,12 +2,20 @@ package com.project.quanlycanghangkhong.controller;
 
 import com.project.quanlycanghangkhong.dto.AttachmentDTO;
 import com.project.quanlycanghangkhong.service.AttachmentService;
-import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
 import com.project.quanlycanghangkhong.service.AzurePreSignedUrlService;
 import com.project.quanlycanghangkhong.dto.request.UpdateAttachmentFileNameRequest;
 import com.project.quanlycanghangkhong.dto.request.FlexibleUploadRequest;
 import com.project.quanlycanghangkhong.dto.request.ConfirmFlexibleUploadRequest;
 import com.project.quanlycanghangkhong.dto.response.presigned.FlexiblePreSignedUrlResponse;
+// Import các response classes chuyên biệt cho attachment
+import com.project.quanlycanghangkhong.dto.response.attachment.ApiGenerateUploadUrlsResponse;
+import com.project.quanlycanghangkhong.dto.response.attachment.ApiConfirmUploadResponse;
+import com.project.quanlycanghangkhong.dto.response.attachment.ApiDownloadUrlResponse;
+import com.project.quanlycanghangkhong.dto.response.attachment.ApiAttachmentResponse;
+import com.project.quanlycanghangkhong.dto.response.attachment.ApiAttachmentListResponse;
+import com.project.quanlycanghangkhong.dto.response.attachment.ApiUpdateAttachmentResponse;
+import com.project.quanlycanghangkhong.dto.response.attachment.ApiDeleteAttachmentResponse;
+import com.project.quanlycanghangkhong.dto.response.attachment.ApiBulkDeleteAttachmentResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -45,11 +53,11 @@ public class AttachmentController {
                             "Tự động detect và xử lý cả single file (1 file) và multiple files (nhiều file)")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Tạo pre-signed URL thành công", 
-                    content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+                    content = @Content(schema = @Schema(implementation = ApiGenerateUploadUrlsResponse.class))),
         @ApiResponse(responseCode = "400", description = "Dữ liệu đầu vào không hợp lệ"),
         @ApiResponse(responseCode = "500", description = "Lỗi server khi tạo pre-signed URL")
     })
-    public ResponseEntity<ApiResponseCustom<FlexiblePreSignedUrlResponse>> generateUploadUrls(
+    public ResponseEntity<ApiGenerateUploadUrlsResponse> generateUploadUrls(
             @Valid @RequestBody FlexibleUploadRequest request) {
         try {
             // Log upload request for monitoring
@@ -60,18 +68,23 @@ public class AttachmentController {
             // Log success
             logger.info("Successfully generated {} upload URLs", result.getTotalFiles());
             
-            return ResponseEntity.ok(ApiResponseCustom.success(result.getMessage(), result));
+            ApiGenerateUploadUrlsResponse response = new ApiGenerateUploadUrlsResponse();
+            response.setMessage(result.getMessage());
+            response.setStatusCode(200);
+            response.setData(result);
+            response.setSuccess(true);
+            
+            return ResponseEntity.ok(response);
             
         } catch (IllegalArgumentException e) {
             logger.warn("Validation error in upload URL generation: {}", e.getMessage());
             return ResponseEntity.status(400).body(
-                ApiResponseCustom.error(org.springframework.http.HttpStatus.BAD_REQUEST, e.getMessage())
+                new ApiGenerateUploadUrlsResponse(e.getMessage(), 400, null, false)
             );
         } catch (Exception e) {
             logger.error("Error generating upload URLs", e);
             return ResponseEntity.status(500).body(
-                ApiResponseCustom.error(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR, 
-                    "Lỗi khi tạo pre-signed URL: " + e.getMessage())
+                new ApiGenerateUploadUrlsResponse("Lỗi khi tạo pre-signed URL: " + e.getMessage(), 500, null, false)
             );
         }
     }
@@ -82,11 +95,11 @@ public class AttachmentController {
                             "Tự động detect và xử lý cả single file và multiple files")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Xác nhận upload thành công", 
-                    content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+                    content = @Content(schema = @Schema(implementation = ApiConfirmUploadResponse.class))),
         @ApiResponse(responseCode = "404", description = "Không tìm thấy file hoặc upload thất bại"),
         @ApiResponse(responseCode = "500", description = "Lỗi server khi xác nhận upload")
     })
-    public ResponseEntity<ApiResponseCustom<List<AttachmentDTO>>> confirmUpload(
+    public ResponseEntity<ApiConfirmUploadResponse> confirmUpload(
             @Valid @RequestBody ConfirmFlexibleUploadRequest request) {
         try {
             List<AttachmentDTO> result = preSignedUrlService.confirmFlexibleUpload(request.getAttachmentIds());
@@ -95,18 +108,23 @@ public class AttachmentController {
                 "Xác nhận upload thành công" : 
                 "Xác nhận upload thành công " + result.size() + " file";
             
-            return ResponseEntity.ok(ApiResponseCustom.success(message, result));
+            ApiConfirmUploadResponse response = new ApiConfirmUploadResponse();
+            response.setMessage(message);
+            response.setStatusCode(200);
+            response.setData(result);
+            response.setSuccess(true);
+            
+            return ResponseEntity.ok(response);
             
         } catch (RuntimeException e) {
             if (e.getMessage().contains("Không tìm thấy") || e.getMessage().contains("chưa được upload")) {
                 return ResponseEntity.status(404).body(
-                    ApiResponseCustom.error(org.springframework.http.HttpStatus.NOT_FOUND, e.getMessage())
+                    new ApiConfirmUploadResponse(e.getMessage(), 404, null, false)
                 );
             }
             
             return ResponseEntity.status(500).body(
-                ApiResponseCustom.error(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR, 
-                    "Lỗi khi xác nhận upload: " + e.getMessage())
+                new ApiConfirmUploadResponse("Lỗi khi xác nhận upload: " + e.getMessage(), 500, null, false)
             );
         }
     }
@@ -116,26 +134,31 @@ public class AttachmentController {
                description = "Tạo pre-signed URL để download file từ Azure Blob Storage")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Tạo download URL thành công", 
-                    content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+                    content = @Content(schema = @Schema(implementation = ApiDownloadUrlResponse.class))),
         @ApiResponse(responseCode = "404", description = "Không tìm thấy file đính kèm"),
         @ApiResponse(responseCode = "500", description = "Lỗi server khi tạo download URL")
     })
-    public ResponseEntity<ApiResponseCustom<String>> generateDownloadUrl(@PathVariable Integer attachmentId) {
+    public ResponseEntity<ApiDownloadUrlResponse> generateDownloadUrl(@PathVariable Integer attachmentId) {
         try {
             String downloadUrl = preSignedUrlService.generateDownloadUrl(attachmentId);
             
-            return ResponseEntity.ok(ApiResponseCustom.success("Tạo download URL thành công", downloadUrl));
+            ApiDownloadUrlResponse response = new ApiDownloadUrlResponse();
+            response.setMessage("Tạo download URL thành công");
+            response.setStatusCode(200);
+            response.setData(downloadUrl);
+            response.setSuccess(true);
+            
+            return ResponseEntity.ok(response);
             
         } catch (RuntimeException e) {
             if (e.getMessage().contains("Không tìm thấy")) {
                 return ResponseEntity.status(404).body(
-                    ApiResponseCustom.error(org.springframework.http.HttpStatus.NOT_FOUND, e.getMessage())
+                    new ApiDownloadUrlResponse(e.getMessage(), 404, null, false)
                 );
             }
             
             return ResponseEntity.status(500).body(
-                ApiResponseCustom.error(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR, 
-                    "Lỗi khi tạo download URL: " + e.getMessage())
+                new ApiDownloadUrlResponse("Lỗi khi tạo download URL: " + e.getMessage(), 500, null, false)
             );
         }
     }
@@ -147,44 +170,58 @@ public class AttachmentController {
                description = "Chỉ cho phép cập nhật tên file đính kèm (fileName)")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Cập nhật file thành công", 
-                    content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+                    content = @Content(schema = @Schema(implementation = ApiUpdateAttachmentResponse.class))),
         @ApiResponse(responseCode = "404", description = "Không tìm thấy file đính kèm")
     })
-    public ResponseEntity<ApiResponseCustom<AttachmentDTO>> updateAttachment(
+    public ResponseEntity<ApiUpdateAttachmentResponse> updateAttachment(
             @PathVariable Integer id, 
             @RequestBody UpdateAttachmentFileNameRequest request) {
         AttachmentDTO result = attachmentService.updateAttachmentFileName(id, request.getFileName());
         if (result == null) {
             return ResponseEntity.status(404).body(
-                ApiResponseCustom.error(org.springframework.http.HttpStatus.NOT_FOUND, "Không tìm thấy file đính kèm")
+                new ApiUpdateAttachmentResponse("Không tìm thấy file đính kèm", 404, null, false)
             );
         }
-        return ResponseEntity.ok(ApiResponseCustom.success("Cập nhật thành công", result));
+        
+        ApiUpdateAttachmentResponse response = new ApiUpdateAttachmentResponse();
+        response.setMessage("Cập nhật thành công");
+        response.setStatusCode(200);
+        response.setData(result);
+        response.setSuccess(true);
+        
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Xóa file đính kèm", 
                description = "Xóa file đính kèm khỏi Azure Blob Storage và database")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Xóa file thành công"),
+        @ApiResponse(responseCode = "200", description = "Xóa file thành công", 
+                    content = @Content(schema = @Schema(implementation = ApiDeleteAttachmentResponse.class))),
         @ApiResponse(responseCode = "404", description = "Không tìm thấy file đính kèm"),
         @ApiResponse(responseCode = "500", description = "Lỗi server khi xóa file")
     })
-    public ResponseEntity<ApiResponseCustom<Void>> deleteAttachment(@PathVariable Integer id) {
+    public ResponseEntity<ApiDeleteAttachmentResponse> deleteAttachment(@PathVariable Integer id) {
         try {
             preSignedUrlService.deleteFile(id);
-            return ResponseEntity.ok(ApiResponseCustom.success("Xóa file thành công", null));
+            
+            ApiDeleteAttachmentResponse response = new ApiDeleteAttachmentResponse();
+            response.setMessage("Xóa file thành công");
+            response.setStatusCode(200);
+            response.setData(null);
+            response.setSuccess(true);
+            
+            return ResponseEntity.ok(response);
             
         } catch (RuntimeException e) {
             if (e.getMessage().contains("Không tìm thấy")) {
                 return ResponseEntity.status(404).body(
-                    ApiResponseCustom.error(org.springframework.http.HttpStatus.NOT_FOUND, e.getMessage())
+                    new ApiDeleteAttachmentResponse(e.getMessage(), 404, null, false)
                 );
             }
             
             return ResponseEntity.status(500).body(
-                ApiResponseCustom.error(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR, 
-                    "Lỗi khi xóa file: " + e.getMessage())
+                new ApiDeleteAttachmentResponse("Lỗi khi xóa file: " + e.getMessage(), 500, null, false)
             );
         }
     }
@@ -193,11 +230,12 @@ public class AttachmentController {
     @Operation(summary = "Xóa nhiều file đính kèm", 
                description = "Xóa nhiều file đính kèm khỏi Azure Blob Storage và database")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Xóa file thành công"),
+        @ApiResponse(responseCode = "200", description = "Xóa file thành công", 
+                    content = @Content(schema = @Schema(implementation = ApiBulkDeleteAttachmentResponse.class))),
         @ApiResponse(responseCode = "404", description = "Không tìm thấy một hoặc nhiều file đính kèm"),
         @ApiResponse(responseCode = "500", description = "Lỗi server khi xóa file")
     })
-    public ResponseEntity<ApiResponseCustom<String>> bulkDeleteAttachments(
+    public ResponseEntity<ApiBulkDeleteAttachmentResponse> bulkDeleteAttachments(
             @Valid @RequestBody ConfirmFlexibleUploadRequest request) {
         try {
             int successCount = 0;
@@ -217,12 +255,17 @@ public class AttachmentController {
                 message += ". Lỗi: " + String.join(", ", errors);
             }
             
-            return ResponseEntity.ok(ApiResponseCustom.success(message, null));
+            ApiBulkDeleteAttachmentResponse response = new ApiBulkDeleteAttachmentResponse();
+            response.setMessage(message);
+            response.setStatusCode(200);
+            response.setData(message);
+            response.setSuccess(true);
+            
+            return ResponseEntity.ok(response);
             
         } catch (Exception e) {
             return ResponseEntity.status(500).body(
-                ApiResponseCustom.error(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR, 
-                    "Lỗi khi xóa bulk file: " + e.getMessage())
+                new ApiBulkDeleteAttachmentResponse("Lỗi khi xóa bulk file: " + e.getMessage(), 500, null, false)
             );
         }
     }
@@ -230,21 +273,44 @@ public class AttachmentController {
     @GetMapping
     @Operation(summary = "Lấy tất cả file đính kèm", 
                description = "Lấy danh sách tất cả file đính kèm đã upload")
-    public ResponseEntity<ApiResponseCustom<List<AttachmentDTO>>> getAllAttachments() {
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Lấy danh sách file thành công", 
+                    content = @Content(schema = @Schema(implementation = ApiAttachmentListResponse.class)))
+    })
+    public ResponseEntity<ApiAttachmentListResponse> getAllAttachments() {
         List<AttachmentDTO> result = attachmentService.getAllAttachments();
-        return ResponseEntity.ok(ApiResponseCustom.success("Thành công", result));
+        
+        ApiAttachmentListResponse response = new ApiAttachmentListResponse();
+        response.setMessage("Thành công");
+        response.setStatusCode(200);
+        response.setData(result);
+        response.setSuccess(true);
+        
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Xem chi tiết file đính kèm", 
                description = "Lấy chi tiết một file đính kèm theo ID")
-    public ResponseEntity<ApiResponseCustom<AttachmentDTO>> getAttachmentById(@PathVariable Integer id) {
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Lấy chi tiết file thành công", 
+                    content = @Content(schema = @Schema(implementation = ApiAttachmentResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy file đính kèm")
+    })
+    public ResponseEntity<ApiAttachmentResponse> getAttachmentById(@PathVariable Integer id) {
         AttachmentDTO result = attachmentService.getAttachmentById(id);
         if (result == null) {
             return ResponseEntity.status(404).body(
-                ApiResponseCustom.error(org.springframework.http.HttpStatus.NOT_FOUND, "Không tìm thấy file đính kèm")
+                new ApiAttachmentResponse("Không tìm thấy file đính kèm", 404, null, false)
             );
         }
-        return ResponseEntity.ok(ApiResponseCustom.success("Thành công", result));
+        
+        ApiAttachmentResponse response = new ApiAttachmentResponse();
+        response.setMessage("Thành công");
+        response.setStatusCode(200);
+        response.setData(result);
+        response.setSuccess(true);
+        
+        return ResponseEntity.ok(response);
     }
 }
