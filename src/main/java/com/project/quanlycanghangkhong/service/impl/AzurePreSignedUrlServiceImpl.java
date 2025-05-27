@@ -127,6 +127,13 @@ public class AzurePreSignedUrlServiceImpl implements AzurePreSignedUrlService {
      */
     @Override
     public FlexiblePreSignedUrlResponse generateFlexibleUploadUrls(FlexibleUploadRequest request) {
+        // Validate files before processing
+        try {
+            request.validateFiles();
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Validation failed: " + e.getMessage(), e);
+        }
+        
         if (request.isSingleFile()) {
             // Optimized path for single file
             FlexibleUploadRequest.FileUploadInfo fileInfo = request.getSingleFile();

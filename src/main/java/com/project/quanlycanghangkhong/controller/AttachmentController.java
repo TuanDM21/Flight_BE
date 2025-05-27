@@ -14,6 +14,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -26,6 +28,8 @@ import javax.validation.Valid;
 @CrossOrigin(origins = "*")
 @Tag(name = "Azure Pre-signed URL File Management", description = "APIs quản lý file đính kèm sử dụng Azure Pre-signed URL")
 public class AttachmentController {
+    
+    private static final Logger logger = LoggerFactory.getLogger(AttachmentController.class);
     
     @Autowired
     private AttachmentService attachmentService;
@@ -48,11 +52,23 @@ public class AttachmentController {
     public ResponseEntity<ApiResponseCustom<FlexiblePreSignedUrlResponse>> generateUploadUrls(
             @Valid @RequestBody FlexibleUploadRequest request) {
         try {
+            // Log upload request for monitoring
+            logger.info("Generating upload URLs for {} files", request.getFiles().size());
+            
             FlexiblePreSignedUrlResponse result = preSignedUrlService.generateFlexibleUploadUrls(request);
+            
+            // Log success
+            logger.info("Successfully generated {} upload URLs", result.getTotalFiles());
             
             return ResponseEntity.ok(ApiResponseCustom.success(result.getMessage(), result));
             
+        } catch (IllegalArgumentException e) {
+            logger.warn("Validation error in upload URL generation: {}", e.getMessage());
+            return ResponseEntity.status(400).body(
+                ApiResponseCustom.error(org.springframework.http.HttpStatus.BAD_REQUEST, e.getMessage())
+            );
         } catch (Exception e) {
+            logger.error("Error generating upload URLs", e);
             return ResponseEntity.status(500).body(
                 ApiResponseCustom.error(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR, 
                     "Lỗi khi tạo pre-signed URL: " + e.getMessage())
