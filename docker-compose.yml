@@ -12,44 +12,43 @@ services:
     volumes:
       - ./:/app
       - ~/.m2:/root/.m2
-    depends_on:
-      mysql:
-        condition: service_healthy
-    networks:
-      - airport-network
+    # depends_on:
+    #   mysql:
+    #     condition: service_healthy
+    # networks:
+    #   - airport-network
 
-  mysql:
-    image: mysql:8
-    container_name: my-mysql
-    environment:
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_ROOT_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
-      MYSQL_ROOT_HOST: "%"
-    ports:
-      - "3307:3307"
-    volumes:
-      - mysql_data:/var/lib/mysql
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "mysqladmin",
-          "ping",
-          "-h",
-          "localhost",
-          "-u",
-          "root",
-          "-p${SPRING_DATASOURCE_PASSWORD}",
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - airport-network
+  # mysql:
+  #   image: mysql:8
+  #   container_name: my-mysql
+  #   environment:
+  #     MYSQL_DATABASE: ${MYSQL_DATABASE}
+  #     MYSQL_ROOT_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+  #     MYSQL_ROOT_HOST: "%"
+  #   ports:
+  #     - "3307:3307"
+  #   volumes:
+  #     - mysql_data:/var/lib/mysql
+  #   healthcheck:
+  #     test:
+  #       [
+  #         "CMD",
+  #         "mysqladmin",
+  #         "ping",
+  #         "-h",
+  #         "localhost",
+  #         "-u",
+  #         "root",
+  #         "-p${SPRING_DATASOURCE_PASSWORD}",
+  #       ]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #   networks:
+  #     - airport-network
+# volumes:
+#   mysql_data:
 
-volumes:
-  mysql_data:
-
-networks:
-  airport-network:
-    driver: bridge
+# networks:
+#   airport-network:
+#     driver: bridge
