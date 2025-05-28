@@ -100,21 +100,25 @@ public class DocumentServiceImpl implements DocumentService {
         updateEntity(doc, request);
         doc.setUpdatedAt(LocalDateTime.now());
         Document saved = documentRepository.save(doc);
-        // Cập nhật lại các attachment cho document này
-        if (request.getAttachmentIds() != null) {
-            // Gỡ các attachment cũ khỏi document này
-            List<Attachment> oldAtts = attachmentRepository.findByDocument_IdAndIsDeletedFalse(id);
-            for (Attachment att : oldAtts) {
-                att.setDocument(null);
-            }
-            attachmentRepository.saveAll(oldAtts);
-            // Gán các attachment mới vào document này
+        
+        // ✅ OPTION 2 (ADD): Đơn giản - chỉ ADD thêm attachment mới
+        if (request.getAttachmentIds() != null && !request.getAttachmentIds().isEmpty()) {
+            // Chỉ cần lấy các attachment mới và gán vào document
             List<Attachment> newAtts = attachmentRepository.findAllByIdIn(request.getAttachmentIds());
             for (Attachment att : newAtts) {
                 att.setDocument(saved);
             }
             attachmentRepository.saveAll(newAtts);
+        } else if (request.getAttachmentIds() != null && request.getAttachmentIds().isEmpty()) {
+            // ✅ Trường hợp muốn XÓA HẾT attachment (gửi mảng rỗng)
+            List<Attachment> oldAtts = attachmentRepository.findByDocument_IdAndIsDeletedFalse(id);
+            for (Attachment att : oldAtts) {
+                att.setDocument(null);
+            }
+            attachmentRepository.saveAll(oldAtts);
         }
+        // ✅ Trường hợp attachmentIds == null: KHÔNG làm gì với attachment (giữ nguyên)
+        
         return toDTO(saved);
     }
     @Transactional
