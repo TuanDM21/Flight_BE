@@ -1,6 +1,7 @@
 package com.project.quanlycanghangkhong.repository;
 
 import com.project.quanlycanghangkhong.model.Attachment;
+import com.project.quanlycanghangkhong.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import java.util.List;
@@ -15,6 +16,8 @@ public interface AttachmentRepository extends JpaRepository<Attachment, Integer>
     List<Attachment> findByDocument_IdAndIsDeletedFalse(Integer documentId);
     // Lấy attachment theo id và chưa bị xoá mềm
     Attachment findByIdAndIsDeletedFalse(Integer id);
+    // 🔥 NEW: Lấy attachment theo owner (uploadedBy) và chưa bị xoá mềm
+    List<Attachment> findByUploadedByAndIsDeletedFalse(User uploadedBy);
 }
 
 

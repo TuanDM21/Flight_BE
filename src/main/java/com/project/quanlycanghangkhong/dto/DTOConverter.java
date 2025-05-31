@@ -64,6 +64,16 @@ public class DTOConverter {
         dto.setFileName(att.getFileName());
         dto.setFileSize(att.getFileSize());
         dto.setCreatedAt(att.getCreatedAt());
+        
+        // Map owner information
+        if (att.getUploadedBy() != null) {
+            UserDTO ownerDto = new UserDTO();
+            ownerDto.setId(att.getUploadedBy().getId());
+            ownerDto.setName(att.getUploadedBy().getName());
+            ownerDto.setEmail(att.getUploadedBy().getEmail());
+            dto.setUploadedBy(ownerDto);
+        }
+        
         return dto;
     }
 }

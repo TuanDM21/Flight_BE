@@ -15,6 +15,11 @@ public class Attachment {
     @JoinColumn(name = "document_id", nullable = true) // Cho phép null để upload file rời
     private Document document;
 
+    // ✅ THÊM: Trường uploadedBy để tracking ownership
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "uploaded_by_user_id", nullable = false)
+    private User uploadedBy;
+
     @Column(name = "file_path", nullable = false, length = 500)
     private String filePath;
 
@@ -46,6 +51,14 @@ public class Attachment {
 
     public void setDocument(Document document) {
         this.document = document;
+    }
+
+    public User getUploadedBy() {
+        return uploadedBy;
+    }
+
+    public void setUploadedBy(User uploadedBy) {
+        this.uploadedBy = uploadedBy;
     }
 
     public String getFilePath() {

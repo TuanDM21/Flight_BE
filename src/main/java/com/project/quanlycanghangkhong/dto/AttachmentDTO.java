@@ -8,6 +8,7 @@ public class AttachmentDTO {
     private String fileName;
     private Long fileSize;
     private LocalDateTime createdAt;
+    private UserDTO uploadedBy;
 
     public Integer getId() {
         return id;
@@ -47,5 +48,13 @@ public class AttachmentDTO {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public UserDTO getUploadedBy() {
+        return uploadedBy;
+    }
+
+    public void setUploadedBy(UserDTO uploadedBy) {
+        this.uploadedBy = uploadedBy;
     }
 }

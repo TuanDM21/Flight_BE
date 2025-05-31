@@ -12,11 +12,15 @@ import com.project.quanlycanghangkhong.dto.response.presigned.PreSignedUrlRespon
 import com.project.quanlycanghangkhong.dto.response.presigned.FlexiblePreSignedUrlResponse;
 import com.project.quanlycanghangkhong.dto.request.FlexibleUploadRequest;
 import com.project.quanlycanghangkhong.model.Attachment;
+import com.project.quanlycanghangkhong.model.User;
 import com.project.quanlycanghangkhong.repository.AttachmentRepository;
+import com.project.quanlycanghangkhong.repository.UserRepository;
 import com.project.quanlycanghangkhong.service.AzurePreSignedUrlService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,6 +44,26 @@ public class AzurePreSignedUrlServiceImpl implements AzurePreSignedUrlService {
     @Autowired
     private AttachmentRepository attachmentRepository;
     
+    @Autowired
+    private UserRepository userRepository;
+    
+    /**
+     * Lấy thông tin user hiện tại từ SecurityContext
+     * @return User hiện tại hoặc null nếu không tìm thấy
+     */
+    private User getCurrentUser() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.getName() != null) {
+                String email = authentication.getName();
+                return userRepository.findByEmail(email).orElse(null);
+            }
+        } catch (Exception e) {
+            logger.error("Error getting current user", e);
+        }
+        return null;
+    }
+
     /**
      * Tạo pre-signed URL cho việc download file
      * @param attachmentId ID của attachment
@@ -97,6 +121,22 @@ public class AzurePreSignedUrlServiceImpl implements AzurePreSignedUrlService {
             // Tìm attachment trong database
             Attachment attachment = attachmentRepository.findById(attachmentId)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy file đính kèm"));
+            
+            // 🔒 CHỈ KIỂM TRA OWNER
+            User currentUser = getCurrentUser();
+            if (currentUser == null) {
+                throw new RuntimeException("Không thể xác định user hiện tại. Vui lòng đăng nhập lại.");
+            }
+            
+            boolean isOwner = attachment.getUploadedBy() != null && 
+                attachment.getUploadedBy().getId().equals(currentUser.getId());
+            
+            if (!isOwner) {
+                throw new RuntimeException("Bạn không có quyền xóa file này. Chỉ người upload file mới có thể thực hiện.");
+            }
+            
+            logger.info("User {} (ID: {}) deleting attachment {} - File: {}", 
+                currentUser.getEmail(), currentUser.getId(), attachmentId, attachment.getFileName());
             
             // Tạo BlobServiceClient
             BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
@@ -184,6 +224,12 @@ public class AzurePreSignedUrlServiceImpl implements AzurePreSignedUrlService {
      */
     private PreSignedUrlResponse createPreSignedUrlForFile(String fileName, Long fileSize, String contentType) {
         try {
+            // Lấy thông tin user hiện tại
+            User currentUser = getCurrentUser();
+            if (currentUser == null) {
+                throw new RuntimeException("Không thể xác định user hiện tại. Vui lòng đăng nhập lại.");
+            }
+            
             // Tạo BlobServiceClient
             BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
                     .connectionString(connectionString)
@@ -212,12 +258,16 @@ public class AzurePreSignedUrlServiceImpl implements AzurePreSignedUrlService {
             // Tạo pre-signed URL
             String sasUrl = blobClient.getBlobUrl() + "?" + blobClient.generateSas(sasValues);
             
-            // Lưu metadata vào database trước
+            // Lưu metadata vào database trước với owner
             Attachment attachment = new Attachment();
             attachment.setFileName(fileName);
             attachment.setFilePath(blobClient.getBlobUrl()); // URL không có SAS token
             attachment.setFileSize(fileSize);
             attachment.setCreatedAt(LocalDateTime.now());
+            attachment.setUploadedBy(currentUser); // 🔥 SET OWNER
+            
+            logger.info("Creating attachment for user: {} (ID: {}) - File: {}", 
+                currentUser.getEmail(), currentUser.getId(), fileName);
             
             Attachment savedAttachment = attachmentRepository.save(attachment);
             
@@ -346,6 +396,16 @@ public class AzurePreSignedUrlServiceImpl implements AzurePreSignedUrlService {
         dto.setFileName(attachment.getFileName());
         dto.setFileSize(attachment.getFileSize());
         dto.setCreatedAt(attachment.getCreatedAt());
+        
+        // Map owner information
+        if (attachment.getUploadedBy() != null) {
+            com.project.quanlycanghangkhong.dto.UserDTO ownerDto = new com.project.quanlycanghangkhong.dto.UserDTO();
+            ownerDto.setId(attachment.getUploadedBy().getId());
+            ownerDto.setName(attachment.getUploadedBy().getName());
+            ownerDto.setEmail(attachment.getUploadedBy().getEmail());
+            dto.setUploadedBy(ownerDto);
+        }
+        
         return dto;
     }
 }
