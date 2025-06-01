@@ -520,18 +520,20 @@ public class AttachmentController {
     }
 
     @PutMapping("/shares/{shareId}")
-    @Operation(summary = "Cập nhật quyền chia sẻ file", 
-               description = "Cập nhật quyền truy cập và thông tin chia sẻ file")
+    @Operation(summary = "Cập nhật quyền chia sẻ file đơn lẻ", 
+               description = "Cập nhật quyền truy cập và thông tin chia sẻ cho 1 file share cụ thể")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Cập nhật chia sẻ thành công", 
                     content = @Content(schema = @Schema(implementation = ApiShareFileResponse.class))),
         @ApiResponse(responseCode = "403", description = "Không có quyền cập nhật chia sẻ này"),
         @ApiResponse(responseCode = "404", description = "Không tìm thấy chia sẻ file")
     })
-    public ResponseEntity<ApiShareFileResponse> updateFileShare(
+    public ResponseEntity<ApiShareFileResponse> updateSingleFileShare(
             @PathVariable Integer shareId, 
             @Valid @RequestBody UpdateFileShareRequest request) {
         try {
+            // Force single update mode
+            request.setUpdateMode(UpdateFileShareRequest.UpdateMode.SINGLE);
             List<FileShareDTO> result = fileShareService.updateFileShare(shareId, request);
             
             ApiShareFileResponse response = new ApiShareFileResponse();
@@ -555,6 +557,263 @@ public class AttachmentController {
             
             return ResponseEntity.status(500).body(
                 new ApiShareFileResponse("Lỗi khi cập nhật chia sẻ: " + e.getMessage(), 500, null, false)
+            );
+        }
+    }
+
+    @PostMapping("/shares/add-users")
+    @Operation(summary = "Thêm user vào file shares hiện có", 
+               description = "Thêm user mới vào danh sách chia sẻ của các file đã được share")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Thêm user thành công", 
+                    content = @Content(schema = @Schema(implementation = ApiShareFileResponse.class))),
+        @ApiResponse(responseCode = "403", description = "Không có quyền chia sẻ file"),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy file")
+    })
+    public ResponseEntity<ApiShareFileResponse> addUsersToShares(@Valid @RequestBody ShareFileRequest request) {
+        try {
+            List<FileShareDTO> result = fileShareService.addUsersToFileShares(
+                request.getAttachmentIds(),
+                request.getSharedWithUserIds(),
+                request.getPermission(),
+                request.getExpiresAt(),
+                request.getNote()
+            );
+            
+            ApiShareFileResponse response = new ApiShareFileResponse();
+            response.setMessage(String.format("Đã thêm %d user vào file shares", result.size()));
+            response.setStatusCode(200);
+            response.setData(result);
+            response.setSuccess(true);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("Không tìm thấy")) {
+                return ResponseEntity.status(404).body(
+                    new ApiShareFileResponse(e.getMessage(), 404, null, false)
+                );
+            } else if (e.getMessage().contains("không có quyền")) {
+                return ResponseEntity.status(403).body(
+                    new ApiShareFileResponse(e.getMessage(), 403, null, false)
+                );
+            }
+            
+            return ResponseEntity.status(500).body(
+                new ApiShareFileResponse("Lỗi khi thêm user: " + e.getMessage(), 500, null, false)
+            );
+        }
+    }
+
+    @DeleteMapping("/shares/remove-users")
+    @Operation(summary = "Xóa user khỏi file shares", 
+               description = "Xóa user khỏi danh sách chia sẻ của các file")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Xóa user thành công", 
+                    content = @Content(schema = @Schema(implementation = ApiShareFileResponse.class))),
+        @ApiResponse(responseCode = "403", description = "Không có quyền quản lý chia sẻ"),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy file")
+    })
+    public ResponseEntity<ApiShareFileResponse> removeUsersFromShares(@Valid @RequestBody ShareFileRequest request) {
+        try {
+            int removedCount = fileShareService.removeUsersFromFileShares(
+                request.getAttachmentIds(),
+                request.getSharedWithUserIds()
+            );
+            
+            ApiShareFileResponse response = new ApiShareFileResponse();
+            response.setMessage(String.format("Đã xóa %d user khỏi file shares", removedCount));
+            response.setStatusCode(200);
+            response.setData(null);
+            response.setSuccess(true);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("Không tìm thấy")) {
+                return ResponseEntity.status(404).body(
+                    new ApiShareFileResponse(e.getMessage(), 404, null, false)
+                );
+            } else if (e.getMessage().contains("không có quyền")) {
+                return ResponseEntity.status(403).body(
+                    new ApiShareFileResponse(e.getMessage(), 403, null, false)
+                );
+            }
+            
+            return ResponseEntity.status(500).body(
+                new ApiShareFileResponse("Lỗi khi xóa user: " + e.getMessage(), 500, null, false)
+            );
+        }
+    }
+
+    @PostMapping("/shares/add-files")
+    @Operation(summary = "Thêm file vào user group shares hiện có", 
+               description = "Thêm file mới vào nhóm user đã được chia sẻ")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Thêm file thành công", 
+                    content = @Content(schema = @Schema(implementation = ApiShareFileResponse.class))),
+        @ApiResponse(responseCode = "403", description = "Không có quyền chia sẻ file"),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy file hoặc user")
+    })
+    public ResponseEntity<ApiShareFileResponse> addFilesToUserShares(@Valid @RequestBody ShareFileRequest request) {
+        try {
+            List<FileShareDTO> result = fileShareService.addFilesToUserShares(
+                request.getAttachmentIds(),
+                request.getSharedWithUserIds(),
+                request.getPermission(),
+                request.getExpiresAt(),
+                request.getNote()
+            );
+            
+            ApiShareFileResponse response = new ApiShareFileResponse();
+            response.setMessage(String.format("Đã thêm %d file shares cho user group", result.size()));
+            response.setStatusCode(200);
+            response.setData(result);
+            response.setSuccess(true);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("Không tìm thấy")) {
+                return ResponseEntity.status(404).body(
+                    new ApiShareFileResponse(e.getMessage(), 404, null, false)
+                );
+            } else if (e.getMessage().contains("không có quyền")) {
+                return ResponseEntity.status(403).body(
+                    new ApiShareFileResponse(e.getMessage(), 403, null, false)
+                );
+            }
+            
+            return ResponseEntity.status(500).body(
+                new ApiShareFileResponse("Lỗi khi thêm file: " + e.getMessage(), 500, null, false)
+            );
+        }
+    }
+
+    @DeleteMapping("/shares/remove-files")
+    @Operation(summary = "Xóa file khỏi user shares", 
+               description = "Xóa file khỏi danh sách chia sẻ với các user")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Xóa file thành công", 
+                    content = @Content(schema = @Schema(implementation = ApiShareFileResponse.class))),
+        @ApiResponse(responseCode = "403", description = "Không có quyền quản lý chia sẻ"),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy file")
+    })
+    public ResponseEntity<ApiShareFileResponse> removeFilesFromUserShares(@Valid @RequestBody ShareFileRequest request) {
+        try {
+            int removedCount = fileShareService.removeFilesFromUserShares(
+                request.getAttachmentIds(),
+                request.getSharedWithUserIds()
+            );
+            
+            ApiShareFileResponse response = new ApiShareFileResponse();
+            response.setMessage(String.format("Đã xóa %d file shares khỏi user group", removedCount));
+            response.setStatusCode(200);
+            response.setData(null);
+            response.setSuccess(true);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("Không tìm thấy")) {
+                return ResponseEntity.status(404).body(
+                    new ApiShareFileResponse(e.getMessage(), 404, null, false)
+                );
+            } else if (e.getMessage().contains("không có quyền")) {
+                return ResponseEntity.status(403).body(
+                    new ApiShareFileResponse(e.getMessage(), 403, null, false)
+                );
+            }
+            
+            return ResponseEntity.status(500).body(
+                new ApiShareFileResponse("Lỗi khi xóa file: " + e.getMessage(), 500, null, false)
+            );
+        }
+    }
+
+    @PutMapping("/shares/batch-update")
+    @Operation(summary = "Cập nhật batch nhiều file shares", 
+               description = "Cập nhật quyền và thông tin cho nhiều file shares cùng lúc")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Cập nhật batch thành công", 
+                    content = @Content(schema = @Schema(implementation = ApiShareFileResponse.class))),
+        @ApiResponse(responseCode = "403", description = "Không có quyền cập nhật"),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy file")
+    })
+    public ResponseEntity<ApiShareFileResponse> batchUpdateFileShares(@Valid @RequestBody UpdateFileShareRequest request) {
+        try {
+            // Force batch update mode
+            request.setUpdateMode(UpdateFileShareRequest.UpdateMode.BATCH);
+            List<FileShareDTO> result = fileShareService.updateFileShareBatch(request);
+            
+            ApiShareFileResponse response = new ApiShareFileResponse();
+            response.setMessage(String.format("Đã cập nhật batch %d file shares", result.size()));
+            response.setStatusCode(200);
+            response.setData(result);
+            response.setSuccess(true);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("Không tìm thấy")) {
+                return ResponseEntity.status(404).body(
+                    new ApiShareFileResponse(e.getMessage(), 404, null, false)
+                );
+            } else if (e.getMessage().contains("không có quyền")) {
+                return ResponseEntity.status(403).body(
+                    new ApiShareFileResponse(e.getMessage(), 403, null, false)
+                );
+            }
+            
+            return ResponseEntity.status(500).body(
+                new ApiShareFileResponse("Lỗi khi cập nhật batch: " + e.getMessage(), 500, null, false)
+            );
+        }
+    }
+
+    @PostMapping("/shares/replace-all")
+    @Operation(summary = "Thay thế toàn bộ sharing scope", 
+               description = "Hủy tất cả shares hiện có và tạo mới theo request")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Thay thế sharing thành công", 
+                    content = @Content(schema = @Schema(implementation = ApiShareFileResponse.class))),
+        @ApiResponse(responseCode = "403", description = "Không có quyền quản lý chia sẻ"),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy file")
+    })
+    public ResponseEntity<ApiShareFileResponse> replaceAllFileShares(@Valid @RequestBody ShareFileRequest request) {
+        try {
+            // Convert to UpdateFileShareRequest for FULL_REPLACE mode
+            UpdateFileShareRequest updateRequest = new UpdateFileShareRequest();
+            updateRequest.setAttachmentIds(request.getAttachmentIds());
+            updateRequest.setCurrentSharedWithUserIds(request.getSharedWithUserIds());
+            updateRequest.setPermission(request.getPermission());
+            updateRequest.setExpiresAt(request.getExpiresAt());
+            updateRequest.setNote(request.getNote());
+            updateRequest.setUpdateMode(UpdateFileShareRequest.UpdateMode.FULL_REPLACE);
+            
+            List<FileShareDTO> result = fileShareService.updateFileShareBatch(updateRequest);
+            
+            ApiShareFileResponse response = new ApiShareFileResponse();
+            response.setMessage(String.format("Đã thay thế toàn bộ sharing: %d file shares mới", result.size()));
+            response.setStatusCode(200);
+            response.setData(result);
+            response.setSuccess(true);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("Không tìm thấy")) {
+                return ResponseEntity.status(404).body(
+                    new ApiShareFileResponse(e.getMessage(), 404, null, false)
+                );
+            } else if (e.getMessage().contains("không có quyền")) {
+                return ResponseEntity.status(403).body(
+                    new ApiShareFileResponse(e.getMessage(), 403, null, false)
+                );
+            }
+            
+            return ResponseEntity.status(500).body(
+                new ApiShareFileResponse("Lỗi khi thay thế sharing: " + e.getMessage(), 500, null, false)
             );
         }
     }
