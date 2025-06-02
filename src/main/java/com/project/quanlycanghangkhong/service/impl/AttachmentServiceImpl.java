@@ -95,6 +95,27 @@ public class AttachmentServiceImpl implements AttachmentService {
         return fileShareService.hasWritePermission(attachment.getId(), currentUser.getId());
     }
 
+    /**
+     * Kiểm tra xem user hiện tại có phải là admin không
+     * @return true nếu là admin, false nếu không
+     */
+    private boolean isAdmin() {
+        User currentUser = getCurrentUser();
+        if (currentUser == null) return false;
+        
+        // Kiểm tra role admin thông qua Role entity
+        if (currentUser.getRole() != null && currentUser.getRole().getRoleName() != null) {
+            String roleName = currentUser.getRole().getRoleName();
+            return "admin".equalsIgnoreCase(roleName) || 
+                   "administrator".equalsIgnoreCase(roleName) ||
+                   "ADMIN".equals(roleName) ||
+                   "Admin".equals(roleName);
+        }
+        
+        // Backup check qua email nếu role không có
+        return "admin@admin.com".equals(currentUser.getEmail());
+    }
+
     private AttachmentDTO toDTO(Attachment att) {
         AttachmentDTO dto = new AttachmentDTO();
         dto.setId(att.getId());
@@ -198,7 +219,14 @@ public class AttachmentServiceImpl implements AttachmentService {
     }
     @Override
     public List<AttachmentDTO> getAllAttachments() {
-        return attachmentRepository.findByIsDeletedFalse().stream().map(this::toDTO).collect(Collectors.toList());
+        // Kiểm tra quyền admin
+        if (!isAdmin()) {
+            throw new RuntimeException("Bạn không có quyền truy cập chức năng này. Chỉ admin mới có thể xem tất cả file.");
+        }
+        
+        // Admin có thể xem tất cả file, kể cả file đã bị xóa mềm
+        List<Attachment> allAttachments = attachmentRepository.findAll();
+        return allAttachments.stream().map(this::toDTO).collect(Collectors.toList());
     }
     @Override
     public AttachmentDTO getAttachmentById(Integer id) {

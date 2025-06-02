@@ -1,54 +1,19 @@
 package com.project.quanlycanghangkhong.dto.response.fileshare;
 
 import com.project.quanlycanghangkhong.dto.FileShareDTO;
+import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 import java.util.List;
 
-public class ApiShareFileResponse {
-    private String message;
-    private int statusCode;
-    private List<FileShareDTO> data;
-    private boolean success;
-
-    // Constructors
-    public ApiShareFileResponse() {}
-
+@Data
+@NoArgsConstructor
+@EqualsAndHashCode(callSuper = true)
+@Schema(description = "API response for file sharing operations", required = true)
+public class ApiShareFileResponse extends ApiResponseCustom<List<FileShareDTO>> {
     public ApiShareFileResponse(String message, int statusCode, List<FileShareDTO> data, boolean success) {
-        this.message = message;
-        this.statusCode = statusCode;
-        this.data = data;
-        this.success = success;
-    }
-
-    // Getters and Setters
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
-    }
-
-    public int getStatusCode() {
-        return statusCode;
-    }
-
-    public void setStatusCode(int statusCode) {
-        this.statusCode = statusCode;
-    }
-
-    public List<FileShareDTO> getData() {
-        return data;
-    }
-
-    public void setData(List<FileShareDTO> data) {
-        this.data = data;
-    }
-
-    public boolean isSuccess() {
-        return success;
-    }
-
-    public void setSuccess(boolean success) {
-        this.success = success;
+        super(message, statusCode, data, success);
     }
 }
