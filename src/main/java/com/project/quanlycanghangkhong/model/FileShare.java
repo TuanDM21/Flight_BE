@@ -26,24 +26,11 @@ public class FileShare {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shared_with_user_id", nullable = false)
     private User sharedWith;
-    
-    // Quyền truy cập: READ_ONLY, READ_WRITE
-    @Enumerated(EnumType.STRING)
-    @Column(name = "permission", nullable = false)
-    private SharePermission permission = SharePermission.READ_ONLY;
-    
+        
     // Thời gian chia sẻ
     @CreationTimestamp
     @Column(name = "shared_at", nullable = false, updatable = false)
     private LocalDateTime sharedAt;
-    
-    // Thời gian hết hạn (nullable - không hết hạn nếu null)
-    @Column(name = "expires_at")
-    private LocalDateTime expiresAt;
-    
-    // Ghi chú về việc chia sẻ
-    @Column(name = "note", length = 500)
-    private String note;
     
     // Trạng thái active
     @Column(name = "is_active", nullable = false)
@@ -52,11 +39,10 @@ public class FileShare {
     // Constructors
     public FileShare() {}
     
-    public FileShare(Attachment attachment, User sharedBy, User sharedWith, SharePermission permission) {
+    public FileShare(Attachment attachment, User sharedBy, User sharedWith) {
         this.attachment = attachment;
         this.sharedBy = sharedBy;
         this.sharedWith = sharedWith;
-        this.permission = permission;
     }
 
     // Getters and Setters
@@ -92,36 +78,12 @@ public class FileShare {
         this.sharedWith = sharedWith;
     }
 
-    public SharePermission getPermission() {
-        return permission;
-    }
-
-    public void setPermission(SharePermission permission) {
-        this.permission = permission;
-    }
-
     public LocalDateTime getSharedAt() {
         return sharedAt;
     }
 
     public void setSharedAt(LocalDateTime sharedAt) {
         this.sharedAt = sharedAt;
-    }
-
-    public LocalDateTime getExpiresAt() {
-        return expiresAt;
-    }
-
-    public void setExpiresAt(LocalDateTime expiresAt) {
-        this.expiresAt = expiresAt;
-    }
-
-    public String getNote() {
-        return note;
-    }
-
-    public void setNote(String note) {
-        this.note = note;
     }
 
     public boolean isActive() {
@@ -132,13 +94,8 @@ public class FileShare {
         isActive = active;
     }
     
-    // Helper method để kiểm tra xem file share có hết hạn không
-    public boolean isExpired() {
-        return expiresAt != null && LocalDateTime.now().isAfter(expiresAt);
-    }
-    
-    // Helper method để kiểm tra xem file share có còn valid không
+    // Helper method để kiểm tra xem file share có còn valid không (đơn giản - chỉ kiểm tra active)
     public boolean isValid() {
-        return isActive && !isExpired();
+        return isActive;
     }
 }

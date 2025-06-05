@@ -1,6 +1,5 @@
 package com.project.quanlycanghangkhong.dto;
 
-import com.project.quanlycanghangkhong.model.SharePermission;
 import java.time.LocalDateTime;
 
 public class FileShareDTO {
@@ -11,12 +10,9 @@ public class FileShareDTO {
     private Long fileSize;
     private UserDTO sharedBy;
     private UserDTO sharedWith;
-    private SharePermission permission;
     private LocalDateTime sharedAt;
-    private LocalDateTime expiresAt;
-    private String note;
+    private String note; // Luôn null (không có ghi chú)
     private boolean isActive;
-    private boolean isExpired;
 
     // Constructors
     public FileShareDTO() {}
@@ -78,28 +74,12 @@ public class FileShareDTO {
         this.sharedWith = sharedWith;
     }
 
-    public SharePermission getPermission() {
-        return permission;
-    }
-
-    public void setPermission(SharePermission permission) {
-        this.permission = permission;
-    }
-
     public LocalDateTime getSharedAt() {
         return sharedAt;
     }
 
     public void setSharedAt(LocalDateTime sharedAt) {
         this.sharedAt = sharedAt;
-    }
-
-    public LocalDateTime getExpiresAt() {
-        return expiresAt;
-    }
-
-    public void setExpiresAt(LocalDateTime expiresAt) {
-        this.expiresAt = expiresAt;
     }
 
     public String getNote() {
@@ -116,13 +96,5 @@ public class FileShareDTO {
 
     public void setActive(boolean active) {
         isActive = active;
-    }
-
-    public boolean isExpired() {
-        return isExpired;
-    }
-
-    public void setExpired(boolean expired) {
-        isExpired = expired;
     }
 }

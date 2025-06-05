@@ -2,8 +2,6 @@ package com.project.quanlycanghangkhong.service.impl;
 
 import com.project.quanlycanghangkhong.dto.FileShareDTO;
 import com.project.quanlycanghangkhong.dto.UserDTO;
-import com.project.quanlycanghangkhong.dto.request.ShareFileRequest;
-import com.project.quanlycanghangkhong.dto.request.UpdateFileShareRequest;
 import com.project.quanlycanghangkhong.model.*;
 import com.project.quanlycanghangkhong.repository.AttachmentRepository;
 import com.project.quanlycanghangkhong.repository.FileShareRepository;
@@ -17,11 +15,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.ArrayList;
 
 @Service
 public class FileShareServiceImpl implements FileShareService {
@@ -54,7 +51,7 @@ public class FileShareServiceImpl implements FileShareService {
     }
     
     /**
-     * Chuyển đổi FileShare entity sang DTO
+     * Chuyển đổi FileShare entity sang DTO (đơn giản tối đa - không có permission, expires_at, note)
      */
     private FileShareDTO toDTO(FileShare fileShare) {
         FileShareDTO dto = new FileShareDTO();
@@ -63,12 +60,9 @@ public class FileShareServiceImpl implements FileShareService {
         dto.setFileName(fileShare.getAttachment().getFileName());
         dto.setFilePath(fileShare.getAttachment().getFilePath());
         dto.setFileSize(fileShare.getAttachment().getFileSize());
-        dto.setPermission(fileShare.getPermission());
         dto.setSharedAt(fileShare.getSharedAt());
-        dto.setExpiresAt(fileShare.getExpiresAt());
-        dto.setNote(fileShare.getNote());
+        dto.setNote(null); // Không có note
         dto.setActive(fileShare.isActive());
-        dto.setExpired(fileShare.isExpired());
         
         // Map user information
         if (fileShare.getSharedBy() != null) {
@@ -92,141 +86,86 @@ public class FileShareServiceImpl implements FileShareService {
     
     @Override
     @Transactional
-    public List<FileShareDTO> shareFile(ShareFileRequest request) {
-        // Hỗ trợ batch sharing - chia sẻ nhiều file cùng lúc
-        if (request.getAttachmentIds() != null && !request.getAttachmentIds().isEmpty()) {
-            return shareFileInternal(request.getAttachmentIds(), request);
-        }
-        
-        // Backward compatibility - nếu dùng attachmentId cũ
-        if (request.getAttachmentId() != null) {
-            request.setAttachmentIds(List.of(request.getAttachmentId()));
-            return shareFileInternal(request.getAttachmentIds(), request);
-        }
-        
-        throw new RuntimeException("Vui lòng cung cấp danh sách file cần chia sẻ.");
-    }
-
-    private List<FileShareDTO> shareFileInternal(List<Integer> attachmentIds, ShareFileRequest request) {
+    public String shareFileWithUsers(Integer attachmentId, List<Integer> userIds) {
         User currentUser = getCurrentUser();
         if (currentUser == null) {
             throw new RuntimeException("Không thể xác định user hiện tại. Vui lòng đăng nhập lại.");
         }
-
-        if (attachmentIds == null || attachmentIds.isEmpty()) {
-            throw new RuntimeException("Danh sách file không được để trống.");
-        }
-
-        if (request.getSharedWithUserIds() == null || request.getSharedWithUserIds().isEmpty()) {
-            throw new RuntimeException("Danh sách user được chia sẻ không được để trống.");
-        }
-
-        List<FileShareDTO> allResults = new ArrayList<>();
-        List<String> errors = new ArrayList<>();
-        List<String> successMessages = new ArrayList<>();
-
-        // Xử lý từng file
-        for (Integer attachmentId : attachmentIds) {
-            try {
-                // Tìm attachment
-                Attachment attachment = attachmentRepository.findByIdAndIsDeletedFalse(attachmentId);
-                if (attachment == null) {
-                    errors.add("File ID " + attachmentId + ": Không tìm thấy file đính kèm");
-                    continue;
-                }
-
-                // Kiểm tra quyền ownership
-                if (!attachment.getUploadedBy().getId().equals(currentUser.getId())) {
-                    errors.add("File ID " + attachmentId + ": Bạn không có quyền chia sẻ file '" + attachment.getFileName() + "'");
-                    continue;
-                }
-
-                List<FileShareDTO> fileResults = new ArrayList<>();
-                List<String> fileErrors = new ArrayList<>();
-
-                // Chia sẻ file này cho từng user
-                for (Integer userId : request.getSharedWithUserIds()) {
-                    try {
-                        // Tìm user được chia sẻ
-                        User sharedWithUser = userRepository.findById(userId).orElse(null);
-                        if (sharedWithUser == null) {
-                            fileErrors.add("User ID " + userId + ": Không tìm thấy user");
-                            continue;
-                        }
-
-                        // Kiểm tra không chia sẻ cho chính mình
-                        if (sharedWithUser.getId().equals(currentUser.getId())) {
-                            fileErrors.add("User ID " + userId + ": Không thể chia sẻ file cho chính mình");
-                            continue;
-                        }
-
-                        // Kiểm tra đã chia sẻ cho user này chưa
-                        Optional<FileShare> existingShare = fileShareRepository
-                            .findByAttachmentAndSharedWithAndIsActiveTrue(attachment, sharedWithUser);
-
-                        if (existingShare.isPresent()) {
-                            // Cập nhật share hiện có
-                            FileShare share = existingShare.get();
-                            share.setPermission(request.getPermission());
-                            share.setExpiresAt(request.getExpiresAt());
-                            share.setNote(request.getNote());
-                            share = fileShareRepository.save(share);
-                            fileResults.add(toDTO(share));
-
-                            logger.info("Updated file share: User {} updated share for attachment {} with user {}", 
-                                currentUser.getEmail(), attachment.getId(), sharedWithUser.getEmail());
-                        } else {
-                            // Tạo share mới
-                            FileShare newShare = new FileShare(attachment, currentUser, sharedWithUser, request.getPermission());
-                            newShare.setExpiresAt(request.getExpiresAt());
-                            newShare.setNote(request.getNote());
-                            newShare = fileShareRepository.save(newShare);
-                            fileResults.add(toDTO(newShare));
-
-                            logger.info("Created file share: User {} shared attachment {} with user {}", 
-                                currentUser.getEmail(), attachment.getId(), sharedWithUser.getEmail());
-                        }
-
-                    } catch (Exception e) {
-                        logger.error("Error sharing file {} with user ID: {}", attachmentId, userId, e);
-                        fileErrors.add("User ID " + userId + ": " + e.getMessage());
-                    }
-                }
-
-                // Thêm kết quả của file này vào tổng kết
-                allResults.addAll(fileResults);
-                
-                if (!fileResults.isEmpty()) {
-                    successMessages.add("File '" + attachment.getFileName() + "': Chia sẻ thành công cho " + fileResults.size() + " user(s)");
-                }
-                
-                if (!fileErrors.isEmpty()) {
-                    errors.addAll(fileErrors.stream()
-                        .map(error -> "File '" + attachment.getFileName() + "' - " + error)
-                        .collect(Collectors.toList()));
-                }
-
-            } catch (Exception e) {
-                logger.error("Error processing file ID: " + attachmentId, e);
-                errors.add("File ID " + attachmentId + ": " + e.getMessage());
-            }
-        }
-
-        // Log kết quả
-        if (!successMessages.isEmpty()) {
-            logger.info("Batch file sharing completed successfully: {}", String.join("; ", successMessages));
+        
+        Attachment attachment = attachmentRepository.findByIdAndIsDeletedFalse(attachmentId);
+        if (attachment == null) {
+            throw new RuntimeException("Không tìm thấy file đính kèm.");
         }
         
-        if (!errors.isEmpty()) {
-            logger.warn("Some files/users failed in batch sharing: {}", String.join("; ", errors));
+        // Chỉ owner mới có thể chia sẻ file
+        if (!attachment.getUploadedBy().getId().equals(currentUser.getId())) {
+            throw new RuntimeException("Bạn không có quyền chia sẻ file này.");
         }
-
-        // Nếu không có file nào được chia sẻ thành công
-        if (allResults.isEmpty()) {
-            throw new RuntimeException("Không thể chia sẻ bất kỳ file nào: " + String.join("; ", errors));
+        
+        List<String> successUsers = new ArrayList<>();
+        List<String> failedUsers = new ArrayList<>();
+        
+        for (Integer userId : userIds) {
+            try {
+                // Tìm user theo ID
+                Optional<User> userOpt = userRepository.findById(userId);
+                if (!userOpt.isPresent()) {
+                    failedUsers.add("User ID " + userId + " (không tìm thấy user)");
+                    continue;
+                }
+                
+                User targetUser = userOpt.get();
+                
+                // Không thể chia sẻ cho chính mình
+                if (targetUser.getId().equals(currentUser.getId())) {
+                    failedUsers.add(targetUser.getEmail() + " (không thể chia sẻ cho chính mình)");
+                    continue;
+                }
+                
+                // Kiểm tra xem đã chia sẻ chưa
+                Optional<FileShare> existingShare = fileShareRepository
+                    .findByAttachmentAndSharedWithAndIsActiveTrue(attachment, targetUser);
+                
+                if (existingShare.isPresent()) {
+                    failedUsers.add(targetUser.getEmail() + " (đã được chia sẻ)");
+                    continue;
+                }
+                
+                // Tạo file share mới - đơn giản, không có permission
+                FileShare newShare = new FileShare();
+                newShare.setAttachment(attachment);
+                newShare.setSharedBy(currentUser);
+                newShare.setSharedWith(targetUser);
+                newShare.setActive(true);
+                
+                fileShareRepository.save(newShare);
+                successUsers.add(targetUser.getEmail());
+                
+                logger.info("File shared: User {} shared attachment {} with user ID {}", 
+                    currentUser.getEmail(), attachmentId, userId);
+                
+            } catch (Exception e) {
+                logger.error("Error sharing file with user ID {}: {}", userId, e.getMessage());
+                failedUsers.add("User ID " + userId + " (lỗi hệ thống)");
+            }
         }
-
-        return allResults;
+        
+        // Tạo thông báo kết quả
+        StringBuilder result = new StringBuilder();
+        if (!successUsers.isEmpty()) {
+            result.append("Chia sẻ thành công với ").append(successUsers.size()).append(" user: ")
+                  .append(String.join(", ", successUsers));
+        }
+        
+        if (!failedUsers.isEmpty()) {
+            if (result.length() > 0) {
+                result.append(". ");
+            }
+            result.append("Chia sẻ thất bại với ").append(failedUsers.size()).append(" user: ")
+                  .append(String.join(", ", failedUsers));
+        }
+        
+        return result.toString();
     }
     
     @Override
@@ -236,7 +175,8 @@ public class FileShareServiceImpl implements FileShareService {
             throw new RuntimeException("Không thể xác định user hiện tại. Vui lòng đăng nhập lại.");
         }
         
-        List<FileShare> shares = fileShareRepository.findActiveSharesForUser(currentUser, LocalDateTime.now());
+        // Đơn giản hóa - không cần kiểm tra expires_at
+        List<FileShare> shares = fileShareRepository.findBySharedWithAndIsActiveTrueOrderBySharedAtDesc(currentUser);
         return shares.stream().map(this::toDTO).collect(Collectors.toList());
     }
     
@@ -274,371 +214,115 @@ public class FileShareServiceImpl implements FileShareService {
     
     @Override
     @Transactional
-    public List<FileShareDTO> updateFileShare(Integer shareId, UpdateFileShareRequest request) {
-        // Nếu là batch update, chuyển sang updateFileShareBatch
-        if (!request.isSingleUpdate()) {
-            return updateFileShareBatch(request);
-        }
-        
-        // Single update logic (backward compatibility)
+    public String bulkRevokeAllShares(Integer attachmentId) {
         User currentUser = getCurrentUser();
         if (currentUser == null) {
             throw new RuntimeException("Không thể xác định user hiện tại. Vui lòng đăng nhập lại.");
         }
         
-        FileShare share = fileShareRepository.findById(shareId).orElse(null);
-        if (share == null || !share.isActive()) {
-            throw new RuntimeException("Không tìm thấy chia sẻ file.");
+        Attachment attachment = attachmentRepository.findByIdAndIsDeletedFalse(attachmentId);
+        if (attachment == null) {
+            throw new RuntimeException("Không tìm thấy file đính kèm.");
         }
         
-        // Chỉ người chia sẻ mới có thể cập nhật
-        if (!share.getSharedBy().getId().equals(currentUser.getId())) {
-            throw new RuntimeException("Bạn không có quyền cập nhật chia sẻ này.");
+        // Chỉ owner mới có thể hủy toàn bộ chia sẻ
+        if (!attachment.getUploadedBy().getId().equals(currentUser.getId())) {
+            throw new RuntimeException("Bạn không có quyền hủy chia sẻ của file này.");
         }
         
-        share.setPermission(request.getPermission());
-        if (request.getExpiresAt() != null) {
-            share.setExpiresAt(request.getExpiresAt());
+        // Lấy tất cả active shares của file này
+        List<FileShare> activeShares = fileShareRepository.findByAttachmentAndIsActiveTrueOrderBySharedAtDesc(attachment);
+        
+        if (activeShares.isEmpty()) {
+            return "Không có chia sẻ nào để hủy";
         }
-        if (request.getNote() != null) {
-            share.setNote(request.getNote());
+        
+        // Hủy tất cả shares
+        int revokedCount = 0;
+        for (FileShare share : activeShares) {
+            share.setActive(false);
+            fileShareRepository.save(share);
+            revokedCount++;
         }
         
-        share = fileShareRepository.save(share);
+        logger.info("Bulk revoked all shares: User {} revoked {} shares for attachment {}", 
+            currentUser.getEmail(), revokedCount, attachmentId);
         
-        logger.info("Updated file share: User {} updated share {} for attachment {}", 
-            currentUser.getEmail(), shareId, share.getAttachment().getId());
-        
-        return List.of(toDTO(share));
+        return "Đã hủy thành công " + revokedCount + " chia sẻ";
     }
     
     @Override
     @Transactional
-    public List<FileShareDTO> updateFileShareBatch(UpdateFileShareRequest request) {
+    public String bulkRevokeMultipleUsers(Integer attachmentId, List<Integer> userIds) {
         User currentUser = getCurrentUser();
         if (currentUser == null) {
             throw new RuntimeException("Không thể xác định user hiện tại. Vui lòng đăng nhập lại.");
         }
         
-        List<FileShareDTO> results = new ArrayList<>();
-        
-        // Xử lý theo từng update mode
-        switch (request.getUpdateMode()) {
-            case ADD_USERS:
-                if (request.isAddUsersUpdate()) {
-                    results.addAll(addUsersToFileShares(
-                        request.getAttachmentIds(), 
-                        request.getAddUserIds(),
-                        request.getPermission(),
-                        request.getExpiresAt(),
-                        request.getNote()
-                    ));
-                }
-                break;
-                
-            case REMOVE_USERS:
-                if (request.isRemoveUsersUpdate()) {
-                    int removed = removeUsersFromFileShares(
-                        request.getAttachmentIds(), 
-                        request.getRemoveUserIds()
-                    );
-                    logger.info("Removed {} user shares", removed);
-                }
-                break;
-                
-            case ADD_FILES:
-                if (request.isAddFilesUpdate()) {
-                    results.addAll(addFilesToUserShares(
-                        request.getAddAttachmentIds(),
-                        request.getCurrentSharedWithUserIds(),
-                        request.getPermission(),
-                        request.getExpiresAt(),
-                        request.getNote()
-                    ));
-                }
-                break;
-                
-            case REMOVE_FILES:
-                if (request.isRemoveFilesUpdate()) {
-                    int removed = removeFilesFromUserShares(
-                        request.getRemoveAttachmentIds(),
-                        request.getCurrentSharedWithUserIds()
-                    );
-                    logger.info("Removed {} file shares", removed);
-                }
-                break;
-                
-            case BATCH:
-                if (request.isBatchUpdate()) {
-                    // Update existing shares for attachments
-                    for (Integer attachmentId : request.getAttachmentIds()) {
-                        List<FileShare> shares = fileShareRepository
-                            .findByAttachmentIdAndSharedByAndIsActiveTrue(attachmentId, currentUser);
-                        
-                        for (FileShare share : shares) {
-                            share.setPermission(request.getPermission());
-                            if (request.getExpiresAt() != null) {
-                                share.setExpiresAt(request.getExpiresAt());
-                            }
-                            if (request.getNote() != null) {
-                                share.setNote(request.getNote());
-                            }
-                        }
-                        
-                        List<FileShare> updated = fileShareRepository.saveAll(shares);
-                        results.addAll(updated.stream().map(this::toDTO).collect(Collectors.toList()));
-                    }
-                }
-                break;
-                
-            case FULL_REPLACE:
-                if (request.isFullReplaceUpdate()) {
-                    // Deactivate existing shares
-                    for (Integer attachmentId : request.getAttachmentIds()) {
-                        List<FileShare> existingShares = fileShareRepository
-                            .findByAttachmentIdAndSharedByAndIsActiveTrue(attachmentId, currentUser);
-                        
-                        for (FileShare share : existingShares) {
-                            share.setActive(false);
-                        }
-                        fileShareRepository.saveAll(existingShares);
-                    }
-                    
-                    // Create new shares
-                    ShareFileRequest newShareRequest = new ShareFileRequest();
-                    newShareRequest.setAttachmentIds(request.getAttachmentIds());
-                    newShareRequest.setSharedWithUserIds(request.getCurrentSharedWithUserIds());
-                    newShareRequest.setPermission(request.getPermission());
-                    newShareRequest.setExpiresAt(request.getExpiresAt());
-                    newShareRequest.setNote(request.getNote());
-                    
-                    results.addAll(shareFileInternal(request.getAttachmentIds(), newShareRequest));
-                }
-                break;
-                
-            default:
-                throw new RuntimeException("Update mode không được hỗ trợ: " + request.getUpdateMode());
+        Attachment attachment = attachmentRepository.findByIdAndIsDeletedFalse(attachmentId);
+        if (attachment == null) {
+            throw new RuntimeException("Không tìm thấy file đính kèm.");
         }
         
-        return results;
-    }
-    
-    @Override
-    @Transactional
-    public List<FileShareDTO> addUsersToFileShares(List<Integer> attachmentIds, List<Integer> addUserIds,
-                                                  SharePermission permission, LocalDateTime expiresAt, String note) {
-        User currentUser = getCurrentUser();
-        if (currentUser == null) {
-            throw new RuntimeException("Không thể xác định user hiện tại. Vui lòng đăng nhập lại.");
+        // Chỉ owner mới có thể hủy chia sẻ
+        if (!attachment.getUploadedBy().getId().equals(currentUser.getId())) {
+            throw new RuntimeException("Bạn không có quyền hủy chia sẻ của file này.");
         }
         
-        List<FileShareDTO> results = new ArrayList<>();
-        List<String> errors = new ArrayList<>();
+        List<String> successUsers = new ArrayList<>();
+        List<String> failedUsers = new ArrayList<>();
         
-        for (Integer attachmentId : attachmentIds) {
-            Attachment attachment = attachmentRepository.findByIdAndIsDeletedFalse(attachmentId);
-            if (attachment == null) {
-                errors.add("File ID " + attachmentId + ": Không tìm thấy file");
-                continue;
-            }
-            
-            // Kiểm tra quyền ownership
-            if (!attachment.getUploadedBy().getId().equals(currentUser.getId())) {
-                errors.add("File ID " + attachmentId + ": Không có quyền chia sẻ file này");
-                continue;
-            }
-            
-            for (Integer userId : addUserIds) {
-                User sharedWithUser = userRepository.findById(userId).orElse(null);
-                if (sharedWithUser == null) {
-                    errors.add("User ID " + userId + ": Không tìm thấy user");
+        for (Integer userId : userIds) {
+            try {
+                // Tìm user theo ID
+                Optional<User> userOpt = userRepository.findById(userId);
+                if (!userOpt.isPresent()) {
+                    failedUsers.add("User ID " + userId + " (không tìm thấy user)");
                     continue;
                 }
                 
-                // Kiểm tra đã share chưa
-                Optional<FileShare> existingShare = fileShareRepository
-                    .findByAttachmentAndSharedWithAndIsActiveTrue(attachment, sharedWithUser);
+                User targetUser = userOpt.get();
                 
-                if (existingShare.isPresent()) {
-                    // Update existing share
-                    FileShare share = existingShare.get();
-                    share.setPermission(permission);
-                    share.setExpiresAt(expiresAt);
-                    share.setNote(note);
-                    share = fileShareRepository.save(share);
-                    results.add(toDTO(share));
-                } else {
-                    // Create new share
-                    FileShare newShare = new FileShare(attachment, currentUser, sharedWithUser, permission);
-                    newShare.setExpiresAt(expiresAt);
-                    newShare.setNote(note);
-                    newShare = fileShareRepository.save(newShare);
-                    results.add(toDTO(newShare));
+                // Tìm active share giữa attachment và user này
+                Optional<FileShare> shareOpt = fileShareRepository
+                    .findByAttachmentAndSharedWithAndIsActiveTrue(attachment, targetUser);
+                
+                if (!shareOpt.isPresent()) {
+                    failedUsers.add(targetUser.getEmail() + " (không có chia sẻ active)");
+                    continue;
                 }
-            }
-        }
-        
-        if (!errors.isEmpty()) {
-            logger.warn("Some errors in addUsersToFileShares: {}", String.join("; ", errors));
-        }
-        
-        return results;
-    }
-    
-    @Override
-    @Transactional
-    public int removeUsersFromFileShares(List<Integer> attachmentIds, List<Integer> removeUserIds) {
-        User currentUser = getCurrentUser();
-        if (currentUser == null) {
-            throw new RuntimeException("Không thể xác định user hiện tại. Vui lòng đăng nhập lại.");
-        }
-        
-        int removedCount = 0;
-        
-        for (Integer attachmentId : attachmentIds) {
-            Attachment attachment = attachmentRepository.findByIdAndIsDeletedFalse(attachmentId);
-            if (attachment == null || !attachment.getUploadedBy().getId().equals(currentUser.getId())) {
-                continue;
-            }
-            
-            for (Integer userId : removeUserIds) {
-                User sharedWithUser = userRepository.findById(userId).orElse(null);
-                if (sharedWithUser == null) continue;
                 
-                Optional<FileShare> existingShare = fileShareRepository
-                    .findByAttachmentAndSharedWithAndIsActiveTrue(attachment, sharedWithUser);
-                
-                if (existingShare.isPresent()) {
-                    FileShare share = existingShare.get();
-                    share.setActive(false);
-                    fileShareRepository.save(share);
-                    removedCount++;
-                }
-            }
-        }
-        
-        return removedCount;
-    }
-    
-    @Override
-    @Transactional
-    public List<FileShareDTO> addFilesToUserShares(List<Integer> addAttachmentIds, List<Integer> sharedWithUserIds,
-                                                  SharePermission permission, LocalDateTime expiresAt, String note) {
-        User currentUser = getCurrentUser();
-        if (currentUser == null) {
-            throw new RuntimeException("Không thể xác định user hiện tại. Vui lòng đăng nhập lại.");
-        }
-        
-        List<FileShareDTO> results = new ArrayList<>();
-        
-        for (Integer attachmentId : addAttachmentIds) {
-            Attachment attachment = attachmentRepository.findByIdAndIsDeletedFalse(attachmentId);
-            if (attachment == null || !attachment.getUploadedBy().getId().equals(currentUser.getId())) {
-                continue;
-            }
-            
-            for (Integer userId : sharedWithUserIds) {
-                User sharedWithUser = userRepository.findById(userId).orElse(null);
-                if (sharedWithUser == null) continue;
-                
-                // Kiểm tra đã share chưa
-                Optional<FileShare> existingShare = fileShareRepository
-                    .findByAttachmentAndSharedWithAndIsActiveTrue(attachment, sharedWithUser);
-                
-                if (!existingShare.isPresent()) {
-                    // Create new share
-                    FileShare newShare = new FileShare(attachment, currentUser, sharedWithUser, permission);
-                    newShare.setExpiresAt(expiresAt);
-                    newShare.setNote(note);
-                    newShare = fileShareRepository.save(newShare);
-                    results.add(toDTO(newShare));
-                }
-            }
-        }
-        
-        return results;
-    }
-    
-    @Override
-    @Transactional
-    public int removeFilesFromUserShares(List<Integer> removeAttachmentIds, List<Integer> sharedWithUserIds) {
-        User currentUser = getCurrentUser();
-        if (currentUser == null) {
-            throw new RuntimeException("Không thể xác định user hiện tại. Vui lòng đăng nhập lại.");
-        }
-        
-        int removedCount = 0;
-        
-        for (Integer attachmentId : removeAttachmentIds) {
-            Attachment attachment = attachmentRepository.findByIdAndIsDeletedFalse(attachmentId);
-            if (attachment == null || !attachment.getUploadedBy().getId().equals(currentUser.getId())) {
-                continue;
-            }
-            
-            for (Integer userId : sharedWithUserIds) {
-                User sharedWithUser = userRepository.findById(userId).orElse(null);
-                if (sharedWithUser == null) continue;
-                
-                Optional<FileShare> existingShare = fileShareRepository
-                    .findByAttachmentAndSharedWithAndIsActiveTrue(attachment, sharedWithUser);
-                
-                if (existingShare.isPresent()) {
-                    FileShare share = existingShare.get();
-                    share.setActive(false);
-                    fileShareRepository.save(share);
-                    removedCount++;
-                }
-            }
-        }
-        
-        return removedCount;
-    }
-    
-    @Override
-    @Transactional
-    public int revokeFileShareBatch(List<Integer> shareIds) {
-        User currentUser = getCurrentUser();
-        if (currentUser == null) {
-            throw new RuntimeException("Không thể xác định user hiện tại. Vui lòng đăng nhập lại.");
-        }
-        
-        int revokedCount = 0;
-        
-        for (Integer shareId : shareIds) {
-            FileShare share = fileShareRepository.findById(shareId).orElse(null);
-            if (share != null && share.getSharedBy().getId().equals(currentUser.getId())) {
+                // Hủy chia sẻ
+                FileShare share = shareOpt.get();
                 share.setActive(false);
                 fileShareRepository.save(share);
-                revokedCount++;
+                successUsers.add(targetUser.getEmail());
+                
+                logger.info("Bulk revoked share: User {} revoked share with user {} for attachment {}", 
+                    currentUser.getEmail(), targetUser.getEmail(), attachmentId);
+                    
+            } catch (Exception e) {
+                logger.error("Error revoking share for user ID {}: {}", userId, e.getMessage());
+                failedUsers.add("User ID " + userId + " (lỗi hệ thống)");
             }
         }
         
-        return revokedCount;
-    }
-    
-    @Override
-    @Transactional
-    public void revokeFileShare(Integer shareId) {
-        User currentUser = getCurrentUser();
-        if (currentUser == null) {
-            throw new RuntimeException("Không thể xác định user hiện tại. Vui lòng đăng nhập lại.");
+        // Tạo thông báo kết quả
+        StringBuilder result = new StringBuilder();
+        if (!successUsers.isEmpty()) {
+            result.append("Hủy chia sẻ thành công với ").append(successUsers.size()).append(" user: ")
+                  .append(String.join(", ", successUsers));
         }
         
-        FileShare share = fileShareRepository.findById(shareId).orElse(null);
-        if (share == null) {
-            throw new RuntimeException("Không tìm thấy chia sẻ file.");
+        if (!failedUsers.isEmpty()) {
+            if (result.length() > 0) {
+                result.append(". ");
+            }
+            result.append("Hủy chia sẻ thất bại với ").append(failedUsers.size()).append(" user: ")
+                  .append(String.join(", ", failedUsers));
         }
         
-        // Chỉ người chia sẻ mới có thể hủy
-        if (!share.getSharedBy().getId().equals(currentUser.getId())) {
-            throw new RuntimeException("Bạn không có quyền hủy chia sẻ này.");
-        }
-        
-        share.setActive(false);
-        fileShareRepository.save(share);
-        
-        logger.info("Revoked file share: User {} revoked share {} for attachment {}", 
-            currentUser.getEmail(), shareId, share.getAttachment().getId());
+        return result.toString();
     }
     
     @Override
@@ -653,42 +337,30 @@ public class FileShareServiceImpl implements FileShareService {
             return null;
         }
         
-        // Kiểm tra owner
+        // Kiểm tra owner - owner có thể chỉnh sửa file
         if (attachment.getUploadedBy().getId().equals(userId)) {
             // Owner có full access - tạo DTO giả để represent owner access
             FileShareDTO ownerAccess = new FileShareDTO();
             ownerAccess.setAttachmentId(attachmentId);
-            ownerAccess.setPermission(SharePermission.READ_WRITE);
             ownerAccess.setActive(true);
-            ownerAccess.setExpired(false);
             return ownerAccess;
         }
         
-        // Kiểm tra shared access
+        // Kiểm tra shared access - shared users chỉ có quyền read
         Optional<FileShare> share = fileShareRepository
-            .findValidShareForUserAndAttachment(attachment, user, LocalDateTime.now());
+            .findByAttachmentAndSharedWithAndIsActiveTrue(attachment, user);
         
         return share.map(this::toDTO).orElse(null);
     }
     
     @Override
     public boolean hasWritePermission(Integer attachmentId, Integer userId) {
-        FileShareDTO access = checkFileAccess(attachmentId, userId);
-        return access != null && access.getPermission() == SharePermission.READ_WRITE;
-    }
-    
-    @Override
-    @Transactional
-    public void cleanupExpiredShares() {
-        List<FileShare> expiredShares = fileShareRepository.findExpiredShares(LocalDateTime.now());
-        
-        for (FileShare share : expiredShares) {
-            share.setActive(false);
+        Attachment attachment = attachmentRepository.findByIdAndIsDeletedFalse(attachmentId);
+        if (attachment == null) {
+            return false;
         }
         
-        if (!expiredShares.isEmpty()) {
-            fileShareRepository.saveAll(expiredShares);
-            logger.info("Cleaned up {} expired file shares", expiredShares.size());
-        }
+        // Chỉ owner mới có quyền write, shared users luôn read-only
+        return attachment.getUploadedBy().getId().equals(userId);
     }
 }
