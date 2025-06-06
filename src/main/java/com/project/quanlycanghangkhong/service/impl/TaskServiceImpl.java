@@ -113,6 +113,8 @@ public class TaskServiceImpl implements TaskService {
                 }
                 assignmentRepository.save(assignment);
             }
+            // ✅ FIX: Cập nhật trạng thái task sau khi tạo assignments
+            updateTaskStatus(savedTask);
         }
 
         // Liên kết documentIds với task thông qua TaskDocument
