@@ -122,27 +122,43 @@ public class FileShareServiceImpl implements FileShareService {
                     continue;
                 }
                 
-                // Kiểm tra xem đã chia sẻ chưa
-                Optional<FileShare> existingShare = fileShareRepository
+                // Kiểm tra xem đã có active share chưa
+                Optional<FileShare> activeShare = fileShareRepository
                     .findByAttachmentAndSharedWithAndIsActiveTrue(attachment, targetUser);
                 
-                if (existingShare.isPresent()) {
+                if (activeShare.isPresent()) {
                     failedUsers.add(targetUser.getEmail() + " (đã được chia sẻ)");
                     continue;
                 }
                 
-                // Tạo file share mới - đơn giản, không có permission
-                FileShare newShare = new FileShare();
-                newShare.setAttachment(attachment);
-                newShare.setSharedBy(currentUser);
-                newShare.setSharedWith(targetUser);
-                newShare.setActive(true);
+                // Kiểm tra xem có inactive share không (để reactivate)
+                Optional<FileShare> inactiveShare = fileShareRepository
+                    .findByAttachmentAndSharedWith(attachment, targetUser);
                 
-                fileShareRepository.save(newShare);
-                successUsers.add(targetUser.getEmail());
-                
-                logger.info("File shared: User {} shared attachment {} with user ID {}", 
-                    currentUser.getEmail(), attachmentId, userId);
+                if (inactiveShare.isPresent()) {
+                    // Reactivate record cũ
+                    FileShare existingShare = inactiveShare.get();
+                    existingShare.setActive(true);
+                    existingShare.setSharedBy(currentUser); // Update shared_by nếu cần
+                    fileShareRepository.save(existingShare);
+                    successUsers.add(targetUser.getEmail() + " (reactivated)");
+                    
+                    logger.info("File share reactivated: User {} reactivated share of attachment {} with user ID {}", 
+                        currentUser.getEmail(), attachmentId, userId);
+                } else {
+                    // Tạo file share mới
+                    FileShare newShare = new FileShare();
+                    newShare.setAttachment(attachment);
+                    newShare.setSharedBy(currentUser);
+                    newShare.setSharedWith(targetUser);
+                    newShare.setActive(true);
+                    
+                    fileShareRepository.save(newShare);
+                    successUsers.add(targetUser.getEmail());
+                    
+                    logger.info("File shared: User {} shared attachment {} with user ID {}", 
+                        currentUser.getEmail(), attachmentId, userId);
+                }
                 
             } catch (Exception e) {
                 logger.error("Error sharing file with user ID {}: {}", userId, e.getMessage());

@@ -9,8 +9,10 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.project.quanlycanghangkhong.dto.ApplyShiftMultiDTO;
+import com.project.quanlycanghangkhong.dto.AssignShiftRequest;
 import com.project.quanlycanghangkhong.dto.DTOConverter;
 import com.project.quanlycanghangkhong.dto.ScheduleDTO;
 import com.project.quanlycanghangkhong.dto.UserShiftDTO;
@@ -161,5 +163,40 @@ public class UserShiftServiceImpl implements UserShiftService {
         List<ScheduleDTO> result = scheduleDAO.getSchedulesByUserAndDateRange(userId, startDate, endDate);
         System.out.println("[LOG] getSchedulesByUserAndDateRange result: " + result);
         return result;
+    }
+
+    @Override
+    @Transactional
+    public List<UserShiftDTO> saveUserShiftsBatch(List<AssignShiftRequest> userShifts) {
+        List<UserShiftDTO> savedShifts = new ArrayList<>();
+        
+        for (AssignShiftRequest request : userShifts) {
+            LocalDate shiftDate = LocalDate.parse(request.getShiftDate()); // Convert String to LocalDate
+            
+            // Kiểm tra user tồn tại
+            User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + request.getUserId()));
+            
+            // Kiểm tra shift tồn tại (có thể null)
+            Shift shift = null;
+            if (request.getShiftId() != null) {
+                shift = shiftRepository.findById(request.getShiftId())
+                    .orElseThrow(() -> new RuntimeException("Shift not found with id: " + request.getShiftId()));
+            }
+            
+            // Kiểm tra conflict: user đã có ca trực trong ngày này chưa
+            List<UserShift> existingShifts = userShiftRepository.findByUserIdAndShiftDate(
+                request.getUserId(), shiftDate);
+            if (!existingShifts.isEmpty()) {
+                throw new RuntimeException("Nhân viên " + user.getName() + " đã có ca trực trong ngày " + shiftDate);
+            }
+            
+            // Tạo và lưu UserShift
+            UserShift userShift = new UserShift(user, shiftDate, shift);
+            UserShift saved = userShiftRepository.save(userShift);
+            savedShifts.add(new UserShiftDTO(saved));
+        }
+        
+        return savedShifts;
     }
 }

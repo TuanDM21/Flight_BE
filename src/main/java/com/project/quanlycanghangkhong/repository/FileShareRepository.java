@@ -14,6 +14,9 @@ public interface FileShareRepository extends JpaRepository<FileShare, Integer> {
     // Tìm file share cụ thể giữa attachment và user
     Optional<FileShare> findByAttachmentAndSharedWithAndIsActiveTrue(Attachment attachment, User sharedWith);
     
+    // Tìm file share bất kể trạng thái active (để reactivate)
+    Optional<FileShare> findByAttachmentAndSharedWith(Attachment attachment, User sharedWith);
+    
     // Lấy tất cả file được chia sẻ với user cụ thể (đơn giản hóa - không cần kiểm tra expires_at)
     List<FileShare> findBySharedWithAndIsActiveTrueOrderBySharedAtDesc(User sharedWith);
     

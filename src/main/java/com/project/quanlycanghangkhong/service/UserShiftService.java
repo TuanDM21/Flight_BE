@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.project.quanlycanghangkhong.dto.ApplyShiftMultiDTO;
+import com.project.quanlycanghangkhong.dto.AssignShiftRequest;
 import com.project.quanlycanghangkhong.dto.ScheduleDTO;
 import com.project.quanlycanghangkhong.dto.UserShiftDTO;
 
@@ -27,4 +28,7 @@ public interface UserShiftService {
     List<Integer> getUserIdsOnDutyAtTime(LocalDate date, java.time.LocalTime actualTime);
 
     List<ScheduleDTO> getSchedulesByUserAndDateRange(Integer userId, LocalDate startDate, LocalDate endDate);
+
+    // Lưu nhiều ca trực cùng lúc
+    List<UserShiftDTO> saveUserShiftsBatch(List<AssignShiftRequest> userShifts);
 }
