@@ -1,6 +1,5 @@
 package com.project.quanlycanghangkhong.model;
 
-
 import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
@@ -14,11 +13,12 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
+import com.project.quanlycanghangkhong.config.VietnamTimestampListener;
+import jakarta.persistence.EntityListeners;
 
 @Entity
 @Table(name = "Task")
+@EntityListeners(VietnamTimestampListener.class)
 public class Task {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -33,11 +33,9 @@ public class Task {
     @Column(columnDefinition = "TEXT")
     private String notes;
 
-    @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 

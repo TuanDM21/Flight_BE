@@ -2,13 +2,13 @@ package com.project.quanlycanghangkhong.model;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 import jakarta.persistence.*;
+import com.project.quanlycanghangkhong.config.VietnamTimestampListener;
 
 @Entity
 @Table(name = "user_flight_shifts", uniqueConstraints = @UniqueConstraint(columnNames = { "user_id", "flight_id",
         "shift_date" }))
+@EntityListeners(VietnamTimestampListener.class)
 public class UserFlightShift {
 
     @Id
@@ -31,11 +31,9 @@ public class UserFlightShift {
     @Column(name = "shift_date", nullable = false)
     private LocalDate shiftDate;
 
-    @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 

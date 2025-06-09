@@ -2,10 +2,11 @@ package com.project.quanlycanghangkhong.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-import org.hibernate.annotations.CreationTimestamp;
+import com.project.quanlycanghangkhong.config.VietnamTimestampListener;
 
 @Entity
 @Table(name = "Attachment")
+@EntityListeners(VietnamTimestampListener.class)
 public class Attachment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,9 +30,13 @@ public class Attachment {
     @Column(name = "file_size")
     private Long fileSize;
 
-    @CreationTimestamp
+    // ❌ XÓA @CreationTimestamp - sẽ dùng VietnamTimestampListener thay thế
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    // ✅ THÊM updatedAt field
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
 
     @Column(name = "is_deleted", nullable = false)
     private boolean isDeleted = false;
@@ -91,6 +96,14 @@ public class Attachment {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 
     public boolean isDeleted() {

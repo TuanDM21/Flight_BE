@@ -2,22 +2,13 @@ package com.project.quanlycanghangkhong.model;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.DecimalMax;
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Size;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
+import com.project.quanlycanghangkhong.config.VietnamTimestampListener;
 
 @Entity
 @Table(name = "airports")
+@EntityListeners(VietnamTimestampListener.class)
 public class Airport {
 
     @Id
@@ -53,11 +44,9 @@ public class Airport {
     @Column(name = "country", nullable = false)
     private String country = "Vietnam";
 
-    @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 

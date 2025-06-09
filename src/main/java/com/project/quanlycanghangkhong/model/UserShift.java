@@ -2,12 +2,12 @@ package com.project.quanlycanghangkhong.model;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 import jakarta.persistence.*;
+import com.project.quanlycanghangkhong.config.VietnamTimestampListener;
 
 @Entity
 @Table(name = "user_shifts")
+@EntityListeners(VietnamTimestampListener.class)
 public class UserShift {
 
     @Id
@@ -25,11 +25,9 @@ public class UserShift {
     @JoinColumn(name = "shift_id", nullable = true)
     private Shift shift;
     
-    @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
     
-    @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
     

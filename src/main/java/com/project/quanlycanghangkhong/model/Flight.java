@@ -3,16 +3,16 @@ package com.project.quanlycanghangkhong.model;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.project.quanlycanghangkhong.config.VietnamTimestampListener;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 
 @Entity
 @Table(name = "flights")
+@EntityListeners(VietnamTimestampListener.class)
 public class Flight {
 
     @Id
@@ -63,11 +63,9 @@ public class Flight {
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
 
-    @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
