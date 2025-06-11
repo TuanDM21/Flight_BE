@@ -64,6 +64,10 @@ public class FileShareServiceImpl implements FileShareService {
         dto.setNote(null); // Không có note
         dto.setActive(fileShare.isActive());
         
+        // 🔥 NEW: Tính shared count (số lượng người được chia sẻ file này)
+        int sharedCount = fileShareRepository.countByAttachmentAndIsActiveTrue(fileShare.getAttachment());
+        dto.setSharedCount(sharedCount);
+        
         // Map user information
         if (fileShare.getSharedBy() != null) {
             UserDTO sharedByDto = new UserDTO();

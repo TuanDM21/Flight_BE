@@ -9,6 +9,7 @@ public class AttachmentDTO {
     private Long fileSize;
     private LocalDateTime createdAt;
     private UserDTO uploadedBy;
+    private Integer sharedCount;
 
     public Integer getId() {
         return id;
@@ -56,5 +57,13 @@ public class AttachmentDTO {
 
     public void setUploadedBy(UserDTO uploadedBy) {
         this.uploadedBy = uploadedBy;
+    }
+
+    public Integer getSharedCount() {
+        return sharedCount;
+    }
+
+    public void setSharedCount(Integer sharedCount) {
+        this.sharedCount = sharedCount;
     }
 }

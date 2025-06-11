@@ -15,6 +15,8 @@ import com.project.quanlycanghangkhong.model.Attachment;
 import com.project.quanlycanghangkhong.model.User;
 import com.project.quanlycanghangkhong.repository.AttachmentRepository;
 import com.project.quanlycanghangkhong.repository.UserRepository;
+import com.project.quanlycanghangkhong.repository.FileShareRepository;
+import com.project.quanlycanghangkhong.model.FileShare;
 import com.project.quanlycanghangkhong.service.AzurePreSignedUrlService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,6 +25,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -46,7 +49,10 @@ public class AzurePreSignedUrlServiceImpl implements AzurePreSignedUrlService {
     
     @Autowired
     private UserRepository userRepository;
-    
+
+    @Autowired
+    private FileShareRepository fileShareRepository;
+
     /**
      * Lấy thông tin user hiện tại từ SecurityContext
      * @return User hiện tại hoặc null nếu không tìm thấy
@@ -116,6 +122,7 @@ public class AzurePreSignedUrlServiceImpl implements AzurePreSignedUrlService {
      * @param attachmentId ID của attachment
      */
     @Override
+    @Transactional
     public void deleteFile(Integer attachmentId) {
         try {
             // Tìm attachment trong database
@@ -138,6 +145,15 @@ public class AzurePreSignedUrlServiceImpl implements AzurePreSignedUrlService {
             logger.info("User {} (ID: {}) deleting attachment {} - File: {}", 
                 currentUser.getEmail(), currentUser.getId(), attachmentId, attachment.getFileName());
             
+            // 🔥 BƯỚC 1: XÓA TẤT CẢ FILE SHARES (CẢ ACTIVE VÀ INACTIVE) LIÊN QUAN TRƯỚC
+            List<FileShare> allFileShares = fileShareRepository.findByAttachment(attachment);
+            if (!allFileShares.isEmpty()) {
+                logger.info("Deleting {} file shares (active and inactive) for attachment {}", allFileShares.size(), attachmentId);
+                fileShareRepository.deleteAll(allFileShares);
+                logger.info("Successfully deleted all file shares for attachment {}", attachmentId);
+            }
+            
+            // 🔥 BƯỚC 2: XÓA FILE TRÊN AZURE BLOB STORAGE
             // Tạo BlobServiceClient
             BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
                     .connectionString(connectionString)
@@ -150,12 +166,15 @@ public class AzurePreSignedUrlServiceImpl implements AzurePreSignedUrlService {
             // Xóa file trên Azure Blob nếu tồn tại
             if (blobClient.exists()) {
                 blobClient.delete();
+                logger.info("Successfully deleted blob file: {}", blobName);
             }
             
-            // Xóa record trong database
+            // 🔥 BƯỚC 3: XÓA ATTACHMENT RECORD TRONG DATABASE
             attachmentRepository.deleteById(attachmentId);
+            logger.info("Successfully deleted attachment record with ID: {}", attachmentId);
             
         } catch (Exception e) {
+            logger.error("Error deleting file with ID: " + attachmentId, e);
             throw new RuntimeException("Lỗi khi xóa file: " + e.getMessage(), e);
         }
     }

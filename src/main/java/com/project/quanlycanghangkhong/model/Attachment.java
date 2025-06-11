@@ -1,6 +1,7 @@
 package com.project.quanlycanghangkhong.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 import com.project.quanlycanghangkhong.config.VietnamTimestampListener;
 
@@ -34,8 +35,9 @@ public class Attachment {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    // ✅ THÊM updatedAt field
-    @Column(name = "updated_at", nullable = false)
+    // ✅ THÊM updatedAt field với nullable = true và @UpdateTimestamp
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = true)
     private LocalDateTime updatedAt;
 
     @Column(name = "is_deleted", nullable = false)

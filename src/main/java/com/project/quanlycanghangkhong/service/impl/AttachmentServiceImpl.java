@@ -31,6 +31,10 @@ public class AttachmentServiceImpl implements AttachmentService {
     @Autowired
     private FileShareService fileShareService;
 
+    // Thêm import và dependency cho FileShareRepository
+    @Autowired
+    private com.project.quanlycanghangkhong.repository.FileShareRepository fileShareRepository;
+
     /**
      * Lấy thông tin user hiện tại từ SecurityContext
      * @return User hiện tại hoặc null nếu không tìm thấy
@@ -133,6 +137,39 @@ public class AttachmentServiceImpl implements AttachmentService {
             dto.setUploadedBy(ownerDto);
         }
         
+        // 🔥 NEW: Tính shared count (số lượng người được chia sẻ)
+        int sharedCount = fileShareRepository.countByAttachmentAndIsActiveTrue(att);
+        dto.setSharedCount(sharedCount);
+        
+        return dto;
+    }
+
+    // 🔥 NEW: Method chuyên dụng cho "my files" - bao gồm shared count
+    private AttachmentDTO toDTOWithSharedCount(Attachment att) {
+        return toDTO(att); // Đã bao gồm shared count trong toDTO
+    }
+
+    // 🔥 NEW: Method chuyên dụng cho "shared with me" - không cần shared count (vì không phải owner)
+    private AttachmentDTO toDTOForSharedFile(Attachment att) {
+        AttachmentDTO dto = new AttachmentDTO();
+        dto.setId(att.getId());
+        dto.setFilePath(att.getFilePath());
+        dto.setFileName(att.getFileName());
+        dto.setFileSize(att.getFileSize());
+        dto.setCreatedAt(att.getCreatedAt());
+        
+        // Map owner information
+        if (att.getUploadedBy() != null) {
+            com.project.quanlycanghangkhong.dto.UserDTO ownerDto = new com.project.quanlycanghangkhong.dto.UserDTO();
+            ownerDto.setId(att.getUploadedBy().getId());
+            ownerDto.setName(att.getUploadedBy().getName());
+            ownerDto.setEmail(att.getUploadedBy().getEmail());
+            dto.setUploadedBy(ownerDto);
+        }
+        
+        // Đặt shared count = null hoặc 0 vì user không phải owner
+        dto.setSharedCount(0);
+        
         return dto;
     }
     @Override
@@ -180,6 +217,7 @@ public class AttachmentServiceImpl implements AttachmentService {
     }
     
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public void deleteAttachment(Integer id) {
         Attachment att = attachmentRepository.findById(id).orElse(null);
         if (att != null) {
@@ -188,6 +226,15 @@ public class AttachmentServiceImpl implements AttachmentService {
                 throw new RuntimeException("Bạn không có quyền xóa file này. Chỉ người upload file mới có thể thực hiện.");
             }
             
+            // 🔥 XÓA TẤT CẢ FILE SHARES (CẢ ACTIVE VÀ INACTIVE) LIÊN QUAN TRƯỚC KHI SOFT DELETE
+            List<com.project.quanlycanghangkhong.model.FileShare> allFileShares = 
+                fileShareRepository.findByAttachment(att);
+            if (!allFileShares.isEmpty()) {
+                // Hard delete tất cả file shares để tránh foreign key constraint
+                fileShareRepository.deleteAll(allFileShares);
+            }
+            
+            // Thực hiện soft delete attachment
             att.setDeleted(true);
             attachmentRepository.save(att);
         }
@@ -273,7 +320,7 @@ public class AttachmentServiceImpl implements AttachmentService {
         for (FileShareDTO shareDto : sharedFiles) {
             Attachment sharedAttachment = attachmentRepository.findByIdAndIsDeletedFalse(shareDto.getAttachmentId());
             if (sharedAttachment != null) {
-                AttachmentDTO dto = toDTO(sharedAttachment);
+                AttachmentDTO dto = toDTOForSharedFile(sharedAttachment);
                 // Thêm thông tin về quyền chia sẻ
                 dto.getClass(); // Có thể extend DTO để thêm field sharePermission nếu cần
                 result.add(dto);

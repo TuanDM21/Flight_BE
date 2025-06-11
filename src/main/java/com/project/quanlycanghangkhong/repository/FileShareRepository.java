@@ -23,9 +23,15 @@ public interface FileShareRepository extends JpaRepository<FileShare, Integer> {
     // Lấy tất cả file mà user đã chia sẻ cho người khác
     List<FileShare> findBySharedByAndIsActiveTrueOrderBySharedAtDesc(User sharedBy);
     
-    // Lấy tất cả share của một attachment cụ thể
+    // Lấy tất cả share của một attachment cụ thể (chỉ active)
     List<FileShare> findByAttachmentAndIsActiveTrueOrderBySharedAtDesc(Attachment attachment);
+    
+    // 🔥 NEW: Lấy TẤT CẢ share của một attachment (bao gồm cả active và inactive)
+    List<FileShare> findByAttachment(Attachment attachment);
     
     // Kiểm tra user có đang chia sẻ file cho ai đó không
     boolean existsByAttachmentAndSharedWithAndIsActiveTrue(Attachment attachment, User sharedWith);
+    
+    // 🔥 NEW: Đếm số lượng người được chia sẻ của một attachment (chỉ active shares)
+    int countByAttachmentAndIsActiveTrue(Attachment attachment);
 }

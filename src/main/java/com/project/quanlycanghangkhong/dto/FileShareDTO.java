@@ -13,6 +13,7 @@ public class FileShareDTO {
     private LocalDateTime sharedAt;
     private String note; // Luôn null (không có ghi chú)
     private boolean isActive;
+    private Integer sharedCount; // Số lượng người được chia sẻ
 
     // Constructors
     public FileShareDTO() {}
@@ -96,5 +97,13 @@ public class FileShareDTO {
 
     public void setActive(boolean active) {
         isActive = active;
+    }
+
+    public Integer getSharedCount() {
+        return sharedCount;
+    }
+
+    public void setSharedCount(Integer sharedCount) {
+        this.sharedCount = sharedCount;
     }
 }
