@@ -22,6 +22,11 @@ public class FlightDTO {
     private LocalDateTime updatedAt;
     private String note;
 
+    // Thêm các field mới
+    private String airline;
+    private String checkInCounters;
+    private Integer gate;
+
     public FlightDTO() {}
 
     // Constructor từ entity Flight (phiên bản cũ)
@@ -37,6 +42,9 @@ public class FlightDTO {
         this.createdAt = flight.getCreatedAt();
         this.updatedAt = flight.getUpdatedAt();
         this.note = flight.getNote();
+        this.airline = flight.getAirline();
+        this.checkInCounters = flight.getCheckInCounters();
+        this.gate = flight.getGate();
         
         if (flight.getDepartureAirport() != null) {
             this.departureAirport = new AirportDTO(
@@ -55,7 +63,8 @@ public class FlightDTO {
                      String departureAirportCode, String arrivalAirportCode,
                      LocalTime departureTime, LocalTime arrivalTime, LocalDate flightDate,
                      LocalTime actualDepartureTime, LocalTime actualArrivalTime, LocalTime actualDepartureTimeAtArrival,
-                     LocalDateTime createdAt, LocalDateTime updatedAt, String note) {
+                     LocalDateTime createdAt, LocalDateTime updatedAt, String note,
+                     String airline, String checkInCounters, Integer gate) {
         this.id = id;
         this.flightNumber = flightNumber;
         this.departureTime = departureTime;
@@ -67,6 +76,9 @@ public class FlightDTO {
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.note = note;
+        this.airline = airline;
+        this.checkInCounters = checkInCounters;
+        this.gate = gate;
 
         // Chuyển đổi mã sân bay thành AirportDTO; nếu cần bổ sung thêm tên sân bay thì điều chỉnh lại
         if (departureAirportCode != null) {
@@ -84,7 +96,7 @@ public class FlightDTO {
                      LocalTime actualDepartureTime, LocalTime actualArrivalTime, LocalTime actualDepartureTimeAtArrival,
                      LocalDateTime createdAt, LocalDateTime updatedAt) {
         this(id, flightNumber, departureAirportCode, arrivalAirportCode, departureTime, arrivalTime, flightDate,
-            actualDepartureTime, actualArrivalTime, actualDepartureTimeAtArrival, createdAt, updatedAt, null);
+            actualDepartureTime, actualArrivalTime, actualDepartureTimeAtArrival, createdAt, updatedAt, null, null, null, null);
     }
 
     // Getters & Setters ...
@@ -130,6 +142,24 @@ public class FlightDTO {
     }
     public void setNote(String note) {
         this.note = note;
+    }
+    public String getAirline() {
+        return airline;
+    }
+    public void setAirline(String airline) {
+        this.airline = airline;
+    }
+    public String getCheckInCounters() {
+        return checkInCounters;
+    }
+    public void setCheckInCounters(String checkInCounters) {
+        this.checkInCounters = checkInCounters;
+    }
+    public Integer getGate() {
+        return gate;
+    }
+    public void setGate(Integer gate) {
+        this.gate = gate;
     }
     // Setters nếu cần...
 }

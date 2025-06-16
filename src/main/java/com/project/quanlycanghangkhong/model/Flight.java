@@ -60,6 +60,16 @@ public class Flight {
     @Column(name = "actual_departure_time_at_arrival")
     private LocalTime actualDepartureTimeAtArrival;
 
+    // Thêm các field mới theo yêu cầu
+    @Column(name = "airline")
+    private String airline;
+
+    @Column(name = "check_in_counters")
+    private String checkInCounters; // Ví dụ: "1-5", "A1-A10"
+
+    @Column(name = "gate")
+    private Integer gate;
+
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
 
@@ -94,6 +104,22 @@ public class Flight {
         this.arrivalTime = arrivalTime;
         this.flightDate = flightDate;
         this.note = note;
+    }
+
+    // Constructor đầy đủ với tất cả các field mới
+    public Flight(String flightNumber, Airport departureAirport, Airport arrivalAirport,
+            LocalTime departureTime, LocalTime arrivalTime, LocalDate flightDate, 
+            String note, String airline, String checkInCounters, Integer gate) {
+        this.flightNumber = flightNumber;
+        this.departureAirport = departureAirport;
+        this.arrivalAirport = arrivalAirport;
+        this.departureTime = departureTime;
+        this.arrivalTime = arrivalTime;
+        this.flightDate = flightDate;
+        this.note = note;
+        this.airline = airline;
+        this.checkInCounters = checkInCounters;
+        this.gate = gate;
     }
 
     // Getters & Setters
@@ -176,6 +202,30 @@ public class Flight {
 
     public void setActualDepartureTimeAtArrival(LocalTime actualDepartureTimeAtArrival) {
         this.actualDepartureTimeAtArrival = actualDepartureTimeAtArrival;
+    }
+
+    public String getAirline() {
+        return airline;
+    }
+
+    public void setAirline(String airline) {
+        this.airline = airline;
+    }
+
+    public String getCheckInCounters() {
+        return checkInCounters;
+    }
+
+    public void setCheckInCounters(String checkInCounters) {
+        this.checkInCounters = checkInCounters;
+    }
+
+    public Integer getGate() {
+        return gate;
+    }
+
+    public void setGate(Integer gate) {
+        this.gate = gate;
     }
 
     public String getNote() {

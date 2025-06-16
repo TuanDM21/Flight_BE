@@ -21,7 +21,8 @@ public interface FlightRepository extends JpaRepository<Flight, Long> {
        "d.airportCode, a.airportCode, " +
        "f.departureTime, f.arrivalTime, f.flightDate, " +
        "f.actualDepartureTime, f.actualArrivalTime, f.actualDepartureTimeAtArrival, " +
-       "f.createdAt, f.updatedAt) " +
+       "f.createdAt, f.updatedAt, f.note, " +
+       "f.airline, f.checkInCounters, f.gate) " +
        "FROM Flight f " +
        "LEFT JOIN f.departureAirport d " +
        "LEFT JOIN f.arrivalAirport a " +

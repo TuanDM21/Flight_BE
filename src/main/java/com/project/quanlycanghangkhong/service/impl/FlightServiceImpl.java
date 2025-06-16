@@ -71,6 +71,11 @@ public class FlightServiceImpl implements FlightService {
         existingFlight.setActualArrivalTime(flightData.getActualArrivalTime());
         existingFlight.setActualDepartureTimeAtArrival(flightData.getActualDepartureTimeAtArrival());
 
+        // Cập nhật các field mới
+        existingFlight.setAirline(flightData.getAirline());
+        existingFlight.setCheckInCounters(flightData.getCheckInCounters());
+        existingFlight.setGate(flightData.getGate());
+
         Flight updatedFlight = flightRepository.save(existingFlight);
         return new FlightDTO(updatedFlight);
     }
