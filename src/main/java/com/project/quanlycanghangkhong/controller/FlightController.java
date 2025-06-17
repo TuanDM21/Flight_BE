@@ -30,6 +30,18 @@ import com.project.quanlycanghangkhong.service.FlightService;
 import com.project.quanlycanghangkhong.service.UserFlightShiftService;
 import com.project.quanlycanghangkhong.service.UserShiftService;
 import com.project.quanlycanghangkhong.service.NotificationService;
+import com.project.quanlycanghangkhong.dto.response.flights.ApiAllFlightsResponse;
+import com.project.quanlycanghangkhong.dto.response.flights.ApiFlightByIdResponse;
+import com.project.quanlycanghangkhong.dto.response.flights.ApiCreateFlightResponse;
+import com.project.quanlycanghangkhong.dto.response.flights.ApiUpdateFlightResponse;
+import com.project.quanlycanghangkhong.dto.response.flights.ApiDeleteFlightResponse;
+import com.project.quanlycanghangkhong.dto.response.flights.ApiSearchFlightsResponse;
+import com.project.quanlycanghangkhong.dto.response.ApiErrorResponse;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,84 +64,178 @@ public class FlightController {
     private NotificationService notificationService;
 
     @GetMapping
-    public ResponseEntity<List<FlightDTO>> getAllFlights() {
+    @Operation(summary = "Get all flights", description = "Retrieve a list of all flights")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully retrieved all flights", content = @Content(schema = @Schema(implementation = ApiAllFlightsResponse.class)))
+    })
+    public ResponseEntity<ApiAllFlightsResponse> getAllFlights() {
         List<FlightDTO> dtos = flightService.getAllFlights();
-        return ResponseEntity.ok(dtos);
+        ApiAllFlightsResponse response = new ApiAllFlightsResponse();
+        response.setMessage("Thành công");
+        response.setStatusCode(200);
+        response.setData(dtos);
+        response.setSuccess(true);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<FlightDTO> getFlightById(@PathVariable Long id) {
+    @Operation(summary = "Get flight by ID", description = "Retrieve a flight by its ID")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully retrieved flight", content = @Content(schema = @Schema(implementation = ApiFlightByIdResponse.class))),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Flight not found", content = @Content(schema = @Schema(implementation = ApiFlightByIdResponse.class)))
+    })
+    public ResponseEntity<ApiFlightByIdResponse> getFlightById(@PathVariable Long id) {
         Optional<FlightDTO> dto = flightService.getFlightById(id);
-        return dto.map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        return dto.map(flight -> {
+            ApiFlightByIdResponse res = new ApiFlightByIdResponse();
+            res.setMessage("Thành công");
+            res.setStatusCode(200);
+            res.setData(flight);
+            res.setSuccess(true);
+            return ResponseEntity.ok(res);
+        }).orElse(ResponseEntity.status(404)
+            .body(new ApiFlightByIdResponse("Flight not found", 404, null, false)));
     }
 
     @PostMapping
-    public ResponseEntity<FlightDTO> createFlight(@RequestBody Flight flight) {
+    @Operation(summary = "Create flight", description = "Create a new flight")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Flight created successfully", content = @Content(schema = @Schema(implementation = ApiCreateFlightResponse.class)))
+    })
+    public ResponseEntity<ApiCreateFlightResponse> createFlight(@RequestBody Flight flight) {
         FlightDTO dto = flightService.createFlight(flight);
-        return ResponseEntity.ok(dto);
+        ApiCreateFlightResponse res = new ApiCreateFlightResponse();
+        res.setMessage("Thành công");
+        res.setStatusCode(200);
+        res.setData(dto);
+        res.setSuccess(true);
+        return ResponseEntity.ok(res);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<FlightDTO> updateFlight(@PathVariable Long id, @RequestBody Flight flightData) {
+    @Operation(summary = "Update flight", description = "Update an existing flight")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Flight updated successfully", content = @Content(schema = @Schema(implementation = ApiUpdateFlightResponse.class))),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Flight not found", content = @Content(schema = @Schema(implementation = ApiUpdateFlightResponse.class)))
+    })
+    public ResponseEntity<ApiUpdateFlightResponse> updateFlight(@PathVariable Long id, @RequestBody Flight flightData) {
         try {
             FlightDTO updatedDto = flightService.updateFlight(id, flightData);
-            return ResponseEntity.ok(updatedDto);
+            ApiUpdateFlightResponse res = new ApiUpdateFlightResponse();
+            res.setMessage("Thành công");
+            res.setStatusCode(200);
+            res.setData(updatedDto);
+            res.setSuccess(true);
+            return ResponseEntity.ok(res);
         } catch (RuntimeException ex) {
-            return ResponseEntity.status(404).body(null);
+            return ResponseEntity.status(404)
+                .body(new ApiUpdateFlightResponse("Flight not found", 404, null, false));
         }
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteFlight(@PathVariable Long id) {
+    @Operation(summary = "Delete flight", description = "Delete a flight by ID")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "204", description = "Flight deleted successfully", content = @Content(schema = @Schema(implementation = ApiDeleteFlightResponse.class)))
+    })
+    public ResponseEntity<ApiDeleteFlightResponse> deleteFlight(@PathVariable Long id) {
         flightService.deleteFlight(id);
-        return ResponseEntity.noContent().build();
+        ApiDeleteFlightResponse res = new ApiDeleteFlightResponse();
+        res.setMessage("Thành công");
+        res.setStatusCode(204);
+        res.setData(null);
+        res.setSuccess(true);
+        return ResponseEntity.status(204).body(res);
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<FlightDTO>> searchFlights(
+    @Operation(summary = "Search flights", description = "Search flights by keyword")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully searched flights", content = @Content(schema = @Schema(implementation = ApiSearchFlightsResponse.class)))
+    })
+    public ResponseEntity<ApiSearchFlightsResponse> searchFlights(
             @RequestParam(value = "keyword", required = false) String keyword) {
         List<FlightDTO> dtos = flightService.searchFlights(keyword);
-        return ResponseEntity.ok(dtos);
+        ApiSearchFlightsResponse res = new ApiSearchFlightsResponse();
+        res.setMessage("Thành công");
+        res.setStatusCode(200);
+        res.setData(dtos);
+        res.setSuccess(true);
+        return ResponseEntity.ok(res);
     }
 
     @GetMapping("/today")
-    public ResponseEntity<List<FlightDTO>> getTodayFlights() {
+    @Operation(summary = "Get today flights", description = "Retrieve flights for today")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully retrieved today flights", content = @Content(schema = @Schema(implementation = ApiSearchFlightsResponse.class)))
+    })
+    public ResponseEntity<ApiSearchFlightsResponse> getTodayFlights() {
         List<FlightDTO> dtos = flightService.getTodayFlights();  
         if (!dtos.isEmpty()) {
             logger.info("Today flights: {}", dtos.get(0).getDepartureAirport());
         } else {
             logger.info("Today flights: empty list");
         }
-        return ResponseEntity.ok(dtos);
+        ApiSearchFlightsResponse res = new ApiSearchFlightsResponse();
+        res.setMessage("Thành công");
+        res.setStatusCode(200);
+        res.setData(dtos);
+        res.setSuccess(true);
+        return ResponseEntity.ok(res);
     }
 
     // Endpoint tìm kiếm chuyến bay theo ngày (đúng hoàn toàn)
     @GetMapping("/searchByDate")
-    public ResponseEntity<List<FlightDTO>> searchFlightByDate(@RequestParam("date") String dateStr) {
+    @Operation(summary = "Search flights by exact date", description = "Search flights by exact date (YYYY-MM-DD format)")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully retrieved flights by date", content = @Content(schema = @Schema(implementation = ApiSearchFlightsResponse.class))),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid date format", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    public ResponseEntity<ApiSearchFlightsResponse> searchFlightByDate(@RequestParam("date") String dateStr) {
         try {
             LocalDate date = LocalDate.parse(dateStr); // format YYYY-MM-DD
             List<FlightDTO> dtos = flightService.getFlightsByExactDate(date);
-            return ResponseEntity.ok(dtos);
+            ApiSearchFlightsResponse res = new ApiSearchFlightsResponse();
+            res.setMessage("Thành công");
+            res.setStatusCode(200);
+            res.setData(dtos);
+            res.setSuccess(true);
+            return ResponseEntity.ok(res);
         } catch (DateTimeParseException ex) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest()
+                .body(new ApiSearchFlightsResponse("Invalid date format", 400, null, false));
         }
     }
 
     @GetMapping("/searchByDateAndKeyword")
-    public ResponseEntity<List<FlightDTO>> searchFlightByDateAndKeyword(
+    @Operation(summary = "Search flights by date and keyword", description = "Search flights by date and optional keyword")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully retrieved flights by date and keyword", content = @Content(schema = @Schema(implementation = ApiSearchFlightsResponse.class))),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid date format", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    public ResponseEntity<ApiSearchFlightsResponse> searchFlightByDateAndKeyword(
             @RequestParam("date") String dateStr,
             @RequestParam(value = "keyword", required = false) String keyword) {
         try {
             LocalDate date = LocalDate.parse(dateStr); // format YYYY-MM-DD
             List<FlightDTO> dtos = flightService.getFlightsByDateAndKeyword(date, keyword);
-            return ResponseEntity.ok(dtos);
+            ApiSearchFlightsResponse res = new ApiSearchFlightsResponse();
+            res.setMessage("Thành công");
+            res.setStatusCode(200);
+            res.setData(dtos);
+            res.setSuccess(true);
+            return ResponseEntity.ok(res);
         } catch (DateTimeParseException ex) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest()
+                .body(new ApiSearchFlightsResponse("Invalid date format", 400, null, false));
         }
     }
 
     @PatchMapping("/{id}/times")
+    @Operation(summary = "Update flight times", description = "Update flight departure/arrival times")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Flight times updated successfully")
+    })
     public ResponseEntity<?> updateFlightTimes(
             @PathVariable Long id,
             @RequestBody FlightTimeUpdateRequest payload) {
@@ -139,6 +245,11 @@ public class FlightController {
     }
 
     @PatchMapping("/{id}/actual-time-notify")
+    @Operation(summary = "Update actual time and notify", description = "Update actual flight time and send notifications to relevant users")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Actual time updated and notifications sent"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request or flight not found")
+    })
     public ResponseEntity<?> updateActualTimeAndNotify(
             @PathVariable Long id,
             @RequestBody FlightTimeUpdateRequest payload) {
@@ -189,7 +300,11 @@ public class FlightController {
     }
 
     @GetMapping("/live-tracking-group")
-    public ResponseEntity<List<FlightDTO>> getLiveTrackingGroup() {
+    @Operation(summary = "Get live tracking flights", description = "Get flights for live tracking (today + yesterday with specific conditions)")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully retrieved live tracking flights", content = @Content(schema = @Schema(implementation = ApiSearchFlightsResponse.class)))
+    })
+    public ResponseEntity<ApiSearchFlightsResponse> getLiveTrackingGroup() {
         LocalDate today = LocalDate.now();
         LocalDate yesterday = today.minusDays(1);
         List<FlightDTO> allToday = flightService.getFlightsByExactDate(today);
@@ -207,6 +322,12 @@ public class FlightController {
         List<FlightDTO> result = new java.util.ArrayList<>();
         result.addAll(todayFiltered);
         result.addAll(yesterdayFiltered);
-        return ResponseEntity.ok(result);
+        
+        ApiSearchFlightsResponse res = new ApiSearchFlightsResponse();
+        res.setMessage("Thành công");
+        res.setStatusCode(200);
+        res.setData(result);
+        res.setSuccess(true);
+        return ResponseEntity.ok(res);
     }
 }
