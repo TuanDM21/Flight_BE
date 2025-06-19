@@ -1,29 +1,31 @@
 package com.project.quanlycanghangkhong.dto;
 
 import java.time.LocalDate;
-import java.time.LocalTime;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.NotBlank;
-import com.project.quanlycanghangkhong.model.Airport;
+import jakarta.validation.constraints.Pattern;
 
 public class CreateFlightRequest {
     
     @NotBlank(message = "Flight number is required")
     private String flightNumber;
     
-    @NotNull(message = "Departure airport is required")
-    private Airport departureAirport;
+    @NotNull(message = "Departure airport ID is required")
+    private Long departureAirportId;
     
-    @NotNull(message = "Arrival airport is required") 
-    private Airport arrivalAirport;
+    @NotNull(message = "Arrival airport ID is required") 
+    private Long arrivalAirportId;
     
-    @NotNull(message = "Departure time is required")
-    private LocalTime departureTime;
+    @NotBlank(message = "Departure time is required")
+    @Pattern(regexp = "^([01]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$", message = "Departure time must be in HH:mm:ss format")
+    private String departureTime;
     
-    @NotNull(message = "Arrival time is required")
-    private LocalTime arrivalTime;
+    @NotBlank(message = "Arrival time is required")
+    @Pattern(regexp = "^([01]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$", message = "Arrival time must be in HH:mm:ss format")
+    private String arrivalTime;
     
-    private LocalTime arrivalTimeatArrival;
+    @Pattern(regexp = "^([01]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$", message = "Arrival time at arrival must be in HH:mm:ss format")
+    private String arrivalTimeatArrival;
     
     private String status;
     
@@ -50,43 +52,43 @@ public class CreateFlightRequest {
         this.flightNumber = flightNumber;
     }
 
-    public Airport getDepartureAirport() {
-        return departureAirport;
+    public Long getDepartureAirportId() {
+        return departureAirportId;
     }
 
-    public void setDepartureAirport(Airport departureAirport) {
-        this.departureAirport = departureAirport;
+    public void setDepartureAirportId(Long departureAirportId) {
+        this.departureAirportId = departureAirportId;
     }
 
-    public Airport getArrivalAirport() {
-        return arrivalAirport;
+    public Long getArrivalAirportId() {
+        return arrivalAirportId;
     }
 
-    public void setArrivalAirport(Airport arrivalAirport) {
-        this.arrivalAirport = arrivalAirport;
+    public void setArrivalAirportId(Long arrivalAirportId) {
+        this.arrivalAirportId = arrivalAirportId;
     }
 
-    public LocalTime getDepartureTime() {
+    public String getDepartureTime() {
         return departureTime;
     }
 
-    public void setDepartureTime(LocalTime departureTime) {
+    public void setDepartureTime(String departureTime) {
         this.departureTime = departureTime;
     }
 
-    public LocalTime getArrivalTime() {
+    public String getArrivalTime() {
         return arrivalTime;
     }
 
-    public void setArrivalTime(LocalTime arrivalTime) {
+    public void setArrivalTime(String arrivalTime) {
         this.arrivalTime = arrivalTime;
     }
 
-    public LocalTime getArrivalTimeatArrival() {
+    public String getArrivalTimeatArrival() {
         return arrivalTimeatArrival;
     }
 
-    public void setArrivalTimeatArrival(LocalTime arrivalTimeatArrival) {
+    public void setArrivalTimeatArrival(String arrivalTimeatArrival) {
         this.arrivalTimeatArrival = arrivalTimeatArrival;
     }
 

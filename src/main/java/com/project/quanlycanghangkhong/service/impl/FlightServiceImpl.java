@@ -15,7 +15,9 @@ import com.project.quanlycanghangkhong.dto.FlightDTO;
 import com.project.quanlycanghangkhong.dto.FlightTimeUpdateRequest;
 import com.project.quanlycanghangkhong.dto.CreateFlightRequest;
 import com.project.quanlycanghangkhong.model.Flight;
+import com.project.quanlycanghangkhong.model.Airport;
 import com.project.quanlycanghangkhong.repository.FlightRepository;
+import com.project.quanlycanghangkhong.repository.AirportRepository;
 import com.project.quanlycanghangkhong.service.FlightService;
 import com.project.quanlycanghangkhong.service.UserFlightShiftService;
 import com.project.quanlycanghangkhong.service.UserShiftService;
@@ -26,6 +28,9 @@ public class FlightServiceImpl implements FlightService {
 
 	@Autowired
 	private FlightRepository flightRepository;
+
+	@Autowired
+	private AirportRepository airportRepository;
 
 	@Autowired
 	private UserFlightShiftService userFlightShiftService;
@@ -44,14 +49,29 @@ public class FlightServiceImpl implements FlightService {
 
 	@Override
 	public FlightDTO createFlightFromRequest(CreateFlightRequest request) {
+		// Tìm departure airport từ database bằng ID
+		Airport departureAirport = airportRepository.findById(request.getDepartureAirportId())
+				.orElseThrow(() -> new RuntimeException("Departure airport not found with id: " + request.getDepartureAirportId()));
+		
+		// Tìm arrival airport từ database bằng ID
+		Airport arrivalAirport = airportRepository.findById(request.getArrivalAirportId())
+				.orElseThrow(() -> new RuntimeException("Arrival airport not found with id: " + request.getArrivalAirportId()));
+		
 		// Chuyển đổi CreateFlightRequest sang Flight entity
 		Flight flight = new Flight();
 		flight.setFlightNumber(request.getFlightNumber());
-		flight.setDepartureAirport(request.getDepartureAirport());
-		flight.setArrivalAirport(request.getArrivalAirport());
-		flight.setDepartureTime(request.getDepartureTime());
-		flight.setArrivalTime(request.getArrivalTime());
-		flight.setArrivalTimeatArrival(request.getArrivalTimeatArrival());
+		flight.setDepartureAirport(departureAirport);
+		flight.setArrivalAirport(arrivalAirport);
+		
+		// Parse String time sang LocalTime
+		flight.setDepartureTime(LocalTime.parse(request.getDepartureTime()));
+		flight.setArrivalTime(LocalTime.parse(request.getArrivalTime()));
+		
+		// Handle optional arrivalTimeatArrival
+		if (request.getArrivalTimeatArrival() != null && !request.getArrivalTimeatArrival().trim().isEmpty()) {
+			flight.setArrivalTimeatArrival(LocalTime.parse(request.getArrivalTimeatArrival()));
+		}
+		
 		flight.setStatus(request.getStatus());
 		flight.setFlightDate(request.getFlightDate());
 		flight.setAirline(request.getAirline());
