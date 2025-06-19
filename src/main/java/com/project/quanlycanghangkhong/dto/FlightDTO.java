@@ -18,6 +18,8 @@ public class FlightDTO {
     private LocalTime actualDepartureTime;
     private LocalTime actualArrivalTime;    
     private LocalTime actualDepartureTimeAtArrival;
+    private LocalTime arrivalTimeatArrival;
+    private String status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String note;
@@ -39,6 +41,8 @@ public class FlightDTO {
         this.actualDepartureTime = flight.getActualDepartureTime();
         this.actualArrivalTime = flight.getActualArrivalTime();
         this.actualDepartureTimeAtArrival = flight.getActualDepartureTimeAtArrival();
+        this.arrivalTimeatArrival = flight.getArrivalTimeatArrival();
+        this.status = flight.getStatus();
         this.createdAt = flight.getCreatedAt();
         this.updatedAt = flight.getUpdatedAt();
         this.note = flight.getNote();
@@ -63,6 +67,7 @@ public class FlightDTO {
                      String departureAirportCode, String arrivalAirportCode,
                      LocalTime departureTime, LocalTime arrivalTime, LocalDate flightDate,
                      LocalTime actualDepartureTime, LocalTime actualArrivalTime, LocalTime actualDepartureTimeAtArrival,
+                     LocalTime arrivalTimeatArrival, String status,
                      LocalDateTime createdAt, LocalDateTime updatedAt, String note,
                      String airline, String checkInCounters, Integer gate) {
         this.id = id;
@@ -73,6 +78,8 @@ public class FlightDTO {
         this.actualDepartureTime = actualDepartureTime;
         this.actualArrivalTime = actualArrivalTime;
         this.actualDepartureTimeAtArrival = actualDepartureTimeAtArrival;
+        this.arrivalTimeatArrival = arrivalTimeatArrival;
+        this.status = status;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.note = note;
@@ -89,14 +96,14 @@ public class FlightDTO {
         }
     }
 
-    // Constructor projection không có trường note (backward compatible)
+    // Constructor projection không có trường mới (backward compatible)
     public FlightDTO(Long id, String flightNumber, 
                      String departureAirportCode, String arrivalAirportCode,
                      LocalTime departureTime, LocalTime arrivalTime, LocalDate flightDate,
                      LocalTime actualDepartureTime, LocalTime actualArrivalTime, LocalTime actualDepartureTimeAtArrival,
                      LocalDateTime createdAt, LocalDateTime updatedAt) {
         this(id, flightNumber, departureAirportCode, arrivalAirportCode, departureTime, arrivalTime, flightDate,
-            actualDepartureTime, actualArrivalTime, actualDepartureTimeAtArrival, createdAt, updatedAt, null, null, null, null);
+            actualDepartureTime, actualArrivalTime, actualDepartureTimeAtArrival, null, null, createdAt, updatedAt, null, null, null, null);
     }
 
     // Getters & Setters ...
@@ -131,6 +138,12 @@ public class FlightDTO {
     public LocalTime getActualDepartureTimeAtArrival() {
         return actualDepartureTimeAtArrival;
     }
+    public LocalTime getArrivalTimeatArrival() {
+        return arrivalTimeatArrival;
+    }
+    public String getStatus() {
+        return status;
+    }
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -160,6 +173,12 @@ public class FlightDTO {
     }
     public void setGate(Integer gate) {
         this.gate = gate;
+    }
+    public void setArrivalTimeatArrival(LocalTime arrivalTimeatArrival) {
+        this.arrivalTimeatArrival = arrivalTimeatArrival;
+    }
+    public void setStatus(String status) {
+        this.status = status;
     }
     // Setters nếu cần...
 }

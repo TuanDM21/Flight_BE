@@ -4,12 +4,14 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+import com.project.quanlycanghangkhong.dto.CreateFlightRequest;
 import com.project.quanlycanghangkhong.dto.FlightDTO;
 import com.project.quanlycanghangkhong.dto.FlightTimeUpdateRequest;
 import com.project.quanlycanghangkhong.model.Flight;
 
 public interface FlightService {
 	  FlightDTO createFlight(Flight flight);
+	  FlightDTO createFlightFromRequest(CreateFlightRequest request);
 	    List<FlightDTO> getAllFlights();
 	    Optional<FlightDTO> getFlightById(Long id);
 	    FlightDTO updateFlight(Long id, Flight flightData);

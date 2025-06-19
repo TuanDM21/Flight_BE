@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.project.quanlycanghangkhong.dto.FlightDTO;
 import com.project.quanlycanghangkhong.dto.FlightTimeUpdateRequest;
+import com.project.quanlycanghangkhong.dto.CreateFlightRequest;
 import com.project.quanlycanghangkhong.model.Flight;
 import com.project.quanlycanghangkhong.repository.FlightRepository;
 import com.project.quanlycanghangkhong.service.FlightService;
@@ -37,6 +38,27 @@ public class FlightServiceImpl implements FlightService {
 
 	@Override
 	public FlightDTO createFlight(Flight flight) {
+		Flight saved = flightRepository.save(flight);
+		return new FlightDTO(saved);
+	}
+
+	@Override
+	public FlightDTO createFlightFromRequest(CreateFlightRequest request) {
+		// Chuyển đổi CreateFlightRequest sang Flight entity
+		Flight flight = new Flight();
+		flight.setFlightNumber(request.getFlightNumber());
+		flight.setDepartureAirport(request.getDepartureAirport());
+		flight.setArrivalAirport(request.getArrivalAirport());
+		flight.setDepartureTime(request.getDepartureTime());
+		flight.setArrivalTime(request.getArrivalTime());
+		flight.setArrivalTimeatArrival(request.getArrivalTimeatArrival());
+		flight.setStatus(request.getStatus());
+		flight.setFlightDate(request.getFlightDate());
+		flight.setAirline(request.getAirline());
+		flight.setCheckInCounters(request.getCheckInCounters());
+		flight.setGate(request.getGate());
+		flight.setNote(request.getNote());
+		
 		Flight saved = flightRepository.save(flight);
 		return new FlightDTO(saved);
 	}
@@ -70,6 +92,8 @@ public class FlightServiceImpl implements FlightService {
         existingFlight.setActualDepartureTime(flightData.getActualDepartureTime());
         existingFlight.setActualArrivalTime(flightData.getActualArrivalTime());
         existingFlight.setActualDepartureTimeAtArrival(flightData.getActualDepartureTimeAtArrival());
+        existingFlight.setArrivalTimeatArrival(flightData.getArrivalTimeatArrival());
+        existingFlight.setStatus(flightData.getStatus());
 
         // Cập nhật các field mới
         existingFlight.setAirline(flightData.getAirline());
@@ -137,7 +161,7 @@ public void updateFlightTimes(Long id, FlightTimeUpdateRequest req) {
     if (req.getActualDepartureTimeAtArrival() != null) {
         f.setActualDepartureTimeAtArrival(LocalTime.parse(req.getActualDepartureTimeAtArrival()));
     }
-    flightRepository.save(f);
+        flightRepository.save(f);
 }
 
     @Override

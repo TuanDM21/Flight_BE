@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.project.quanlycanghangkhong.dto.FlightDTO;
 import com.project.quanlycanghangkhong.dto.FlightTimeUpdateRequest;
+import com.project.quanlycanghangkhong.dto.CreateFlightRequest;
 import com.project.quanlycanghangkhong.model.Flight;
 import com.project.quanlycanghangkhong.service.FlightService;
 import com.project.quanlycanghangkhong.service.UserFlightShiftService;
@@ -102,8 +103,8 @@ public class FlightController {
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Flight created successfully", content = @Content(schema = @Schema(implementation = ApiCreateFlightResponse.class)))
     })
-    public ResponseEntity<ApiCreateFlightResponse> createFlight(@RequestBody Flight flight) {
-        FlightDTO dto = flightService.createFlight(flight);
+    public ResponseEntity<ApiCreateFlightResponse> createFlight(@RequestBody CreateFlightRequest request) {
+        FlightDTO dto = flightService.createFlightFromRequest(request);
         ApiCreateFlightResponse res = new ApiCreateFlightResponse();
         res.setMessage("Thành công");
         res.setStatusCode(200);

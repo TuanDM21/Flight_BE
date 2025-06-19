@@ -60,6 +60,13 @@ public class Flight {
     @Column(name = "actual_departure_time_at_arrival")
     private LocalTime actualDepartureTimeAtArrival;
 
+    // Thêm trường mới theo yêu cầu
+    @Column(name = "arrival_time_at_arrival")
+    private LocalTime arrivalTimeatArrival;
+
+    @Column(name = "status")
+    private String status;
+
     // Thêm các field mới theo yêu cầu
     @Column(name = "airline")
     private String airline;
@@ -109,7 +116,8 @@ public class Flight {
     // Constructor đầy đủ với tất cả các field mới
     public Flight(String flightNumber, Airport departureAirport, Airport arrivalAirport,
             LocalTime departureTime, LocalTime arrivalTime, LocalDate flightDate, 
-            String note, String airline, String checkInCounters, Integer gate) {
+            String note, String airline, String checkInCounters, Integer gate,
+            LocalTime arrivalTimeatArrival, String status) {
         this.flightNumber = flightNumber;
         this.departureAirport = departureAirport;
         this.arrivalAirport = arrivalAirport;
@@ -120,6 +128,8 @@ public class Flight {
         this.airline = airline;
         this.checkInCounters = checkInCounters;
         this.gate = gate;
+        this.arrivalTimeatArrival = arrivalTimeatArrival;
+        this.status = status;
     }
 
     // Getters & Setters
@@ -202,6 +212,22 @@ public class Flight {
 
     public void setActualDepartureTimeAtArrival(LocalTime actualDepartureTimeAtArrival) {
         this.actualDepartureTimeAtArrival = actualDepartureTimeAtArrival;
+    }
+
+    public LocalTime getArrivalTimeatArrival() {
+        return arrivalTimeatArrival;
+    }
+
+    public void setArrivalTimeatArrival(LocalTime arrivalTimeatArrival) {
+        this.arrivalTimeatArrival = arrivalTimeatArrival;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 
     public String getAirline() {

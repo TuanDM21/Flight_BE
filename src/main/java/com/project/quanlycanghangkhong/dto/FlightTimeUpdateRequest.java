@@ -7,6 +7,8 @@ public class FlightTimeUpdateRequest {
     private String actualDepartureTime;
     private String actualArrivalTime;
     private String actualDepartureTimeAtArrival;
+    private String arrivalTimeatArrival;
+    private String status;
     private String eventType;
 
     // 1) Default constructor bắt buộc cho Jackson
@@ -39,6 +41,18 @@ public class FlightTimeUpdateRequest {
     }
     public void setActualDepartureTimeAtArrival(String actualDepartureTimeAtArrival) {
         this.actualDepartureTimeAtArrival = actualDepartureTimeAtArrival;
+    }
+    public String getArrivalTimeatArrival() {
+        return arrivalTimeatArrival;
+    }
+    public void setArrivalTimeatArrival(String arrivalTimeatArrival) {
+        this.arrivalTimeatArrival = arrivalTimeatArrival;
+    }
+    public String getStatus() {
+        return status;
+    }
+    public void setStatus(String status) {
+        this.status = status;
     }
     public String getEventType() {
         return eventType;
