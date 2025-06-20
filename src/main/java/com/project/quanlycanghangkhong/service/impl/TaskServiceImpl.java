@@ -41,6 +41,9 @@ public class TaskServiceImpl implements TaskService {
     @Autowired
     private TaskDocumentRepository taskDocumentRepository;
 
+    @Autowired
+    private AttachmentRepository attachmentRepository;
+
     private TaskDTO convertToDTO(Task task) {
         TaskDTO dto = new TaskDTO();
         dto.setId(task.getId());
@@ -117,7 +120,37 @@ public class TaskServiceImpl implements TaskService {
             updateTaskStatus(savedTask);
         }
 
-        // Liên kết documentIds với task thông qua TaskDocument
+        // 🔥 NEW: Tạo documents mới và đính kèm vào task
+        if (request.getNewDocuments() != null) {
+            for (CreateDocumentInTaskRequest newDocRequest : request.getNewDocuments()) {
+                // Tạo document mới
+                Document newDoc = new Document();
+                newDoc.setDocumentType(newDocRequest.getDocumentType());
+                newDoc.setContent(newDocRequest.getContent());
+                newDoc.setNotes(newDocRequest.getNotes());
+                newDoc.setCreatedAt(LocalDateTime.now());
+                newDoc.setUpdatedAt(LocalDateTime.now());
+                Document savedDoc = documentRepository.save(newDoc);
+
+                // Gán các attachment cho document mới nếu có
+                if (newDocRequest.getAttachmentIds() != null && !newDocRequest.getAttachmentIds().isEmpty()) {
+                    List<Attachment> attachments = attachmentRepository.findAllByIdIn(newDocRequest.getAttachmentIds());
+                    for (Attachment att : attachments) {
+                        att.setDocument(savedDoc);
+                    }
+                    attachmentRepository.saveAll(attachments);
+                }
+
+                // Liên kết document mới với task
+                TaskDocument taskDocument = new TaskDocument();
+                taskDocument.setTask(savedTask);
+                taskDocument.setDocument(savedDoc);
+                taskDocument.setCreatedAt(LocalDateTime.now());
+                taskDocumentRepository.save(taskDocument);
+            }
+        }
+
+        // Liên kết documentIds có sẵn với task thông qua TaskDocument
         if (request.getDocumentIds() != null) {
             for (Integer docId : request.getDocumentIds()) {
                 Document doc = documentRepository.findById(docId).orElse(null);

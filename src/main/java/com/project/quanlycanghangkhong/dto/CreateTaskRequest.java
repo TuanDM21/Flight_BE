@@ -7,7 +7,8 @@ public class CreateTaskRequest {
     private String instructions;
     private String notes;
     private List<AssignmentRequest> assignments;
-    private List<Integer> documentIds;
+    private List<Integer> documentIds; // Document có sẵn
+    private List<CreateDocumentInTaskRequest> newDocuments; // Document mới tạo
 
     // Getters and setters
     public String getContent() {
@@ -48,5 +49,13 @@ public class CreateTaskRequest {
 
     public void setDocumentIds(List<Integer> documentIds) {
         this.documentIds = documentIds;
+    }
+
+    public List<CreateDocumentInTaskRequest> getNewDocuments() {
+        return newDocuments;
+    }
+
+    public void setNewDocuments(List<CreateDocumentInTaskRequest> newDocuments) {
+        this.newDocuments = newDocuments;
     }
 }
