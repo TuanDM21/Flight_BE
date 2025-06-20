@@ -11,6 +11,7 @@ public interface TaskService {
     TaskDTO createTask(TaskDTO taskDTO);
     TaskDTO updateTask(Integer id, UpdateTaskDTO updateTaskDTO);
     void deleteTask(Integer id);
+    void bulkDeleteTasks(List<Integer> taskIds);
     TaskDTO getTaskById(Integer id);
     List<TaskDTO> getAllTasks();
     TaskDetailDTO getTaskDetailById(Integer id);

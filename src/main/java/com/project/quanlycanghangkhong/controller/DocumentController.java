@@ -5,6 +5,7 @@ import com.project.quanlycanghangkhong.service.AttachmentService;
 import com.project.quanlycanghangkhong.service.DocumentService;
 import com.project.quanlycanghangkhong.dto.response.document.ApiDocumentResponse;
 import com.project.quanlycanghangkhong.dto.response.document.ApiDocumentListResponse;
+import com.project.quanlycanghangkhong.dto.response.document.ApiBulkDeleteDocumentsResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -17,7 +18,9 @@ import java.util.List;
 import com.project.quanlycanghangkhong.dto.CreateDocumentRequest;
 import com.project.quanlycanghangkhong.dto.UpdateDocumentRequest;
 import com.project.quanlycanghangkhong.dto.request.AttachmentAssignRequest;
+import com.project.quanlycanghangkhong.dto.request.BulkDeleteDocumentsRequest;
 import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
+import javax.validation.Valid;
 
 @RestController
 @RequestMapping("/api/documents")
@@ -99,16 +102,31 @@ public class DocumentController {
     //     return ResponseEntity.status(201).body(response);
     // }
 
-    // @DeleteMapping("/bulk")
-    // @Operation(summary = "Bulk delete documents", description = "Xoá nhiều document cùng lúc")
-    // @ApiResponses(value = {
-    //     @ApiResponse(responseCode = "200", description = "Xoá documents thành công", content = @Content(schema = @Schema(implementation = ApiDocumentResponse.class)))
-    // })
-    // public ResponseEntity<ApiDocumentResponse> bulkDeleteDocuments(@RequestBody List<Integer> ids) {
-    //     documentService.bulkDeleteDocuments(ids);
-    //     ApiDocumentResponse response = new ApiDocumentResponse("Xoá thành công", 200, null, true);
-    //     return ResponseEntity.ok(response);
-    // }
+    @DeleteMapping("/bulk-delete")
+    @Operation(summary = "Xóa nhiều document", description = "Xóa nhiều document cùng lúc")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Xóa thành công", content = @Content(schema = @Schema(implementation = ApiBulkDeleteDocumentsResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Dữ liệu không hợp lệ", content = @Content(schema = @Schema(implementation = ApiBulkDeleteDocumentsResponse.class)))
+    })
+    public ResponseEntity<ApiBulkDeleteDocumentsResponse> bulkDeleteDocuments(@Valid @RequestBody BulkDeleteDocumentsRequest request) {
+        try {
+            if (request.getDocumentIds() == null || request.getDocumentIds().isEmpty()) {
+                return ResponseEntity.badRequest().body(
+                    new ApiBulkDeleteDocumentsResponse("Danh sách document ID không được để trống", 400, null, false)
+                );
+            }
+
+            documentService.bulkDeleteDocuments(request.getDocumentIds());
+            
+            String message = "Đã xóa thành công " + request.getDocumentIds().size() + " document";
+            return ResponseEntity.ok(new ApiBulkDeleteDocumentsResponse(message, 200, message, true));
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(
+                new ApiBulkDeleteDocumentsResponse("Lỗi khi xóa document: " + e.getMessage(), 500, null, false)
+            );
+        }
+    }
 
     @PostMapping("/{documentId}/attachments/assign")
     @Operation(summary = "Gán nhiều file đính kèm vào document", description = "Gán các attachment đã upload vào document theo documentId")

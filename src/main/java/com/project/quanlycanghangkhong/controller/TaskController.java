@@ -4,9 +4,11 @@ import com.project.quanlycanghangkhong.dto.CreateTaskRequest;
 import com.project.quanlycanghangkhong.dto.TaskDTO;
 import com.project.quanlycanghangkhong.dto.TaskDetailDTO;
 import com.project.quanlycanghangkhong.dto.UpdateTaskDTO;
+import com.project.quanlycanghangkhong.dto.request.BulkDeleteTasksRequest;
 import com.project.quanlycanghangkhong.dto.response.task.ApiAllTasksResponse;
 import com.project.quanlycanghangkhong.dto.response.task.ApiTaskResponse;
 import com.project.quanlycanghangkhong.dto.response.task.ApiTaskDetailResponse;
+import com.project.quanlycanghangkhong.dto.response.task.ApiBulkDeleteTasksResponse;
 import com.project.quanlycanghangkhong.service.TaskService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -18,6 +20,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import javax.validation.Valid;
 
 @RestController
 @RequestMapping("/api/tasks")
@@ -57,6 +60,32 @@ public class TaskController {
     public ResponseEntity<ApiTaskResponse> deleteTask(@PathVariable Integer id) {
         taskService.deleteTask(id);
         return ResponseEntity.ok(new ApiTaskResponse("Xoá thành công", 200, null, true));
+    }
+
+    @DeleteMapping("/bulk-delete")
+    @Operation(summary = "Xoá nhiều task", description = "Xoá nhiều công việc cùng lúc")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Xoá thành công", content = @Content(schema = @Schema(implementation = ApiBulkDeleteTasksResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Dữ liệu không hợp lệ", content = @Content(schema = @Schema(implementation = ApiBulkDeleteTasksResponse.class)))
+    })
+    public ResponseEntity<ApiBulkDeleteTasksResponse> bulkDeleteTasks(@Valid @RequestBody BulkDeleteTasksRequest request) {
+        try {
+            if (request.getTaskIds() == null || request.getTaskIds().isEmpty()) {
+                return ResponseEntity.badRequest().body(
+                    new ApiBulkDeleteTasksResponse("Danh sách task ID không được để trống", 400, null, false)
+                );
+            }
+
+            taskService.bulkDeleteTasks(request.getTaskIds());
+            
+            String message = "Đã xoá thành công " + request.getTaskIds().size() + " task";
+            return ResponseEntity.ok(new ApiBulkDeleteTasksResponse(message, 200, message, true));
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(
+                new ApiBulkDeleteTasksResponse("Lỗi khi xoá task: " + e.getMessage(), 500, null, false)
+            );
+        }
     }
 
     @GetMapping("/{id}")

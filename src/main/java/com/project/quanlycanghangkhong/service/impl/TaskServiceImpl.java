@@ -192,6 +192,19 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
+    @Transactional
+    public void bulkDeleteTasks(List<Integer> taskIds) {
+        for (Integer taskId : taskIds) {
+            Optional<Task> optionalTask = taskRepository.findById(taskId);
+            if (optionalTask.isPresent()) {
+                Task task = optionalTask.get();
+                task.setDeleted(true);
+                taskRepository.save(task);
+            }
+        }
+    }
+
+    @Override
     public TaskDTO getTaskById(Integer id) {
         return taskRepository.findByIdAndDeletedFalse(id).map(this::convertToDTO).orElse(null);
     }
