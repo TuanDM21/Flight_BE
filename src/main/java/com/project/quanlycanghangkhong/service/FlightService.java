@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.project.quanlycanghangkhong.dto.CreateFlightRequest;
+import com.project.quanlycanghangkhong.dto.UpdateFlightRequest;
 import com.project.quanlycanghangkhong.dto.FlightDTO;
 import com.project.quanlycanghangkhong.dto.FlightTimeUpdateRequest;
 import com.project.quanlycanghangkhong.model.Flight;
@@ -15,6 +16,7 @@ public interface FlightService {
 	    List<FlightDTO> getAllFlights();
 	    Optional<FlightDTO> getFlightById(Long id);
 	    FlightDTO updateFlight(Long id, Flight flightData);
+	    FlightDTO updateFlightFromRequest(Long id, UpdateFlightRequest request);
 	    void deleteFlight(Long id);
 	    List<FlightDTO> searchFlights(String keyword);
 	    

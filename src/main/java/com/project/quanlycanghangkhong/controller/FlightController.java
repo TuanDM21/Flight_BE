@@ -9,6 +9,8 @@ import java.time.LocalTime;
 import java.util.HashSet;
 import java.util.Set;
 
+import jakarta.validation.Valid;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -26,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.project.quanlycanghangkhong.dto.FlightDTO;
 import com.project.quanlycanghangkhong.dto.FlightTimeUpdateRequest;
 import com.project.quanlycanghangkhong.dto.CreateFlightRequest;
+import com.project.quanlycanghangkhong.dto.UpdateFlightRequest;
 import com.project.quanlycanghangkhong.model.Flight;
 import com.project.quanlycanghangkhong.service.FlightService;
 import com.project.quanlycanghangkhong.service.UserFlightShiftService;
@@ -114,23 +117,47 @@ public class FlightController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update flight", description = "Update an existing flight")
+    @Operation(summary = "Update flight", description = "Update an existing flight with validated request data")
     @ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Flight updated successfully", content = @Content(schema = @Schema(implementation = ApiUpdateFlightResponse.class))),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Flight not found", content = @Content(schema = @Schema(implementation = ApiUpdateFlightResponse.class)))
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200", 
+            description = "Flight updated successfully", 
+            content = @Content(schema = @Schema(implementation = ApiUpdateFlightResponse.class))
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "404", 
+            description = "Flight not found", 
+            content = @Content(schema = @Schema(implementation = ApiUpdateFlightResponse.class))
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "400", 
+            description = "Invalid input data", 
+            content = @Content(schema = @Schema(implementation = ApiUpdateFlightResponse.class))
+        )
     })
-    public ResponseEntity<ApiUpdateFlightResponse> updateFlight(@PathVariable Long id, @RequestBody Flight flightData) {
+    public ResponseEntity<ApiUpdateFlightResponse> updateFlight(
+            @PathVariable Long id, 
+            @Valid @RequestBody UpdateFlightRequest request) {
         try {
-            FlightDTO updatedDto = flightService.updateFlight(id, flightData);
+            FlightDTO updatedDto = flightService.updateFlightFromRequest(id, request);
             ApiUpdateFlightResponse res = new ApiUpdateFlightResponse();
-            res.setMessage("Thành công");
+            res.setMessage("Cập nhật chuyến bay thành công");
             res.setStatusCode(200);
             res.setData(updatedDto);
             res.setSuccess(true);
             return ResponseEntity.ok(res);
         } catch (RuntimeException ex) {
-            return ResponseEntity.status(404)
-                .body(new ApiUpdateFlightResponse("Flight not found", 404, null, false));
+            String errorMessage = ex.getMessage();
+            if (errorMessage.contains("Flight not found")) {
+                return ResponseEntity.status(404)
+                    .body(new ApiUpdateFlightResponse("Không tìm thấy chuyến bay", 404, null, false));
+            } else if (errorMessage.contains("airport not found")) {
+                return ResponseEntity.status(400)
+                    .body(new ApiUpdateFlightResponse("Sân bay không hợp lệ: " + errorMessage, 400, null, false));
+            } else {
+                return ResponseEntity.status(400)
+                    .body(new ApiUpdateFlightResponse("Dữ liệu không hợp lệ: " + errorMessage, 400, null, false));
+            }
         }
     }
 
