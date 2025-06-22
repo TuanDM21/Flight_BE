@@ -50,15 +50,32 @@ public class FlightDTO {
         this.checkInCounters = flight.getCheckInCounters();
         this.gate = flight.getGate();
         
+        // ✅ Mapping đầy đủ thông tin Airport với tất cả các field
         if (flight.getDepartureAirport() != null) {
             this.departureAirport = new AirportDTO(
+                flight.getDepartureAirport().getId(),
                 flight.getDepartureAirport().getAirportCode(),
-                flight.getDepartureAirport().getAirportName());
+                flight.getDepartureAirport().getAirportName(),
+                flight.getDepartureAirport().getLatitude(),
+                flight.getDepartureAirport().getLongitude(),
+                flight.getDepartureAirport().getCity(),
+                flight.getDepartureAirport().getCountry(),
+                flight.getDepartureAirport().getCreatedAt(),
+                flight.getDepartureAirport().getUpdatedAt()
+            );
         }
         if (flight.getArrivalAirport() != null) {
             this.arrivalAirport = new AirportDTO(
+                flight.getArrivalAirport().getId(),
                 flight.getArrivalAirport().getAirportCode(),
-                flight.getArrivalAirport().getAirportName());
+                flight.getArrivalAirport().getAirportName(),
+                flight.getArrivalAirport().getLatitude(),
+                flight.getArrivalAirport().getLongitude(),
+                flight.getArrivalAirport().getCity(),
+                flight.getArrivalAirport().getCountry(),
+                flight.getArrivalAirport().getCreatedAt(),
+                flight.getArrivalAirport().getUpdatedAt()
+            );
         }
     }
 
