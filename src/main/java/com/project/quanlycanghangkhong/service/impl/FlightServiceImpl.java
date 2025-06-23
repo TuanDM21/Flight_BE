@@ -168,7 +168,15 @@ public class FlightServiceImpl implements FlightService {
     }
 
 	@Override
+	@Transactional
 	public void deleteFlight(Long id) {
+		// Kiểm tra flight có tồn tại không trước khi xóa
+		if (!flightRepository.existsById(id)) {
+			throw new RuntimeException("Không tìm thấy chuyến bay với id: " + id);
+		}
+		
+		// Với cascade = CascadeType.ALL và orphanRemoval = true trong Flight entity,
+		// các UserFlightShift liên quan sẽ được tự động xóa
 		flightRepository.deleteById(id);
 	}
 

@@ -3,6 +3,7 @@ package com.project.quanlycanghangkhong.model;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.project.quanlycanghangkhong.config.VietnamTimestampListener;
@@ -79,6 +80,11 @@ public class Flight {
 
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
+
+    // Thêm relationship với UserFlightShift để xử lý cascade delete
+    @OneToMany(mappedBy = "flight", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private List<UserFlightShift> userFlightShifts;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -276,5 +282,13 @@ public class Flight {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public List<UserFlightShift> getUserFlightShifts() {
+        return userFlightShifts;
+    }
+
+    public void setUserFlightShifts(List<UserFlightShift> userFlightShifts) {
+        this.userFlightShifts = userFlightShifts;
     }
 }
