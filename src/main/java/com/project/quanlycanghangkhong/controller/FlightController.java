@@ -360,23 +360,27 @@ public class FlightController {
     }
 
     @GetMapping("/searchByCriteria")
-    @Operation(summary = "Search flights by date and flight number", description = "Search flights by date (YYYY-MM-DD format) and flight number. Both parameters are optional.")
+    @Operation(summary = "Search flights by multiple criteria", description = "Search flights by date (YYYY-MM-DD format), flight number, departure airport, and arrival airport. All parameters are optional.")
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully retrieved flights by criteria", content = @Content(schema = @Schema(implementation = ApiSearchFlightsResponse.class))),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid date format or parameters", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     public ResponseEntity<ApiSearchFlightsResponse> searchFlightsByCriteria(
             @RequestParam(value = "date", required = false) String dateStr,
-            @RequestParam(value = "flightNumber", required = false) String flightNumber) {
+            @RequestParam(value = "flightNumber", required = false) String flightNumber,
+            @RequestParam(value = "departureAirport", required = false) String departureAirport,
+            @RequestParam(value = "arrivalAirport", required = false) String arrivalAirport) {
         
         // 🔍 Debug logging - Controller
         System.out.println("=== FLIGHT SEARCH CRITERIA DEBUG ===");
         System.out.println("📅 Date: " + dateStr);
         System.out.println("✈️ Flight Number: " + flightNumber);
+        System.out.println("🛫 Departure Airport: " + departureAirport);
+        System.out.println("🛬 Arrival Airport: " + arrivalAirport);
         System.out.println("=====================================");
         
         try {
-            List<FlightDTO> dtos = flightService.searchFlightsByCriteria(dateStr, flightNumber);
+            List<FlightDTO> dtos = flightService.searchFlightsByCriteria(dateStr, flightNumber, departureAirport, arrivalAirport);
             
             // 🔍 Debug result
             System.out.println("📊 Results found: " + (dtos != null ? dtos.size() : "NULL"));

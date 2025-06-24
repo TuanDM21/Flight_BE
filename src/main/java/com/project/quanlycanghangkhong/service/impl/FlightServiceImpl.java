@@ -271,12 +271,14 @@ public class FlightServiceImpl implements FlightService {
 	}
 
 	@Override
-	public List<FlightDTO> searchFlightsByCriteria(String dateStr, String flightNumber) {
+	public List<FlightDTO> searchFlightsByCriteria(String dateStr, String flightNumber, String departureAirport, String arrivalAirport) {
 		// 🔍 Debug logging - Service layer
 		System.out.println("=== SERVICE LAYER DEBUG ===");
 		System.out.println("📥 Raw inputs:");
 		System.out.println("   dateStr: " + dateStr);
 		System.out.println("   flightNumber: " + flightNumber);
+		System.out.println("   departureAirport: " + departureAirport);
+		System.out.println("   arrivalAirport: " + arrivalAirport);
 		
 		// Parse date if provided
 		LocalDate date = null;
@@ -294,36 +296,47 @@ public class FlightServiceImpl implements FlightService {
 		
 		// Clean up parameters - handle "null" strings and empty strings
 		String cleanFlightNumber = cleanParameter(flightNumber);
+		String cleanDepartureAirport = cleanParameter(departureAirport);
+		String cleanArrivalAirport = cleanParameter(arrivalAirport);
 		
 		System.out.println("🧹 Cleaned parameters:");
 		System.out.println("   date: " + date);
 		System.out.println("   cleanFlightNumber: " + cleanFlightNumber);
+		System.out.println("   cleanDepartureAirport: " + cleanDepartureAirport);
+		System.out.println("   cleanArrivalAirport: " + cleanArrivalAirport);
 		
 		// 🔍 Generate SQL for manual testing
 		System.out.println("🔧 SQL FOR MANUAL DATABASE TESTING:");
-		System.out.println("SELECT * FROM flights f");
+		System.out.println("SELECT f.* FROM flights f");
+		System.out.println("LEFT JOIN airports da ON da.id = f.departure_airport_id");
+		System.out.println("LEFT JOIN airports aa ON aa.id = f.arrival_airport_id");
 		System.out.print("WHERE ");
 		
+		boolean hasCondition = false;
 		if (date != null) {
-			System.out.print("f.flight_date = '" + date + "'");
-		} else {
-			System.out.print("1=1"); // always true when date is null
+			System.out.print("f.flight_date = '" + dateStr + "'");
+			hasCondition = true;
 		}
-		
 		if (cleanFlightNumber != null) {
-			System.out.print(" AND LOWER(f.flight_number) LIKE LOWER('%" + cleanFlightNumber + "%')");
+			if (hasCondition) System.out.print(" AND ");
+			System.out.print("LOWER(f.flight_number) LIKE LOWER('%" + cleanFlightNumber + "%')");
+			hasCondition = true;
 		}
-		
+		if (cleanDepartureAirport != null) {
+			if (hasCondition) System.out.print(" AND ");
+			System.out.print("(LOWER(da.airport_code) LIKE LOWER('%" + cleanDepartureAirport + "%') OR LOWER(da.airport_name) LIKE LOWER('%" + cleanDepartureAirport + "%'))");
+			hasCondition = true;
+		}
+		if (cleanArrivalAirport != null) {
+			if (hasCondition) System.out.print(" AND ");
+			System.out.print("(LOWER(aa.airport_code) LIKE LOWER('%" + cleanArrivalAirport + "%') OR LOWER(aa.airport_name) LIKE LOWER('%" + cleanArrivalAirport + "%'))");
+		}
+		if (!hasCondition) System.out.print("1=1");
 		System.out.println(";");
-		System.out.println("🔧 Actual parameters being passed:");
-		System.out.println("   Parameter 1 (date): " + date);
-		System.out.println("   Parameter 2 (date again): " + date);
-		System.out.println("   Parameter 3 (flightNumber): " + cleanFlightNumber);
-		System.out.println("   Parameter 4 (flightNumber again): " + cleanFlightNumber);
 		
 		// Call repository method with cleaned parameters
 		System.out.println("🔍 Calling repository...");
-		List<Flight> flights = flightRepository.findFlightsByCriteria(dateStr, cleanFlightNumber);
+		List<Flight> flights = flightRepository.findFlightsByCriteria(dateStr, cleanFlightNumber, cleanDepartureAirport, cleanArrivalAirport);
 		
 		System.out.println("📊 Repository results: " + (flights != null ? flights.size() : "NULL") + " flights found");
 		if (flights != null && !flights.isEmpty()) {

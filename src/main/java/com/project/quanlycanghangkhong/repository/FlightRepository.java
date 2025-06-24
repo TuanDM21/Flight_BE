@@ -45,4 +45,22 @@ public interface FlightRepository extends JpaRepository<Flight, Long> {
 		   nativeQuery = true)
 	List<Flight> findFlightsByCriteria(@Param("date") String date,
 									   @Param("flightNumber") String flightNumber);
+
+	// Phương thức tìm kiếm theo nhiều tiêu chí - COMPLETE WITH AIRPORTS  
+	@Query(value = "SELECT * FROM flights f " +
+		   "LEFT JOIN airports da ON da.id = f.departure_airport_id " +
+		   "LEFT JOIN airports aa ON aa.id = f.arrival_airport_id " +
+		   "WHERE (:date IS NULL OR f.flight_date = :date) " +
+		   "AND (:flightNumber IS NULL OR LOWER(f.flight_number) LIKE LOWER(CONCAT('%', :flightNumber, '%'))) " +
+		   "AND (:departureAirport IS NULL OR " +
+		   "     LOWER(da.airport_code) LIKE LOWER(CONCAT('%', :departureAirport, '%')) OR " +
+		   "     LOWER(da.airport_name) LIKE LOWER(CONCAT('%', :departureAirport, '%'))) " +
+		   "AND (:arrivalAirport IS NULL OR " +
+		   "     LOWER(aa.airport_code) LIKE LOWER(CONCAT('%', :arrivalAirport, '%')) OR " +
+		   "     LOWER(aa.airport_name) LIKE LOWER(CONCAT('%', :arrivalAirport, '%')))",
+		   nativeQuery = true)
+	List<Flight> findFlightsByCriteria(@Param("date") String date,
+									   @Param("flightNumber") String flightNumber,
+									   @Param("departureAirport") String departureAirport,
+									   @Param("arrivalAirport") String arrivalAirport);
 }
