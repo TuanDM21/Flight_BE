@@ -38,11 +38,11 @@ public interface FlightRepository extends JpaRepository<Flight, Long> {
 	// Phương thức tìm kiếm theo ngày và chứa keyword trong flightNumber (nếu cần)
 	List<Flight> findByFlightDateAndFlightNumberContainingIgnoreCase(LocalDate flightDate, String flightNumber);
 
-	// Phương thức tìm kiếm theo nhiều tiêu chí - SIMPLIFIED NATIVE SQL  
+	// Phương thức tìm kiếm theo nhiều tiêu chí - FIXED NATIVE SQL  
 	@Query(value = "SELECT * FROM flights f " +
 		   "WHERE (:date IS NULL OR f.flight_date = :date) " +
 		   "AND (:flightNumber IS NULL OR LOWER(f.flight_number) LIKE LOWER(CONCAT('%', :flightNumber, '%')))",
 		   nativeQuery = true)
-	List<Flight> findFlightsByCriteria(@Param("date") LocalDate date,
+	List<Flight> findFlightsByCriteria(@Param("date") String date,
 									   @Param("flightNumber") String flightNumber);
 }

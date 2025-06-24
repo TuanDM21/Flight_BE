@@ -299,9 +299,31 @@ public class FlightServiceImpl implements FlightService {
 		System.out.println("   date: " + date);
 		System.out.println("   cleanFlightNumber: " + cleanFlightNumber);
 		
+		// 🔍 Generate SQL for manual testing
+		System.out.println("🔧 SQL FOR MANUAL DATABASE TESTING:");
+		System.out.println("SELECT * FROM flights f");
+		System.out.print("WHERE ");
+		
+		if (date != null) {
+			System.out.print("f.flight_date = '" + date + "'");
+		} else {
+			System.out.print("1=1"); // always true when date is null
+		}
+		
+		if (cleanFlightNumber != null) {
+			System.out.print(" AND LOWER(f.flight_number) LIKE LOWER('%" + cleanFlightNumber + "%')");
+		}
+		
+		System.out.println(";");
+		System.out.println("🔧 Actual parameters being passed:");
+		System.out.println("   Parameter 1 (date): " + date);
+		System.out.println("   Parameter 2 (date again): " + date);
+		System.out.println("   Parameter 3 (flightNumber): " + cleanFlightNumber);
+		System.out.println("   Parameter 4 (flightNumber again): " + cleanFlightNumber);
+		
 		// Call repository method with cleaned parameters
 		System.out.println("🔍 Calling repository...");
-		List<Flight> flights = flightRepository.findFlightsByCriteria(date, cleanFlightNumber);
+		List<Flight> flights = flightRepository.findFlightsByCriteria(dateStr, cleanFlightNumber);
 		
 		System.out.println("📊 Repository results: " + (flights != null ? flights.size() : "NULL") + " flights found");
 		if (flights != null && !flights.isEmpty()) {
