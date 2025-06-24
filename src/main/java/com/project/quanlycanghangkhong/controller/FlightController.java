@@ -360,7 +360,7 @@ public class FlightController {
     }
 
     @GetMapping("/searchByCriteria")
-    @Operation(summary = "Search flights by multiple criteria", description = "Search flights by date, flight number, departure airport, and arrival airport")
+    @Operation(summary = "Search flights by multiple criteria", description = "Search flights by date (YYYY-MM-DD format), flight number, departure airport, and arrival airport. All parameters are optional.")
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully retrieved flights by criteria", content = @Content(schema = @Schema(implementation = ApiSearchFlightsResponse.class))),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid date format or parameters", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
@@ -371,12 +371,6 @@ public class FlightController {
             @RequestParam(value = "departureAirport", required = false) String departureAirport,
             @RequestParam(value = "arrivalAirport", required = false) String arrivalAirport) {
         try {
-            // Convert "null" strings to actual null values before passing to service
-            if ("null".equalsIgnoreCase(flightNumber)) flightNumber = null;
-            if ("null".equalsIgnoreCase(departureAirport)) departureAirport = null;
-            if ("null".equalsIgnoreCase(arrivalAirport)) arrivalAirport = null;
-            if ("null".equalsIgnoreCase(dateStr)) dateStr = null;
-            
             List<FlightDTO> dtos = flightService.searchFlightsByCriteria(dateStr, flightNumber, departureAirport, arrivalAirport);
             ApiSearchFlightsResponse res = new ApiSearchFlightsResponse();
             res.setMessage("Thành công");
@@ -386,7 +380,7 @@ public class FlightController {
             return ResponseEntity.ok(res);
         } catch (DateTimeParseException ex) {
             return ResponseEntity.badRequest()
-                .body(new ApiSearchFlightsResponse("Invalid date format, use YYYY-MM-DD", 400, null, false));
+                .body(new ApiSearchFlightsResponse("Invalid date format", 400, null, false));
         } catch (Exception ex) {
             return ResponseEntity.badRequest()
                 .body(new ApiSearchFlightsResponse("Error: " + ex.getMessage(), 400, null, false));
