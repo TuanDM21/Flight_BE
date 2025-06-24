@@ -370,8 +370,24 @@ public class FlightController {
             @RequestParam(value = "flightNumber", required = false) String flightNumber,
             @RequestParam(value = "departureAirport", required = false) String departureAirport,
             @RequestParam(value = "arrivalAirport", required = false) String arrivalAirport) {
+        
+        // 🔍 Debug logging - Controller
+        System.out.println("=== FLIGHT SEARCH CRITERIA DEBUG ===");
+        System.out.println("📅 Date: " + dateStr);
+        System.out.println("✈️ Flight Number: " + flightNumber);
+        System.out.println("🛫 Departure Airport: " + departureAirport);
+        System.out.println("🛬 Arrival Airport: " + arrivalAirport);
+        System.out.println("=====================================");
+        
         try {
             List<FlightDTO> dtos = flightService.searchFlightsByCriteria(dateStr, flightNumber, departureAirport, arrivalAirport);
+            
+            // 🔍 Debug result
+            System.out.println("📊 Results found: " + (dtos != null ? dtos.size() : "NULL"));
+            if (dtos != null && !dtos.isEmpty()) {
+                System.out.println("🎯 First result: " + dtos.get(0).getFlightNumber() + " - " + dtos.get(0).getFlightDate());
+            }
+            
             ApiSearchFlightsResponse res = new ApiSearchFlightsResponse();
             res.setMessage("Thành công");
             res.setStatusCode(200);
@@ -379,9 +395,12 @@ public class FlightController {
             res.setSuccess(true);
             return ResponseEntity.ok(res);
         } catch (DateTimeParseException ex) {
+            System.err.println("❌ Date parse error: " + ex.getMessage());
             return ResponseEntity.badRequest()
                 .body(new ApiSearchFlightsResponse("Invalid date format", 400, null, false));
         } catch (Exception ex) {
+            System.err.println("❌ General error: " + ex.getMessage());
+            ex.printStackTrace();
             return ResponseEntity.badRequest()
                 .body(new ApiSearchFlightsResponse("Error: " + ex.getMessage(), 400, null, false));
         }

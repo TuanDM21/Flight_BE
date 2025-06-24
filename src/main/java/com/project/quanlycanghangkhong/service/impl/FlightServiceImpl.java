@@ -272,14 +272,26 @@ public class FlightServiceImpl implements FlightService {
 
 	@Override
 	public List<FlightDTO> searchFlightsByCriteria(String dateStr, String flightNumber, String departureAirport, String arrivalAirport) {
+		// 🔍 Debug logging - Service layer
+		System.out.println("=== SERVICE LAYER DEBUG ===");
+		System.out.println("📥 Raw inputs:");
+		System.out.println("   dateStr: " + dateStr);
+		System.out.println("   flightNumber: " + flightNumber);
+		System.out.println("   departureAirport: " + departureAirport);
+		System.out.println("   arrivalAirport: " + arrivalAirport);
+		
 		// Parse date if provided
 		LocalDate date = null;
 		if (dateStr != null && !dateStr.trim().isEmpty() && !"null".equals(dateStr)) {
 			try {
 				date = LocalDate.parse(dateStr.trim());
+				System.out.println("✅ Parsed date: " + date);
 			} catch (Exception e) {
+				System.err.println("❌ Date parse failed: " + e.getMessage());
 				throw new RuntimeException("Invalid date format: " + dateStr + ". Use YYYY-MM-DD format.");
 			}
+		} else {
+			System.out.println("ℹ️ No date provided or date is null/empty");
 		}
 		
 		// Clean up parameters - handle "null" strings and empty strings
@@ -287,12 +299,35 @@ public class FlightServiceImpl implements FlightService {
 		String cleanDepartureAirport = cleanParameter(departureAirport);
 		String cleanArrivalAirport = cleanParameter(arrivalAirport);
 		
+		System.out.println("🧹 Cleaned parameters:");
+		System.out.println("   date: " + date);
+		System.out.println("   cleanFlightNumber: " + cleanFlightNumber);
+		System.out.println("   cleanDepartureAirport: " + cleanDepartureAirport);
+		System.out.println("   cleanArrivalAirport: " + cleanArrivalAirport);
+		
 		// Call repository method with cleaned parameters
+		System.out.println("🔍 Calling repository...");
 		List<Flight> flights = flightRepository.findFlightsByCriteria(date, cleanFlightNumber, cleanDepartureAirport, cleanArrivalAirport);
 		
-		return flights.stream()
+		System.out.println("📊 Repository results: " + (flights != null ? flights.size() : "NULL") + " flights found");
+		if (flights != null && !flights.isEmpty()) {
+			System.out.println("🎯 Sample results:");
+			for (int i = 0; i < Math.min(3, flights.size()); i++) {
+				Flight f = flights.get(i);
+				System.out.println("   [" + i + "] " + f.getFlightNumber() + " | " + f.getFlightDate() + 
+					" | " + (f.getDepartureAirport() != null ? f.getDepartureAirport().getAirportCode() : "NULL") +
+					" -> " + (f.getArrivalAirport() != null ? f.getArrivalAirport().getAirportCode() : "NULL"));
+			}
+		}
+		
+		List<FlightDTO> result = flights.stream()
 			.map(FlightDTO::new)
 			.collect(Collectors.toList());
+			
+		System.out.println("🚀 Final DTO results: " + result.size() + " items");
+		System.out.println("============================");
+		
+		return result;
 	}
 	
 	// Helper method to clean parameters
