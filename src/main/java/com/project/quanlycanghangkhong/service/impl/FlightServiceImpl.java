@@ -269,4 +269,20 @@ public class FlightServiceImpl implements FlightService {
 			);
 		}
 	}
+
+	@Override
+	public List<FlightDTO> searchFlightsByCriteria(String dateStr, String flightNumber, String departureAirport, String arrivalAirport) {
+		// Parse date if provided
+		LocalDate date = null;
+		if (dateStr != null && !dateStr.trim().isEmpty()) {
+			date = LocalDate.parse(dateStr);
+		}
+		
+		// Call repository method with all criteria
+		List<Flight> flights = flightRepository.findFlightsByCriteria(date, flightNumber, departureAirport, arrivalAirport);
+		
+		return flights.stream()
+			.map(FlightDTO::new)
+			.collect(Collectors.toList());
+	}
 }

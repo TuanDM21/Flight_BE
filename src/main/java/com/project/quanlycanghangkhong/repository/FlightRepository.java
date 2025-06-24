@@ -29,7 +29,7 @@ public interface FlightRepository extends JpaRepository<Flight, Long> {
        "LEFT JOIN f.arrivalAirport a " +
        "WHERE f.flightDate = :today " +
        "   OR (f.flightDate = :yesterday AND f.actualDepartureTimeAtArrival IS NULL)")
-List<FlightDTO> findFlightsForServiceDay(@Param("today") LocalDate today,
+	List<FlightDTO> findFlightsForServiceDay(@Param("today") LocalDate today,
                                           @Param("yesterday") LocalDate yesterday);
 
 
@@ -37,4 +37,17 @@ List<FlightDTO> findFlightsForServiceDay(@Param("today") LocalDate today,
 
 	// Phương thức tìm kiếm theo ngày và chứa keyword trong flightNumber (nếu cần)
 	List<Flight> findByFlightDateAndFlightNumberContainingIgnoreCase(LocalDate flightDate, String flightNumber);
+
+	// Phương thức tìm kiếm theo nhiều tiêu chí
+	@Query("SELECT f FROM Flight f " +
+		   "LEFT JOIN f.departureAirport da " +
+		   "LEFT JOIN f.arrivalAirport aa " +
+		   "WHERE (:date IS NULL OR f.flightDate = :date) " +
+		   "AND (:flightNumber IS NULL OR :flightNumber = '' OR LOWER(f.flightNumber) LIKE LOWER(CONCAT('%', :flightNumber, '%'))) " +
+		   "AND (:departureAirport IS NULL OR :departureAirport = '' OR LOWER(da.airportCode) LIKE LOWER(CONCAT('%', :departureAirport, '%')) OR LOWER(da.airportName) LIKE LOWER(CONCAT('%', :departureAirport, '%'))) " +
+		   "AND (:arrivalAirport IS NULL OR :arrivalAirport = '' OR LOWER(aa.airportCode) LIKE LOWER(CONCAT('%', :arrivalAirport, '%')) OR LOWER(aa.airportName) LIKE LOWER(CONCAT('%', :arrivalAirport, '%')))")
+	List<Flight> findFlightsByCriteria(@Param("date") LocalDate date,
+									   @Param("flightNumber") String flightNumber,
+									   @Param("departureAirport") String departureAirport,
+									   @Param("arrivalAirport") String arrivalAirport);
 }

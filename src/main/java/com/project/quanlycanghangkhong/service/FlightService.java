@@ -34,4 +34,7 @@ public interface FlightService {
 	     * Gửi notification cho các user phục vụ chuyến bay hoặc trực ca khi thay đổi actual time
 	     */
 	    void notifyUsersOnActualTimeChange(Long flightId, java.time.LocalTime actualTime, String eventType, String airportCode);
+	    
+	    // Thêm method tìm kiếm theo nhiều tiêu chí
+	    List<FlightDTO> searchFlightsByCriteria(String date, String flightNumber, String departureAirport, String arrivalAirport);
 }

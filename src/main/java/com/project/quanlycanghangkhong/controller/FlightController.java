@@ -358,4 +358,32 @@ public class FlightController {
         res.setSuccess(true);
         return ResponseEntity.ok(res);
     }
+
+    @GetMapping("/searchByCriteria")
+    @Operation(summary = "Search flights by multiple criteria", description = "Search flights by date, flight number, departure airport, and arrival airport")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully retrieved flights by criteria", content = @Content(schema = @Schema(implementation = ApiSearchFlightsResponse.class))),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid date format or parameters", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    public ResponseEntity<ApiSearchFlightsResponse> searchFlightsByCriteria(
+            @RequestParam(value = "date", required = false) String dateStr,
+            @RequestParam(value = "flightNumber", required = false) String flightNumber,
+            @RequestParam(value = "departureAirport", required = false) String departureAirport,
+            @RequestParam(value = "arrivalAirport", required = false) String arrivalAirport) {
+        try {
+            List<FlightDTO> dtos = flightService.searchFlightsByCriteria(dateStr, flightNumber, departureAirport, arrivalAirport);
+            ApiSearchFlightsResponse res = new ApiSearchFlightsResponse();
+            res.setMessage("Thành công");
+            res.setStatusCode(200);
+            res.setData(dtos);
+            res.setSuccess(true);
+            return ResponseEntity.ok(res);
+        } catch (DateTimeParseException ex) {
+            return ResponseEntity.badRequest()
+                .body(new ApiSearchFlightsResponse("Invalid date format, use YYYY-MM-DD", 400, null, false));
+        } catch (Exception ex) {
+            return ResponseEntity.badRequest()
+                .body(new ApiSearchFlightsResponse("Error: " + ex.getMessage(), 400, null, false));
+        }
+    }
 }
