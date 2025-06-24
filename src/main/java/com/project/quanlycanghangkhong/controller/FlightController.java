@@ -371,6 +371,12 @@ public class FlightController {
             @RequestParam(value = "departureAirport", required = false) String departureAirport,
             @RequestParam(value = "arrivalAirport", required = false) String arrivalAirport) {
         try {
+            // Convert "null" strings to actual null values before passing to service
+            if ("null".equalsIgnoreCase(flightNumber)) flightNumber = null;
+            if ("null".equalsIgnoreCase(departureAirport)) departureAirport = null;
+            if ("null".equalsIgnoreCase(arrivalAirport)) arrivalAirport = null;
+            if ("null".equalsIgnoreCase(dateStr)) dateStr = null;
+            
             List<FlightDTO> dtos = flightService.searchFlightsByCriteria(dateStr, flightNumber, departureAirport, arrivalAirport);
             ApiSearchFlightsResponse res = new ApiSearchFlightsResponse();
             res.setMessage("Thành công");
