@@ -31,6 +31,10 @@ public class Document {
     @OneToMany(mappedBy = "document", fetch = FetchType.LAZY)
     private List<Attachment> attachments;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by_user_id")
+    private User createdBy;
+
     // Getters and setters
     public Integer getId() {
         return id;
@@ -86,5 +90,13 @@ public class Document {
 
     public void setAttachments(List<Attachment> attachments) {
         this.attachments = attachments;
+    }
+
+    public User getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(User createdBy) {
+        this.createdBy = createdBy;
     }
 }

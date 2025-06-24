@@ -11,6 +11,7 @@ public class DocumentDTO {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<AttachmentDTO> attachments;
+    private UserDTO createdByUser;
 
     public Integer getId() {
         return id;
@@ -66,5 +67,13 @@ public class DocumentDTO {
 
     public void setAttachments(List<AttachmentDTO> attachments) {
         this.attachments = attachments;
+    }
+
+    public UserDTO getCreatedByUser() {
+        return createdByUser;
+    }
+
+    public void setCreatedByUser(UserDTO createdByUser) {
+        this.createdByUser = createdByUser;
     }
 }

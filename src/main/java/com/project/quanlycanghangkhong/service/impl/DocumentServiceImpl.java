@@ -12,9 +12,14 @@ import com.project.quanlycanghangkhong.repository.AttachmentRepository;
 import com.project.quanlycanghangkhong.model.TaskDocument;
 import com.project.quanlycanghangkhong.repository.TaskDocumentRepository;
 import com.project.quanlycanghangkhong.repository.EvaluationIssueDocumentRepository;
+import com.project.quanlycanghangkhong.model.User;
+import com.project.quanlycanghangkhong.dto.UserDTO;
+import com.project.quanlycanghangkhong.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -30,6 +35,8 @@ public class DocumentServiceImpl implements DocumentService {
     private TaskDocumentRepository taskDocumentRepository;
     @Autowired
     private EvaluationIssueDocumentRepository evaluationIssueDocumentRepository;
+    @Autowired
+    private UserRepository userRepository;
 
     private DocumentDTO toDTO(Document doc) {
         DocumentDTO dto = new DocumentDTO();
@@ -41,6 +48,9 @@ public class DocumentServiceImpl implements DocumentService {
         dto.setUpdatedAt(doc.getUpdatedAt());
         if (doc.getAttachments() != null) {
             dto.setAttachments(doc.getAttachments().stream().map(this::toAttachmentDTO).collect(Collectors.toList()));
+        }
+        if (doc.getCreatedBy() != null) {
+            dto.setCreatedByUser(new UserDTO(doc.getCreatedBy()));
         }
         return dto;
     }
@@ -82,6 +92,14 @@ public class DocumentServiceImpl implements DocumentService {
         Document doc = toEntity(request);
         doc.setCreatedAt(LocalDateTime.now());
         doc.setUpdatedAt(LocalDateTime.now());
+        // Lấy user hiện tại từ SecurityContextHolder
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated()) {
+            String email = authentication.getName();
+            // Tìm user theo email
+            User user = userRepository.findByEmail(email).orElse(null);
+            doc.setCreatedBy(user);
+        }
         Document saved = documentRepository.save(doc);
         // Gán các attachment đã upload vào document này
         if (request.getAttachmentIds() != null && !request.getAttachmentIds().isEmpty()) {
