@@ -307,32 +307,32 @@ public class FlightServiceImpl implements FlightService {
 		
 		// 🔍 Generate SQL for manual testing
 		System.out.println("🔧 SQL FOR MANUAL DATABASE TESTING:");
-		System.out.println("SELECT f.* FROM flights f");
+		System.out.println("SELECT DISTINCT f.* FROM flights f");
 		System.out.println("LEFT JOIN airports da ON da.id = f.departure_airport_id");
 		System.out.println("LEFT JOIN airports aa ON aa.id = f.arrival_airport_id");
-		System.out.print("WHERE ");
+		System.out.println("WHERE 1=1");
 		
-		boolean hasCondition = false;
-		if (date != null) {
-			System.out.print("f.flight_date = '" + dateStr + "'");
-			hasCondition = true;
+		if (dateStr != null && !dateStr.trim().isEmpty()) {
+			System.out.println("AND f.flight_date = '" + dateStr + "'");
 		}
 		if (cleanFlightNumber != null) {
-			if (hasCondition) System.out.print(" AND ");
-			System.out.print("LOWER(f.flight_number) LIKE LOWER('%" + cleanFlightNumber + "%')");
-			hasCondition = true;
+			System.out.println("AND LOWER(f.flight_number) LIKE LOWER('%" + cleanFlightNumber + "%')");
 		}
 		if (cleanDepartureAirport != null) {
-			if (hasCondition) System.out.print(" AND ");
-			System.out.print("(LOWER(da.airport_code) LIKE LOWER('%" + cleanDepartureAirport + "%') OR LOWER(da.airport_name) LIKE LOWER('%" + cleanDepartureAirport + "%'))");
-			hasCondition = true;
+			System.out.println("AND (da.airport_code IS NOT NULL AND (LOWER(da.airport_code) LIKE LOWER('%" + cleanDepartureAirport + "%') OR LOWER(da.airport_name) LIKE LOWER('%" + cleanDepartureAirport + "%')))");
 		}
 		if (cleanArrivalAirport != null) {
-			if (hasCondition) System.out.print(" AND ");
-			System.out.print("(LOWER(aa.airport_code) LIKE LOWER('%" + cleanArrivalAirport + "%') OR LOWER(aa.airport_name) LIKE LOWER('%" + cleanArrivalAirport + "%'))");
+			System.out.println("AND (aa.airport_code IS NOT NULL AND (LOWER(aa.airport_code) LIKE LOWER('%" + cleanArrivalAirport + "%') OR LOWER(aa.airport_name) LIKE LOWER('%" + cleanArrivalAirport + "%')))");
 		}
-		if (!hasCondition) System.out.print("1=1");
 		System.out.println(";");
+		
+		// 🔍 Debug airports data
+		if (cleanDepartureAirport != null) {
+			System.out.println("🔍 DEBUG: Looking for departure airports with code/name containing: " + cleanDepartureAirport);
+		}
+		if (cleanArrivalAirport != null) {
+			System.out.println("🔍 DEBUG: Looking for arrival airports with code/name containing: " + cleanArrivalAirport);
+		}
 		
 		// Call repository method with cleaned parameters
 		System.out.println("🔍 Calling repository...");

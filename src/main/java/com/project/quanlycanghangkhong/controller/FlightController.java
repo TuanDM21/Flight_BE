@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.time.LocalTime;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import jakarta.validation.Valid;
 
@@ -403,6 +404,67 @@ public class FlightController {
             ex.printStackTrace();
             return ResponseEntity.badRequest()
                 .body(new ApiSearchFlightsResponse("Error: " + ex.getMessage(), 400, null, false));
+        }
+    }
+
+    @GetMapping("/debug/airports")
+    @Operation(summary = "Debug - Check airports in database", description = "Debug endpoint to check all airports and search for specific codes")
+    public ResponseEntity<?> debugAirports(
+            @RequestParam(value = "search", required = false) String search) {
+        
+        try {
+            System.out.println("=== DEBUG: CHECKING AIRPORTS ===");
+            
+            // Get all airports from database
+            List<com.project.quanlycanghangkhong.model.Airport> allAirports = 
+                ((com.project.quanlycanghangkhong.repository.AirportRepository) 
+                 flightService.getClass().getDeclaredField("airportRepository").get(flightService))
+                .findAll();
+                
+            System.out.println("📊 Total airports in database: " + allAirports.size());
+            
+            if (!allAirports.isEmpty()) {
+                System.out.println("🎯 All airports:");
+                for (com.project.quanlycanghangkhong.model.Airport airport : allAirports) {
+                    System.out.println("   [" + airport.getId() + "] " + airport.getAirportCode() + " - " + airport.getAirportName());
+                }
+            }
+            
+            // Search for specific airport if provided
+            if (search != null && !search.trim().isEmpty()) {
+                System.out.println("🔍 Searching for airports containing: " + search);
+                List<com.project.quanlycanghangkhong.model.Airport> matchingAirports = allAirports.stream()
+                    .filter(a -> a.getAirportCode().toLowerCase().contains(search.toLowerCase()) ||
+                               a.getAirportName().toLowerCase().contains(search.toLowerCase()))
+                    .collect(Collectors.toList());
+                System.out.println("📅 Matching airports: " + matchingAirports.size());
+                
+                return ResponseEntity.ok(Map.of(
+                    "totalAirports", allAirports.size(),
+                    "searchTerm", search,
+                    "matchingAirports", matchingAirports.stream()
+                        .map(a -> Map.of("id", a.getId(), "code", a.getAirportCode(), "name", a.getAirportName()))
+                        .collect(Collectors.toList()),
+                    "allAirports", allAirports.stream()
+                        .map(a -> Map.of("id", a.getId(), "code", a.getAirportCode(), "name", a.getAirportName()))
+                        .collect(Collectors.toList())
+                ));
+            }
+            
+            return ResponseEntity.ok(Map.of(
+                "totalAirports", allAirports.size(),
+                "airports", allAirports.stream()
+                    .map(a -> Map.of("id", a.getId(), "code", a.getAirportCode(), "name", a.getAirportName()))
+                    .collect(Collectors.toList())
+            ));
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error checking airports: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", e.getMessage(),
+                "message", "Failed to check airports"
+            ));
         }
     }
 }
