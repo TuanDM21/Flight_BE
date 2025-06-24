@@ -271,14 +271,12 @@ public class FlightServiceImpl implements FlightService {
 	}
 
 	@Override
-	public List<FlightDTO> searchFlightsByCriteria(String dateStr, String flightNumber, String departureAirport, String arrivalAirport) {
+	public List<FlightDTO> searchFlightsByCriteria(String dateStr, String flightNumber) {
 		// 🔍 Debug logging - Service layer
 		System.out.println("=== SERVICE LAYER DEBUG ===");
 		System.out.println("📥 Raw inputs:");
 		System.out.println("   dateStr: " + dateStr);
 		System.out.println("   flightNumber: " + flightNumber);
-		System.out.println("   departureAirport: " + departureAirport);
-		System.out.println("   arrivalAirport: " + arrivalAirport);
 		
 		// Parse date if provided
 		LocalDate date = null;
@@ -296,18 +294,14 @@ public class FlightServiceImpl implements FlightService {
 		
 		// Clean up parameters - handle "null" strings and empty strings
 		String cleanFlightNumber = cleanParameter(flightNumber);
-		String cleanDepartureAirport = cleanParameter(departureAirport);
-		String cleanArrivalAirport = cleanParameter(arrivalAirport);
 		
 		System.out.println("🧹 Cleaned parameters:");
 		System.out.println("   date: " + date);
 		System.out.println("   cleanFlightNumber: " + cleanFlightNumber);
-		System.out.println("   cleanDepartureAirport: " + cleanDepartureAirport);
-		System.out.println("   cleanArrivalAirport: " + cleanArrivalAirport);
 		
 		// Call repository method with cleaned parameters
 		System.out.println("🔍 Calling repository...");
-		List<Flight> flights = flightRepository.findFlightsByCriteria(date, cleanFlightNumber, cleanDepartureAirport, cleanArrivalAirport);
+		List<Flight> flights = flightRepository.findFlightsByCriteria(date, cleanFlightNumber);
 		
 		System.out.println("📊 Repository results: " + (flights != null ? flights.size() : "NULL") + " flights found");
 		if (flights != null && !flights.isEmpty()) {

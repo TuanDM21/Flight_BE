@@ -38,20 +38,11 @@ public interface FlightRepository extends JpaRepository<Flight, Long> {
 	// Phương thức tìm kiếm theo ngày và chứa keyword trong flightNumber (nếu cần)
 	List<Flight> findByFlightDateAndFlightNumberContainingIgnoreCase(LocalDate flightDate, String flightNumber);
 
-	// Phương thức tìm kiếm theo nhiều tiêu chí - FIXED SQL
-	@Query("SELECT f FROM Flight f " +
-		   "LEFT JOIN f.departureAirport da " +
-		   "LEFT JOIN f.arrivalAirport aa " +
-		   "WHERE (:date IS NULL OR f.flightDate = :date) " +
-		   "AND (:flightNumber IS NULL OR LOWER(f.flightNumber) LIKE LOWER(CONCAT('%', :flightNumber, '%'))) " +
-		   "AND (:departureAirport IS NULL OR " +
-		   "     LOWER(da.airportCode) LIKE LOWER(CONCAT('%', :departureAirport, '%')) OR " +
-		   "     LOWER(da.airportName) LIKE LOWER(CONCAT('%', :departureAirport, '%'))) " +
-		   "AND (:arrivalAirport IS NULL OR " +
-		   "     LOWER(aa.airportCode) LIKE LOWER(CONCAT('%', :arrivalAirport, '%')) OR " +
-		   "     LOWER(aa.airportName) LIKE LOWER(CONCAT('%', :arrivalAirport, '%')))")
+	// Phương thức tìm kiếm theo nhiều tiêu chí - SIMPLIFIED NATIVE SQL  
+	@Query(value = "SELECT * FROM flights f " +
+		   "WHERE (:date IS NULL OR f.flight_date = :date) " +
+		   "AND (:flightNumber IS NULL OR LOWER(f.flight_number) LIKE LOWER(CONCAT('%', :flightNumber, '%')))",
+		   nativeQuery = true)
 	List<Flight> findFlightsByCriteria(@Param("date") LocalDate date,
-									   @Param("flightNumber") String flightNumber,
-									   @Param("departureAirport") String departureAirport,
-									   @Param("arrivalAirport") String arrivalAirport);
+									   @Param("flightNumber") String flightNumber);
 }
