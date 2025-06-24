@@ -274,15 +274,32 @@ public class FlightServiceImpl implements FlightService {
 	public List<FlightDTO> searchFlightsByCriteria(String dateStr, String flightNumber, String departureAirport, String arrivalAirport) {
 		// Parse date if provided
 		LocalDate date = null;
-		if (dateStr != null && !dateStr.trim().isEmpty()) {
-			date = LocalDate.parse(dateStr);
+		if (dateStr != null && !dateStr.trim().isEmpty() && !"null".equals(dateStr)) {
+			try {
+				date = LocalDate.parse(dateStr.trim());
+			} catch (Exception e) {
+				throw new RuntimeException("Invalid date format: " + dateStr + ". Use YYYY-MM-DD format.");
+			}
 		}
 		
-		// Call repository method with all criteria
-		List<Flight> flights = flightRepository.findFlightsByCriteria(date, flightNumber, departureAirport, arrivalAirport);
+		// Clean up parameters - handle "null" strings and empty strings
+		String cleanFlightNumber = cleanParameter(flightNumber);
+		String cleanDepartureAirport = cleanParameter(departureAirport);
+		String cleanArrivalAirport = cleanParameter(arrivalAirport);
+		
+		// Call repository method with cleaned parameters
+		List<Flight> flights = flightRepository.findFlightsByCriteria(date, cleanFlightNumber, cleanDepartureAirport, cleanArrivalAirport);
 		
 		return flights.stream()
 			.map(FlightDTO::new)
 			.collect(Collectors.toList());
+	}
+	
+	// Helper method to clean parameters
+	private String cleanParameter(String param) {
+		if (param == null || param.trim().isEmpty() || "null".equals(param) || "undefined".equals(param)) {
+			return null;
+		}
+		return param.trim();
 	}
 }
