@@ -36,7 +36,14 @@ public class AuthController {
 			@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Invalid credentials", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
 	})
 	public ResponseEntity<ApiResponseCustom<LoginResponse>> login(@Valid @RequestBody LoginRequest loginRequest) {
-		return ResponseEntity.ok(authService.login(loginRequest));
+		ApiResponseCustom<LoginResponse> response = authService.login(loginRequest);
+		
+		// Trả về status code dựa trên kết quả từ service
+		if (response.isSuccess()) {
+			return ResponseEntity.ok(response);
+		} else {
+			return ResponseEntity.status(response.getStatusCode()).body(response);
+		}
 	}
 
 	@PostMapping("/register")
