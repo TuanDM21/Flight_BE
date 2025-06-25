@@ -130,6 +130,10 @@ public class TaskServiceImpl implements TaskService {
                 newDoc.setNotes(newDocRequest.getNotes());
                 newDoc.setCreatedAt(LocalDateTime.now());
                 newDoc.setUpdatedAt(LocalDateTime.now());
+                // ✅ FIX: Set người tạo document là người đang login
+                if (creator != null) {
+                    newDoc.setCreatedBy(creator);
+                }
                 Document savedDoc = documentRepository.save(newDoc);
 
                 // Gán các attachment cho document mới nếu có
