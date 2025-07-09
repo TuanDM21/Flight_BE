@@ -1,12 +1,9 @@
 package com.project.quanlycanghangkhong.service.impl;
 
 import com.project.quanlycanghangkhong.dto.AttachmentDTO;
-import com.project.quanlycanghangkhong.dto.request.AttachmentAssignRequest;
 import com.project.quanlycanghangkhong.model.Attachment;
-import com.project.quanlycanghangkhong.model.Document;
 import com.project.quanlycanghangkhong.model.User;
 import com.project.quanlycanghangkhong.repository.AttachmentRepository;
-import com.project.quanlycanghangkhong.repository.DocumentRepository;
 import com.project.quanlycanghangkhong.repository.UserRepository;
 import com.project.quanlycanghangkhong.service.AttachmentService;
 import com.project.quanlycanghangkhong.service.FileShareService;
@@ -16,7 +13,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -24,8 +20,6 @@ import java.util.stream.Collectors;
 public class AttachmentServiceImpl implements AttachmentService {
     @Autowired
     private AttachmentRepository attachmentRepository;
-    @Autowired
-    private DocumentRepository documentRepository;
     @Autowired
     private UserRepository userRepository;
     @Autowired
@@ -172,6 +166,9 @@ public class AttachmentServiceImpl implements AttachmentService {
         
         return dto;
     }
+    // THAY ĐỔI LOGIC NGHIỆP VỤ: Đã chuyển sang task-attachment trực tiếp
+    // Document không còn quản lý attachment nữa
+    /*
     @Override
     public AttachmentDTO addAttachmentToDocument(Integer documentId, AttachmentDTO dto) {
         Document doc = documentRepository.findById(documentId).orElse(null);
@@ -184,6 +181,7 @@ public class AttachmentServiceImpl implements AttachmentService {
         att.setCreatedAt(LocalDateTime.now());
         return toDTO(attachmentRepository.save(att));
     }
+    */
     @Override
     public AttachmentDTO updateAttachment(Integer id, AttachmentDTO dto) {
         Attachment att = attachmentRepository.findById(id).orElse(null);
@@ -239,31 +237,10 @@ public class AttachmentServiceImpl implements AttachmentService {
             attachmentRepository.save(att);
         }
     }
-    @Override
-    public List<AttachmentDTO> getAttachmentsByDocumentId(Integer documentId) {
-        return attachmentRepository.findByDocument_IdAndIsDeletedFalse(documentId).stream().map(this::toDTO).collect(Collectors.toList());
-    }
-    @Override
-    public void assignAttachmentsToDocument(Integer documentId, AttachmentAssignRequest request) {
-        Document doc = documentRepository.findById(documentId).orElse(null);
-        if (doc == null || request == null || request.getAttachmentIds() == null) return;
-        List<Attachment> attachments = attachmentRepository.findAllByIdIn(request.getAttachmentIds());
-        for (Attachment att : attachments) {
-            att.setDocument(doc);
-        }
-        attachmentRepository.saveAll(attachments);
-    }
-    @Override
-    public void removeAttachmentsFromDocument(Integer documentId, AttachmentAssignRequest request) {
-        if (request == null || request.getAttachmentIds() == null) return;
-        List<Attachment> attachments = attachmentRepository.findAllByIdIn(request.getAttachmentIds());
-        for (Attachment att : attachments) {
-            if (att.getDocument() != null && att.getDocument().getId().equals(documentId)) {
-                att.setDocument(null);
-            }
-        }
-        attachmentRepository.saveAll(attachments);
-    }
+    
+    // === BUSINESS LOGIC: CHỈ SỬ DỤNG TASK-ATTACHMENT TRỰC TIẾP ===
+    // Document đã được loại bỏ hoàn toàn khỏi hệ thống quản lý file
+    
     @Override
     public List<AttachmentDTO> getAllAttachments() {
         // Kiểm tra quyền admin
@@ -275,6 +252,7 @@ public class AttachmentServiceImpl implements AttachmentService {
         List<Attachment> allAttachments = attachmentRepository.findAll();
         return allAttachments.stream().map(this::toDTO).collect(Collectors.toList());
     }
+    
     @Override
     public AttachmentDTO getAttachmentById(Integer id) {
         Attachment att = attachmentRepository.findByIdAndIsDeletedFalse(id);
@@ -328,5 +306,28 @@ public class AttachmentServiceImpl implements AttachmentService {
         }
         
         return result;
+    }
+    
+    @Override
+    public List<AttachmentDTO> getAvailableAttachments() {
+        // Chỉ admin mới có thể xem tất cả file chưa gán
+        if (!isAdmin()) {
+            throw new RuntimeException("Bạn không có quyền truy cập chức năng này. Chỉ admin mới có thể xem tất cả file chưa gán.");
+        }
+        
+        List<Attachment> availableAttachments = attachmentRepository.findByTaskIsNullAndIsDeletedFalse();
+        return availableAttachments.stream().map(this::toDTO).collect(Collectors.toList());
+    }
+    
+    @Override
+    public List<AttachmentDTO> getMyAvailableAttachments() {
+        User currentUser = getCurrentUser();
+        if (currentUser == null) {
+            throw new RuntimeException("Không thể xác định user hiện tại. Vui lòng đăng nhập lại.");
+        }
+        
+        // Lấy file của user hiện tại chưa được gán vào task nào
+        List<Attachment> myAvailableFiles = attachmentRepository.findByTaskIsNullAndUploadedByAndIsDeletedFalse(currentUser);
+        return myAvailableFiles.stream().map(this::toDTO).collect(Collectors.toList());
     }
 }

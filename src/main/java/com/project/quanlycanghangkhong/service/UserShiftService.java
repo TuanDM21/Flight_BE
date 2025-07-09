@@ -31,4 +31,10 @@ public interface UserShiftService {
 
     // Lưu nhiều ca trực cùng lúc
     List<UserShiftDTO> saveUserShiftsBatch(List<AssignShiftRequest> userShifts);
+    
+    // Lấy ca trực của user hiện tại
+    List<UserShiftDTO> getMyShifts();
+    
+    // Lấy ca trực theo userId
+    List<UserShiftDTO> getShiftsByUserId(Integer userId);
 }

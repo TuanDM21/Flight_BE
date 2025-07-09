@@ -1,9 +1,11 @@
 package com.project.quanlycanghangkhong.controller;
 
 import com.project.quanlycanghangkhong.dto.CreateTaskRequest;
+import com.project.quanlycanghangkhong.dto.CreateSubtaskRequest;
 import com.project.quanlycanghangkhong.dto.TaskDTO;
 import com.project.quanlycanghangkhong.dto.TaskDetailDTO;
 import com.project.quanlycanghangkhong.dto.UpdateTaskDTO;
+import com.project.quanlycanghangkhong.dto.AttachmentDTO;
 import com.project.quanlycanghangkhong.dto.request.BulkDeleteTasksRequest;
 import com.project.quanlycanghangkhong.dto.response.task.ApiAllTasksResponse;
 import com.project.quanlycanghangkhong.dto.response.task.ApiTaskResponse;
@@ -15,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.Map;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -35,7 +38,7 @@ public class TaskController {
         @ApiResponse(responseCode = "201", description = "Tạo thành công", content = @Content(schema = @Schema(implementation = ApiTaskResponse.class)))
     })
     public ResponseEntity<ApiTaskResponse> createTask(@RequestBody CreateTaskRequest request) {
-        TaskDTO created = taskService.createTaskWithAssignmentsAndDocuments(request);
+        TaskDTO created = taskService.createTaskWithAssignmentsAndAttachments(request);
         ApiTaskResponse res = new ApiTaskResponse("Tạo công việc thành công", 201, created, true);
         return ResponseEntity.status(HttpStatus.CREATED).body(res);
     }
@@ -132,5 +135,59 @@ public class TaskController {
         };
         
         return ResponseEntity.ok(new ApiAllTasksResponse(message, 200, tasks, true));
+    }
+
+    // MÔ HÌNH ADJACENCY LIST: API Subtask
+    @PostMapping("/{parentId}/subtasks")
+    @Operation(summary = "Tạo subtask", description = "Tạo subtask con cho một task cha")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "Tạo subtask thành công", content = @Content(schema = @Schema(implementation = ApiTaskResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy task cha", content = @Content(schema = @Schema(implementation = ApiTaskResponse.class)))
+    })
+    public ResponseEntity<ApiTaskResponse> createSubtask(@PathVariable Integer parentId, @RequestBody CreateSubtaskRequest request) {
+        // parentId được truyền qua path parameter, truyền trực tiếp vào service
+        TaskDTO created = taskService.createSubtask(parentId, request);
+        ApiTaskResponse res = new ApiTaskResponse("Tạo subtask thành công", 201, created, true);
+        return ResponseEntity.status(HttpStatus.CREATED).body(res);
+    }
+
+    @GetMapping("/{id}/subtasks")
+    @Operation(summary = "Lấy danh sách subtask", description = "Lấy tất cả subtask con của một task")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiAllTasksResponse.class)))
+    })
+    public ResponseEntity<ApiAllTasksResponse> getSubtasks(@PathVariable Integer id) {
+        List<TaskDetailDTO> subtasks = taskService.getSubtasks(id);
+        return ResponseEntity.ok(new ApiAllTasksResponse("Thành công", 200, subtasks, true));
+    }
+
+    @GetMapping("/root")
+    @Operation(summary = "Lấy danh sách task gốc", description = "Lấy tất cả task không có parent (task gốc)")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiAllTasksResponse.class)))
+    })
+    public ResponseEntity<ApiAllTasksResponse> getRootTasks() {
+        List<TaskDetailDTO> rootTasks = taskService.getRootTasks();
+        return ResponseEntity.ok(new ApiAllTasksResponse("Thành công", 200, rootTasks, true));
+    }
+
+    // === ATTACHMENT MANAGEMENT ===
+    // Attachment chỉ được quản lý thông qua createTask và updateTask
+    // Đã loại bỏ các API riêng biệt để gán/gỡ attachment vì không cần thiết
+    
+    @GetMapping("/{id}/attachments")
+    @Operation(summary = "Lấy danh sách file đính kèm của task", description = "Lấy tất cả file đính kèm trực tiếp của task")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Thành công"),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy task")
+    })
+    public ResponseEntity<?> getTaskAttachments(@PathVariable Integer id) {
+        List<AttachmentDTO> attachments = taskService.getTaskAttachments(id);
+        return ResponseEntity.ok(Map.of(
+            "message", "Thành công",
+            "statusCode", 200,
+            "data", attachments,
+            "success", true
+        ));
     }
 }

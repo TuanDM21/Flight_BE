@@ -1,7 +1,6 @@
 package com.project.quanlycanghangkhong.controller;
 
 import com.project.quanlycanghangkhong.dto.DocumentDTO;
-import com.project.quanlycanghangkhong.service.AttachmentService;
 import com.project.quanlycanghangkhong.service.DocumentService;
 import com.project.quanlycanghangkhong.dto.response.document.ApiDocumentResponse;
 import com.project.quanlycanghangkhong.dto.response.document.ApiDocumentListResponse;
@@ -17,9 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import com.project.quanlycanghangkhong.dto.CreateDocumentRequest;
 import com.project.quanlycanghangkhong.dto.UpdateDocumentRequest;
-import com.project.quanlycanghangkhong.dto.request.AttachmentAssignRequest;
 import com.project.quanlycanghangkhong.dto.request.BulkDeleteDocumentsRequest;
-import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
 import javax.validation.Valid;
 
 @RestController
@@ -29,8 +26,8 @@ public class DocumentController {
     @Autowired
     private DocumentService documentService;
 
-    @Autowired
-    private AttachmentService attachmentService;
+    // === BUSINESS LOGIC THAY ĐỔI: Document không còn quản lý attachment ===
+    // AttachmentService đã được loại bỏ khỏi DocumentController
 
     @PostMapping
     @Operation(summary = "Tạo document", description = "Tạo mới một document")
@@ -128,6 +125,11 @@ public class DocumentController {
         }
     }
 
+    // === BUSINESS LOGIC THAY ĐỔI: Document không còn quản lý attachment ===
+    // Toàn bộ attachment giờ được gán trực tiếp vào task thông qua TaskController
+    // API gán/gỡ attachment vào document đã được loại bỏ
+    
+    /*
     @PostMapping("/{documentId}/attachments/assign")
     @Operation(summary = "Gán nhiều file đính kèm vào document", description = "Gán các attachment đã upload vào document theo documentId")
     public ResponseEntity<ApiResponseCustom<Void>> assignAttachmentsToDocument(
@@ -145,5 +147,6 @@ public class DocumentController {
         attachmentService.removeAttachmentsFromDocument(documentId, request);
         return ResponseEntity.ok(new ApiResponseCustom<>("Gỡ file thành công", 200, null, true));
     }
+    */
 }
 

@@ -593,4 +593,49 @@ public class AttachmentController {
             );
         }
     }
+
+    @GetMapping("/available")
+    @Operation(summary = "Lấy danh sách file chưa gán vào task", 
+               description = "Lấy danh sách tất cả file chưa được gán vào task nào (chỉ admin)")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Lấy danh sách file thành công", 
+                    content = @Content(schema = @Schema(implementation = ApiAttachmentListResponse.class))),
+        @ApiResponse(responseCode = "403", description = "Không có quyền truy cập")
+    })
+    public ResponseEntity<ApiAttachmentListResponse> getAvailableAttachments() {
+        try {
+            List<AttachmentDTO> result = attachmentService.getAvailableAttachments();
+            
+            ApiAttachmentListResponse response = new ApiAttachmentListResponse();
+            response.setMessage("Thành công");
+            response.setStatusCode(200);
+            response.setData(result);
+            response.setSuccess(true);
+            
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(403).body(
+                new ApiAttachmentListResponse(e.getMessage(), 403, null, false)
+            );
+        }
+    }
+
+    @GetMapping("/my-available")
+    @Operation(summary = "Lấy danh sách file của tôi chưa gán vào task", 
+               description = "Lấy danh sách file của user hiện tại chưa được gán vào task nào")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Lấy danh sách file thành công", 
+                    content = @Content(schema = @Schema(implementation = ApiAttachmentListResponse.class)))
+    })
+    public ResponseEntity<ApiAttachmentListResponse> getMyAvailableAttachments() {
+        List<AttachmentDTO> result = attachmentService.getMyAvailableAttachments();
+        
+        ApiAttachmentListResponse response = new ApiAttachmentListResponse();
+        response.setMessage("Thành công"); 
+        response.setStatusCode(200);
+        response.setData(result);
+        response.setSuccess(true);
+        
+        return ResponseEntity.ok(response);
+    }
 }

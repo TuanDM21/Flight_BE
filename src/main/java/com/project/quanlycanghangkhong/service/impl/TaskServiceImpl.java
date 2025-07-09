@@ -36,12 +36,6 @@ public class TaskServiceImpl implements TaskService {
     private AssignmentRepository assignmentRepository;
 
     @Autowired
-    private DocumentRepository documentRepository;
-
-    @Autowired
-    private TaskDocumentRepository taskDocumentRepository;
-
-    @Autowired
     private AttachmentRepository attachmentRepository;
 
     private TaskDTO convertToDTO(Task task) {
@@ -53,6 +47,7 @@ public class TaskServiceImpl implements TaskService {
         dto.setCreatedAt(task.getCreatedAt());
         dto.setUpdatedAt(task.getUpdatedAt());
         dto.setCreatedBy(task.getCreatedBy() != null ? task.getCreatedBy().getId() : null);
+        dto.setStatus(task.getStatus()); // ✅ THÊM field status bị thiếu
         return dto;
     }
 
@@ -84,7 +79,11 @@ public class TaskServiceImpl implements TaskService {
 
     @Transactional
     @Override
-    public TaskDTO createTaskWithAssignmentsAndDocuments(CreateTaskRequest request) {
+    /**
+     * Tạo task với assignment và attachment trực tiếp
+     * THAY ĐỔI LOGIC NGHIỆP VỤ: Thay thế hoàn toàn logic dựa trên document bằng attachment trực tiếp
+     */
+    public TaskDTO createTaskWithAssignmentsAndAttachments(CreateTaskRequest request) {
         // Lấy user hiện tại từ SecurityContextHolder
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String email = authentication != null ? authentication.getName() : null;
@@ -99,6 +98,17 @@ public class TaskServiceImpl implements TaskService {
         task.setUpdatedAt(LocalDateTime.now());
         if (creator != null) task.setCreatedBy(creator);
         Task savedTask = taskRepository.save(task);
+
+        // MỚI: Gán attachment trực tiếp vào task (THAY THẾ hoàn toàn logic document)
+        if (request.getAttachmentIds() != null && !request.getAttachmentIds().isEmpty()) {
+            List<Attachment> attachments = attachmentRepository.findAllByIdIn(request.getAttachmentIds());
+            for (Attachment attachment : attachments) {
+                if (!attachment.isDeleted()) {
+                    attachment.setTask(savedTask);
+                }
+            }
+            attachmentRepository.saveAll(attachments);
+        }
 
         // Tạo Assignment
         if (request.getAssignments() != null) {
@@ -120,65 +130,28 @@ public class TaskServiceImpl implements TaskService {
             updateTaskStatus(savedTask);
         }
 
-        // 🔥 NEW: Tạo documents mới và đính kèm vào task
-        if (request.getNewDocuments() != null) {
-            for (CreateDocumentInTaskRequest newDocRequest : request.getNewDocuments()) {
-                // Tạo document mới
-                Document newDoc = new Document();
-                newDoc.setDocumentType(newDocRequest.getDocumentType());
-                newDoc.setContent(newDocRequest.getContent());
-                newDoc.setNotes(newDocRequest.getNotes());
-                newDoc.setCreatedAt(LocalDateTime.now());
-                newDoc.setUpdatedAt(LocalDateTime.now());
-                // ✅ FIX: Set người tạo document là người đang login
-                if (creator != null) {
-                    newDoc.setCreatedBy(creator);
-                }
-                Document savedDoc = documentRepository.save(newDoc);
-
-                // Gán các attachment cho document mới nếu có
-                if (newDocRequest.getAttachmentIds() != null && !newDocRequest.getAttachmentIds().isEmpty()) {
-                    List<Attachment> attachments = attachmentRepository.findAllByIdIn(newDocRequest.getAttachmentIds());
-                    for (Attachment att : attachments) {
-                        att.setDocument(savedDoc);
-                    }
-                    attachmentRepository.saveAll(attachments);
-                }
-
-                // Liên kết document mới với task
-                TaskDocument taskDocument = new TaskDocument();
-                taskDocument.setTask(savedTask);
-                taskDocument.setDocument(savedDoc);
-                taskDocument.setCreatedAt(LocalDateTime.now());
-                taskDocumentRepository.save(taskDocument);
-            }
-        }
-
-        // Liên kết documentIds có sẵn với task thông qua TaskDocument
-        if (request.getDocumentIds() != null) {
-            for (Integer docId : request.getDocumentIds()) {
-                Document doc = documentRepository.findById(docId).orElse(null);
-                if (doc != null) {
-                    TaskDocument taskDocument = new TaskDocument();
-                    taskDocument.setTask(savedTask);
-                    taskDocument.setDocument(doc);
-                    taskDocument.setCreatedAt(LocalDateTime.now());
-                    taskDocumentRepository.save(taskDocument);
-                }
-            }
-        }
         return convertToDTO(savedTask);
     }
 
     @Override
+    @Transactional
     public TaskDTO updateTask(Integer id, UpdateTaskDTO updateTaskDTO) {
         Optional<Task> optionalTask = taskRepository.findById(id);
         if (optionalTask.isPresent()) {
             Task task = optionalTask.get();
+            
+            // Cập nhật thông tin cơ bản
             task.setContent(updateTaskDTO.getContent());
             task.setInstructions(updateTaskDTO.getInstructions());
             task.setNotes(updateTaskDTO.getNotes());
             task.setUpdatedAt(LocalDateTime.now());
+            
+            // MỚI: Cập nhật attachment list
+            if (updateTaskDTO.getAttachmentIds() != null) {
+                updateTaskAttachments(task, updateTaskDTO.getAttachmentIds());
+            }
+            // null = không thay đổi attachment, chỉ cập nhật nội dung
+            
             Task updated = taskRepository.save(task);
             return convertToDTO(updated);
         }
@@ -230,9 +203,16 @@ public class TaskServiceImpl implements TaskService {
         dto.setCreatedAt(task.getCreatedAt());
         dto.setUpdatedAt(task.getUpdatedAt());
         dto.setStatus(task.getStatus()); // Mapping status enum
+        
+        // NEW: Set parent ID if exists
+        if (task.getParent() != null) {
+            dto.setParentId(task.getParent().getId());
+        }
+        
         if (task.getCreatedBy() != null) {
             dto.setCreatedByUser(new UserDTO(task.getCreatedBy()));
         }
+        
         // Assignments
         List<AssignmentDTO> assignmentDTOs = assignmentRepository.findAll().stream()
             .filter(a -> a.getTask().getId().equals(task.getId()))
@@ -264,35 +244,35 @@ public class TaskServiceImpl implements TaskService {
                 return adto;
             }).toList();
         dto.setAssignments(assignmentDTOs);
-        // Documents (qua TaskDocument)
-        List<TaskDocument> taskDocuments = taskDocumentRepository.findAll().stream()
-            .filter(td -> td.getTask().getId().equals(task.getId()))
-            .toList();
-        List<DocumentDetailDTO> documentDTOs = new ArrayList<>();
-        for (TaskDocument td : taskDocuments) {
-            Document doc = td.getDocument();
-            DocumentDetailDTO dDto = new DocumentDetailDTO();
-            dDto.setId(doc.getId());
-            dDto.setDocumentType(doc.getDocumentType());
-            dDto.setContent(doc.getContent());
-            dDto.setNotes(doc.getNotes());
-            dDto.setCreatedAt(doc.getCreatedAt());
-            dDto.setUpdatedAt(doc.getUpdatedAt());
-            // Attachments
-            List<AttachmentDTO> attDTOs = new ArrayList<>();
-            if (doc.getAttachments() != null) {
-                for (Attachment att : doc.getAttachments()) {
-                    AttachmentDTO attDto = new AttachmentDTO();
-                    attDto.setFilePath(att.getFilePath());
-                    attDto.setFileName(att.getFileName());
-                    attDto.setFileSize(att.getFileSize());
-                    attDTOs.add(attDto);
-                }
+        
+        // NEW: Direct attachments
+        List<AttachmentDTO> attachmentDTOs = new ArrayList<>();
+        List<Attachment> directAttachments = attachmentRepository.findByTask_IdAndIsDeletedFalse(task.getId());
+        for (Attachment att : directAttachments) {
+            AttachmentDTO attDto = new AttachmentDTO();
+            attDto.setId(att.getId());
+            attDto.setFilePath(att.getFilePath());
+            attDto.setFileName(att.getFileName());
+            attDto.setFileSize(att.getFileSize());
+            attDto.setCreatedAt(att.getCreatedAt());
+            if (att.getUploadedBy() != null) {
+                attDto.setUploadedBy(new UserDTO(att.getUploadedBy()));
             }
-            dDto.setAttachments(attDTOs);
-            documentDTOs.add(dDto);
+            attachmentDTOs.add(attDto);
         }
-        dto.setDocuments(documentDTOs);
+        dto.setAttachments(attachmentDTOs);
+        
+        // NEW: Subtasks
+        List<TaskDetailDTO> subtaskDTOs = new ArrayList<>();
+        List<Task> subtasks = taskRepository.findByParentIdAndDeletedFalse(task.getId());
+        for (Task subtask : subtasks) {
+            TaskDetailDTO subtaskDto = getTaskDetailById(subtask.getId()); // Recursive call
+            if (subtaskDto != null) {
+                subtaskDTOs.add(subtaskDto);
+            }
+        }
+        dto.setSubtasks(subtaskDTOs);
+        
         return dto;
     }
 
@@ -440,5 +420,173 @@ public class TaskServiceImpl implements TaskService {
             }
         }
         taskRepository.save(task);
+    }
+
+    // MÔ HÌNH ADJACENCY LIST: Triển khai các method subtask
+    @Override
+    @Transactional
+    /**
+     * Tạo subtask trong mô hình Adjacency List
+     * MÔ HÌNH ADJACENCY LIST: Tạo task con với parent_id tham chiếu
+     */
+    public TaskDTO createSubtask(Integer parentId, CreateSubtaskRequest request) {
+        // Lấy task cha
+        Task parentTask = taskRepository.findByIdAndDeletedFalse(parentId).orElse(null);
+        if (parentTask == null) {
+            throw new RuntimeException("Không tìm thấy task cha: " + parentId);
+        }
+
+        // Get current user
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication != null ? authentication.getName() : null;
+        User creator = (email != null) ? userRepository.findByEmail(email).orElse(null) : null;
+
+        // Create subtask
+        Task subtask = new Task();
+        subtask.setContent(request.getContent());
+        subtask.setInstructions(request.getInstructions());
+        subtask.setNotes(request.getNotes());
+        subtask.setParent(parentTask);
+        subtask.setCreatedAt(LocalDateTime.now());
+        subtask.setUpdatedAt(LocalDateTime.now());
+        if (creator != null) subtask.setCreatedBy(creator);
+        Task savedSubtask = taskRepository.save(subtask);
+
+        // Assign direct attachments if provided
+        if (request.getAttachmentIds() != null && !request.getAttachmentIds().isEmpty()) {
+            List<Attachment> attachments = attachmentRepository.findAllByIdIn(request.getAttachmentIds());
+            for (Attachment attachment : attachments) {
+                if (!attachment.isDeleted()) {
+                    attachment.setTask(savedSubtask);
+                }
+            }
+            attachmentRepository.saveAll(attachments);
+        }
+
+        // Create assignments for subtask
+        if (request.getAssignments() != null) {
+            for (AssignmentRequest a : request.getAssignments()) {
+                Assignment assignment = new Assignment();
+                assignment.setTask(savedSubtask);
+                assignment.setRecipientType(a.getRecipientType());
+                assignment.setRecipientId(a.getRecipientId());
+                assignment.setNote(a.getNote());
+                assignment.setAssignedAt(LocalDateTime.now());
+                assignment.setAssignedBy(creator);
+                assignment.setStatus(AssignmentStatus.ASSIGNED);
+                if (a.getDueAt() != null) {
+                    assignment.setDueAt(new java.sql.Timestamp(a.getDueAt().getTime()).toLocalDateTime());
+                }
+                assignmentRepository.save(assignment);
+            }
+            updateTaskStatus(savedSubtask);
+        }
+
+        return convertToDTO(savedSubtask);
+    }
+
+    @Override
+    public List<TaskDetailDTO> getSubtasks(Integer parentId) {
+        List<Task> subtasks = taskRepository.findByParentIdAndDeletedFalse(parentId);
+        return subtasks.stream()
+            .map(task -> getTaskDetailById(task.getId()))
+            .filter(taskDetail -> taskDetail != null)
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<TaskDetailDTO> getRootTasks() {
+        List<Task> rootTasks = taskRepository.findByParentIsNullAndDeletedFalse();
+        return rootTasks.stream()
+            .map(task -> getTaskDetailById(task.getId()))
+            .filter(taskDetail -> taskDetail != null)
+            .collect(Collectors.toList());
+    }
+
+    // === ATTACHMENT MANAGEMENT ===
+    // Đã loại bỏ assignAttachmentsToTask và removeAttachmentsFromTask
+    // Attachment chỉ được quản lý thông qua createTask và updateTask
+    
+    /*
+    // ❌ KHÔNG CẦN: Đã thay thế bằng logic trong createTask và updateTask
+    @Override
+    @Transactional
+    public void assignAttachmentsToTask(Integer taskId, List<Integer> attachmentIds) {
+        Task task = taskRepository.findByIdAndDeletedFalse(taskId).orElse(null);
+        if (task == null) {
+            throw new RuntimeException("Task not found: " + taskId);
+        }
+
+        List<Attachment> attachments = attachmentRepository.findAllByIdIn(attachmentIds);
+        for (Attachment attachment : attachments) {
+            if (!attachment.isDeleted()) {
+                attachment.setTask(task);
+            }
+        }
+        attachmentRepository.saveAll(attachments);
+    }
+
+    @Override
+    @Transactional
+    public void removeAttachmentsFromTask(Integer taskId, List<Integer> attachmentIds) {
+        List<Attachment> attachments = attachmentRepository.findAllByIdIn(attachmentIds);
+        for (Attachment attachment : attachments) {
+            if (attachment.getTask() != null && attachment.getTask().getId().equals(taskId)) {
+                attachment.setTask(null);
+            }
+        }
+        attachmentRepository.saveAll(attachments);
+    }
+    */
+
+    @Override
+    public List<AttachmentDTO> getTaskAttachments(Integer taskId) {
+        List<Attachment> attachments = attachmentRepository.findByTask_IdAndIsDeletedFalse(taskId);
+        return attachments.stream()
+            .map(att -> {
+                AttachmentDTO dto = new AttachmentDTO();
+                dto.setId(att.getId());
+                dto.setFilePath(att.getFilePath());
+                dto.setFileName(att.getFileName());
+                dto.setFileSize(att.getFileSize());
+                dto.setCreatedAt(att.getCreatedAt());
+                if (att.getUploadedBy() != null) {
+                    dto.setUploadedBy(new UserDTO(att.getUploadedBy()));
+                }
+                return dto;
+            })
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * Cập nhật danh sách attachment của task
+     * Logic: 
+     * - null: không thay đổi 
+     * - empty list: xóa hết attachment
+     * - có giá trị: replace toàn bộ attachment list
+     * @param task Task cần cập nhật
+     * @param attachmentIds Danh sách attachment ID mới
+     */
+    private void updateTaskAttachments(Task task, List<Integer> attachmentIds) {
+        // Lấy danh sách attachment hiện tại của task
+        List<Attachment> currentAttachments = attachmentRepository.findByTask_IdAndIsDeletedFalse(task.getId());
+        
+        // Gỡ tất cả attachment hiện tại khỏi task
+        for (Attachment attachment : currentAttachments) {
+            attachment.setTask(null);
+        }
+        attachmentRepository.saveAll(currentAttachments);
+        
+        // Nếu có attachment mới, gán vào task
+        if (!attachmentIds.isEmpty()) {
+            List<Attachment> newAttachments = attachmentRepository.findAllByIdIn(attachmentIds);
+            for (Attachment attachment : newAttachments) {
+                if (!attachment.isDeleted()) {
+                    attachment.setTask(task);
+                }
+            }
+            attachmentRepository.saveAll(newAttachments);
+        }
+        // Nếu attachmentIds empty = xóa hết attachment (đã làm ở trên)
     }
 }

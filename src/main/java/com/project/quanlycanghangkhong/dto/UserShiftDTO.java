@@ -15,6 +15,7 @@ public class UserShiftDTO {
 	private String shiftCode;
 	private String startTime;
 	private String endTime;
+	private String location; // Thêm location từ Shift
 	private UserDTO user;
 	private LocalDate shiftDate;
 	private Integer shiftId; // Nếu có ca trực, chỉ lưu id của ca
@@ -41,6 +42,11 @@ public class UserShiftDTO {
 		if (user != null) {
 			this.userId = user.getId();
 			this.userName = user.getName();
+			// Tạo UserDTO để có thông tin đầy đủ
+			this.user = new UserDTO();
+			this.user.setId(user.getId());
+			this.user.setName(user.getName());
+			this.user.setEmail(user.getEmail());
 		}
 		// Gán trực tiếp LocalDate nếu DTO cũng là LocalDate
 		this.shiftDate = userShift.getShiftDate();
@@ -48,11 +54,17 @@ public class UserShiftDTO {
 		// Lấy thông tin ca trực
 		Shift shift = userShift.getShift();
 		if (shift != null) {
+			this.shiftId = shift.getId();
 			this.shiftCode = shift.getShiftCode();
 			DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
 			this.startTime = shift.getStartTime() != null ? shift.getStartTime().format(timeFormatter) : null;
 			this.endTime = shift.getEndTime() != null ? shift.getEndTime().format(timeFormatter) : null;
+			this.location = shift.getLocation(); // Lấy thông tin location từ Shift
 		}
+		
+		// Set timestamps
+		this.createdAt = userShift.getCreatedAt();
+		this.updatedAt = userShift.getUpdatedAt();
 	}
 
 	public Integer getId() {
@@ -141,6 +153,14 @@ public class UserShiftDTO {
 
 	public void setEndTime(String endTime) {
 		this.endTime = endTime;
+	}
+
+	public String getLocation() {
+		return location;
+	}
+
+	public void setLocation(String location) {
+		this.location = location;
 	}
 
 }

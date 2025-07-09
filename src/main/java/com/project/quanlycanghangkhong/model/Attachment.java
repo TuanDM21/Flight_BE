@@ -17,7 +17,12 @@ public class Attachment {
     @JoinColumn(name = "document_id", nullable = true) // Cho phép null để upload file rời
     private Document document;
 
-    // ✅ THÊM: Trường uploadedBy để tracking ownership
+    // THAY ĐỔI LOGIC NGHIỆP VỤ: Quan hệ task trực tiếp cho quy trình làm việc dựa trên attachment mới
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "task_id", nullable = true) // Liên kết task-attachment trực tiếp
+    private Task task;
+
+    // ✅ THÊM: 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "uploaded_by_user_id", nullable = false)
     private User uploadedBy;
@@ -114,5 +119,23 @@ public class Attachment {
 
     public void setDeleted(boolean deleted) {
         isDeleted = deleted;
+    }
+
+    /**
+     * Lấy task được liên kết trực tiếp với attachment này
+     * THAY ĐỔI LOGIC NGHIỆP VỤ: Quan hệ task-attachment trực tiếp
+     * @return Task được liên kết hoặc null nếu không được gán cho task nào
+     */
+    public Task getTask() {
+        return task;
+    }
+
+    /**
+     * Đặt task được liên kết trực tiếp với attachment này
+     * THAY ĐỔI LOGIC NGHIỆP VỤ: Cho phép gán task-attachment trực tiếp
+     * @param task Task để liên kết với attachment này
+     */
+    public void setTask(Task task) {
+        this.task = task;
     }
 }

@@ -16,8 +16,6 @@ import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
 import com.project.quanlycanghangkhong.model.User;
 import com.project.quanlycanghangkhong.repository.UserRepository;
 import com.project.quanlycanghangkhong.service.UserService;
-import com.project.quanlycanghangkhong.repository.UserPermissionRepository;
-import com.project.quanlycanghangkhong.model.UserPermission;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -27,12 +25,9 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private UserDAO userDAO;
 
-    @Autowired
-    private UserPermissionRepository userPermissionRepository;
-
     @Override
     public List<UserDTO> getAllUsers() {
-        List<User> users = userRepository.findAll();
+        List<User> users = userRepository.findAllWithPermissions();
         return users.stream()
                 .map(DTOConverter::convertUser)
                 .collect(Collectors.toList());
@@ -78,23 +73,14 @@ public class UserServiceImpl implements UserService {
     @Override
     public ApiResponseCustom<UserDTO> getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
-        UserDTO dto = new UserDTO(user);
-        // Lấy quyền động từ user_permission
-        List<UserPermission> perms = userPermissionRepository.findByUserId(user.getId());
-        List<String> permCodes = perms.stream()
-            .filter(UserPermission::getValue)
-            .map(UserPermission::getPermissionCode)
-            .collect(Collectors.toList());
-        dto.setPermissions(permCodes);
-        // Giữ lại canCreateActivity cho tương thích cũ
-        dto.setCanCreateActivity(permCodes.contains("CAN_CREATE_ACTIVITY"));
+        User user = userRepository.findByEmailWithPermissions(email).orElseThrow(() -> new RuntimeException("User not found"));
+        UserDTO dto = DTOConverter.convertUser(user); // Sử dụng DTOConverter đã được cập nhật
         return ApiResponseCustom.success(dto);
     }
 
     @Override
     public List<UserDTO> searchUsersByKeyword(String keyword) {
-        List<User> users = userRepository.findByNameContainingIgnoreCaseOrEmailContainingIgnoreCase(keyword, keyword);
+        List<User> users = userRepository.findByNameContainingIgnoreCaseOrEmailContainingIgnoreCaseWithPermissions(keyword, keyword);
         return users.stream()
                 .map(DTOConverter::convertUser)
                 .collect(Collectors.toList());
@@ -102,7 +88,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<UserDTO> getUsersByRoles(List<String> roleNames) {
-        List<User> users = userRepository.findByRoleNames(roleNames);
+        List<User> users = userRepository.findByRoleNamesWithPermissions(roleNames);
         return users.stream().map(DTOConverter::convertUser).collect(Collectors.toList());
     }
 

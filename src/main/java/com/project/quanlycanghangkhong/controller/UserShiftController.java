@@ -254,4 +254,54 @@ public class UserShiftController {
         return ResponseEntity.ok(res);
     }
 
+    @GetMapping("/my-shifts")
+    @Operation(summary = "Get current user's shifts", description = "Get shifts for the currently authenticated user")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully retrieved user's shifts", content = @Content(schema = @Schema(implementation = ApiAllUserShiftsResponse.class))),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    public ResponseEntity<ApiAllUserShiftsResponse> getMyShifts() {
+        try {
+            List<UserShiftDTO> myShifts = userShiftService.getMyShifts();
+            ApiAllUserShiftsResponse response = new ApiAllUserShiftsResponse();
+            response.setMessage("Thành công");
+            response.setStatusCode(200);
+            response.setData(myShifts);
+            response.setSuccess(true);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            ApiAllUserShiftsResponse errorResponse = new ApiAllUserShiftsResponse();
+            errorResponse.setMessage("Không thể lấy ca trực: " + e.getMessage());
+            errorResponse.setStatusCode(500);
+            errorResponse.setData(null);
+            errorResponse.setSuccess(false);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    @GetMapping("/user/{userId}")
+    @Operation(summary = "Get user shifts by user ID", description = "Get all shifts for a specific user")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully retrieved user's shifts", content = @Content(schema = @Schema(implementation = ApiAllUserShiftsResponse.class))),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found")
+    })
+    public ResponseEntity<ApiAllUserShiftsResponse> getUserShiftsByUserId(@PathVariable Integer userId) {
+        try {
+            List<UserShiftDTO> userShifts = userShiftService.getShiftsByUserId(userId);
+            ApiAllUserShiftsResponse response = new ApiAllUserShiftsResponse();
+            response.setMessage("Thành công");
+            response.setStatusCode(200);
+            response.setData(userShifts);
+            response.setSuccess(true);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            ApiAllUserShiftsResponse errorResponse = new ApiAllUserShiftsResponse();
+            errorResponse.setMessage("Không thể lấy ca trực cho user: " + e.getMessage());
+            errorResponse.setStatusCode(500);
+            errorResponse.setData(null);
+            errorResponse.setSuccess(false);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
 }

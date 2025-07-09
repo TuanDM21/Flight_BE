@@ -1,10 +1,15 @@
 package com.project.quanlycanghangkhong.dto;
 
+import java.util.List;
+
 public class UpdateTaskDTO {
     private Integer id;
     private String content;
     private String instructions;
     private String notes;
+    
+    // MỚI: Hỗ trợ cập nhật attachment trong cùng 1 request
+    private List<Integer> attachmentIds; // null = không thay đổi, empty = xóa hết, có giá trị = replace
 
     public Integer getId() {
         return id;
@@ -29,5 +34,13 @@ public class UpdateTaskDTO {
     }
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+    
+    public List<Integer> getAttachmentIds() {
+        return attachmentIds;
+    }
+    
+    public void setAttachmentIds(List<Integer> attachmentIds) {
+        this.attachmentIds = attachmentIds;
     }
 }

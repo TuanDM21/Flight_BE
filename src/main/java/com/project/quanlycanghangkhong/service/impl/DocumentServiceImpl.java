@@ -1,14 +1,11 @@
 package com.project.quanlycanghangkhong.service.impl;
 
 import com.project.quanlycanghangkhong.dto.DocumentDTO;
-import com.project.quanlycanghangkhong.dto.AttachmentDTO;
 import com.project.quanlycanghangkhong.dto.CreateDocumentRequest;
 import com.project.quanlycanghangkhong.dto.UpdateDocumentRequest;
 import com.project.quanlycanghangkhong.model.Document;
-import com.project.quanlycanghangkhong.model.Attachment;
 import com.project.quanlycanghangkhong.repository.DocumentRepository;
 import com.project.quanlycanghangkhong.service.DocumentService;
-import com.project.quanlycanghangkhong.repository.AttachmentRepository;
 import com.project.quanlycanghangkhong.model.TaskDocument;
 import com.project.quanlycanghangkhong.repository.TaskDocumentRepository;
 import com.project.quanlycanghangkhong.repository.EvaluationIssueDocumentRepository;
@@ -30,8 +27,6 @@ public class DocumentServiceImpl implements DocumentService {
     @Autowired
     private DocumentRepository documentRepository;
     @Autowired
-    private AttachmentRepository attachmentRepository;
-    @Autowired
     private TaskDocumentRepository taskDocumentRepository;
     @Autowired
     private EvaluationIssueDocumentRepository evaluationIssueDocumentRepository;
@@ -46,14 +41,23 @@ public class DocumentServiceImpl implements DocumentService {
         dto.setNotes(doc.getNotes());
         dto.setCreatedAt(doc.getCreatedAt());
         dto.setUpdatedAt(doc.getUpdatedAt());
+        
+        // === BUSINESS LOGIC THAY ĐỔI: Document không còn quản lý attachment ===
+        // Toàn bộ logic attachment đã chuyển sang task-attachment trực tiếp
+        /*
         if (doc.getAttachments() != null) {
             dto.setAttachments(doc.getAttachments().stream().map(this::toAttachmentDTO).collect(Collectors.toList()));
         }
+        */
+        
         if (doc.getCreatedBy() != null) {
             dto.setCreatedByUser(new UserDTO(doc.getCreatedBy()));
         }
         return dto;
     }
+    
+    // === KHÔNG DÙNG: Method này không còn cần thiết vì document không quản lý attachment ===
+    /*
     private AttachmentDTO toAttachmentDTO(Attachment att) {
         AttachmentDTO dto = new AttachmentDTO();
         dto.setId(att.getId());
@@ -63,6 +67,8 @@ public class DocumentServiceImpl implements DocumentService {
         dto.setCreatedAt(att.getCreatedAt());
         return dto;
     }
+    */
+    
     private Document toEntity(DocumentDTO dto) {
         Document doc = new Document();
         doc.setId(dto.getId());
@@ -101,6 +107,10 @@ public class DocumentServiceImpl implements DocumentService {
             doc.setCreatedBy(user);
         }
         Document saved = documentRepository.save(doc);
+        
+        // === BUSINESS LOGIC THAY ĐỔI: Document không còn quản lý attachment ===
+        // Toàn bộ attachment giờ chỉ gán trực tiếp vào task
+        /*
         // Gán các attachment đã upload vào document này
         if (request.getAttachmentIds() != null && !request.getAttachmentIds().isEmpty()) {
             List<Attachment> atts = attachmentRepository.findAllByIdIn(request.getAttachmentIds());
@@ -109,6 +119,8 @@ public class DocumentServiceImpl implements DocumentService {
             }
             attachmentRepository.saveAll(atts);
         }
+        */
+        
         return toDTO(saved);
     }
     @Override
@@ -119,6 +131,9 @@ public class DocumentServiceImpl implements DocumentService {
         doc.setUpdatedAt(LocalDateTime.now());
         Document saved = documentRepository.save(doc);
         
+        // THAY ĐỔI LOGIC NGHIỆP VỤ: Đã chuyển sang task-attachment trực tiếp
+        // Document không còn quản lý attachment nữa - attachment được gán trực tiếp vào task
+        /*
         // ✅ OPTION 2 (ADD): Đơn giản - chỉ ADD thêm attachment mới
         if (request.getAttachmentIds() != null && !request.getAttachmentIds().isEmpty()) {
             // Chỉ cần lấy các attachment mới và gán vào document
@@ -136,6 +151,7 @@ public class DocumentServiceImpl implements DocumentService {
             attachmentRepository.saveAll(oldAtts);
         }
         // ✅ Trường hợp attachmentIds == null: KHÔNG làm gì với attachment (giữ nguyên)
+        */
         
         return toDTO(saved);
     }
@@ -159,12 +175,16 @@ public class DocumentServiceImpl implements DocumentService {
             taskDocumentRepository.delete(taskDoc);
         }
         
+        // THAY ĐỔI LOGIC NGHIỆP VỤ: Đã chuyển sang task-attachment trực tiếp
+        // Document không còn quản lý attachment nữa - attachment được gán trực tiếp vào task
+        /*
         // Gỡ liên kết tất cả Attachment khỏi Document để giữ chúng
         List<Attachment> attachments = attachmentRepository.findByDocument_IdAndIsDeletedFalse(id);
         for (Attachment att : attachments) {
             att.setDocument(null); // Gỡ liên kết với document
         }
         attachmentRepository.saveAll(attachments);
+        */
         
         // Xóa document (bây giờ không còn attachment nào bị xóa theo)
         documentRepository.deleteById(id);
@@ -204,12 +224,16 @@ public class DocumentServiceImpl implements DocumentService {
                 taskDocumentRepository.delete(taskDoc);
             }
             
+            // THAY ĐỔI LOGIC NGHIỆP VỤ: Đã chuyển sang task-attachment trực tiếp
+            // Document không còn quản lý attachment nữa - attachment được gán trực tiếp vào task
+            /*
             // Gỡ liên kết tất cả Attachment khỏi Document để giữ chúng
             List<Attachment> attachments = attachmentRepository.findByDocument_IdAndIsDeletedFalse(id);
             for (Attachment att : attachments) {
                 att.setDocument(null); // Gỡ liên kết với document
             }
             attachmentRepository.saveAll(attachments);
+            */
         }
         
         // Cuối cùng mới xóa tất cả documents

@@ -1,13 +1,21 @@
 package com.project.quanlycanghangkhong.service;
 
 import com.project.quanlycanghangkhong.dto.CreateTaskRequest;
+import com.project.quanlycanghangkhong.dto.CreateSubtaskRequest;
 import com.project.quanlycanghangkhong.dto.TaskDTO;
 import com.project.quanlycanghangkhong.dto.TaskDetailDTO;
 import com.project.quanlycanghangkhong.dto.UpdateTaskDTO;
+import com.project.quanlycanghangkhong.dto.AttachmentDTO;
 import java.util.List;
 
 public interface TaskService {
-    TaskDTO createTaskWithAssignmentsAndDocuments(CreateTaskRequest request);
+    /**
+     * Tạo task với assignment và attachment trực tiếp
+     * THAY ĐỔI LOGIC NGHIỆP VỤ: Thay thế cách tiếp cận dựa trên document bằng việc gán attachment trực tiếp
+     * @param request Yêu cầu tạo task với danh sách ID attachment
+     * @return DTO task đã tạo
+     */
+    TaskDTO createTaskWithAssignmentsAndAttachments(CreateTaskRequest request);
     TaskDTO createTask(TaskDTO taskDTO);
     TaskDTO updateTask(Integer id, UpdateTaskDTO updateTaskDTO);
     void deleteTask(Integer id);
@@ -20,4 +28,43 @@ public interface TaskService {
     
     // Method mới để lấy task theo loại
     List<TaskDetailDTO> getMyTasks(String type);
+    
+    // MÔ HÌNH ADJACENCY LIST: Các method subtask cho cấu trúc phân cấp
+    
+    /**
+     * Tạo subtask dưới một task cha trong mô hình Adjacency List
+     * @param parentId ID task cha (từ path parameter)
+     * @param request Yêu cầu tạo subtask (không chứa parentId)
+     * @return DTO subtask đã tạo
+     */
+    TaskDTO createSubtask(Integer parentId, CreateSubtaskRequest request);
+    
+    /**
+     * Lấy tất cả subtask (task con) của một task cha trong mô hình Adjacency List
+     * @param parentId ID task cha
+     * @return Danh sách task con
+    /**
+     * Lấy tất cả subtask (task con) của một task cha trong mô hình Adjacency List
+     * @param parentId ID task cha
+     * @return Danh sách task con
+     */
+    List<TaskDetailDTO> getSubtasks(Integer parentId);
+    
+    /**
+     * Lấy tất cả task gốc (task không có cha) trong mô hình Adjacency List
+     * @return Danh sách task gốc
+     */
+    List<TaskDetailDTO> getRootTasks();
+    
+    // === ATTACHMENT MANAGEMENT ===
+    // Attachment chỉ được quản lý thông qua createTask và updateTask
+    // Đã loại bỏ assignAttachmentsToTask và removeAttachmentsFromTask
+    
+    /**
+     * Lấy tất cả attachment được liên kết trực tiếp với một task
+     * THAY ĐỔI LOGIC NGHIỆP VỤ: Truy vấn quan hệ task-attachment trực tiếp
+     * @param taskId ID Task
+     * @return Danh sách attachment được liên kết trực tiếp với task
+     */
+    List<AttachmentDTO> getTaskAttachments(Integer taskId);
 }

@@ -199,4 +199,57 @@ public class UserShiftServiceImpl implements UserShiftService {
         
         return savedShifts;
     }
+    
+    @Override
+    public List<UserShiftDTO> getMyShifts() {
+        try {
+            // Lấy thông tin user hiện tại từ SecurityContext
+            String email = org.springframework.security.core.context.SecurityContextHolder
+                    .getContext().getAuthentication().getName();
+            
+            User currentUser = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            
+            // Lấy ca trực của user hiện tại
+            List<UserShift> userShifts = userShiftRepository.findByUserId(currentUser.getId());
+            
+            return userShifts.stream()
+                    .map(UserShiftDTO::new)
+                    .sorted((a, b) -> {
+                        // Sắp xếp theo ngày mới nhất trước
+                        if (a.getShiftDate() != null && b.getShiftDate() != null) {
+                            return b.getShiftDate().compareTo(a.getShiftDate());
+                        }
+                        return 0;
+                    })
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            throw new RuntimeException("Không thể lấy ca trực của user hiện tại: " + e.getMessage());
+        }
+    }
+    
+    @Override
+    public List<UserShiftDTO> getShiftsByUserId(Integer userId) {
+        try {
+            // Kiểm tra user tồn tại
+            userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+            
+            // Lấy ca trực của user
+            List<UserShift> userShifts = userShiftRepository.findByUserId(userId);
+            
+            return userShifts.stream()
+                    .map(UserShiftDTO::new)
+                    .sorted((a, b) -> {
+                        // Sắp xếp theo ngày mới nhất trước
+                        if (a.getShiftDate() != null && b.getShiftDate() != null) {
+                            return b.getShiftDate().compareTo(a.getShiftDate());
+                        }
+                        return 0;
+                    })
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            throw new RuntimeException("Không thể lấy ca trực cho user " + userId + ": " + e.getMessage());
+        }
+    }
 }

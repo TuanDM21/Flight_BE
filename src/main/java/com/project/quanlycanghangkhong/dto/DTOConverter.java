@@ -7,6 +7,7 @@ import com.project.quanlycanghangkhong.model.UserShift;
 import com.project.quanlycanghangkhong.model.Document;
 import com.project.quanlycanghangkhong.model.Attachment;
 import java.util.stream.Collectors;
+import java.util.List;
 
 public class DTOConverter {
 
@@ -23,7 +24,22 @@ public class DTOConverter {
     
     public static UserDTO convertUser(User user) {
         if (user == null) return null;
-        return new UserDTO(user); // Sử dụng constructor đầy đủ, sẽ lấy cả roleName, teamName, unitName
+        UserDTO dto = new UserDTO(user); // Sử dụng constructor đầy đủ, sẽ lấy cả roleName, teamName, unitName
+        
+        // Lấy permissions từ UserPermission
+        if (user.getUserPermissions() != null) {
+            List<String> permCodes = user.getUserPermissions().stream()
+                .filter(perm -> perm.getValue() != null && perm.getValue())
+                .map(perm -> perm.getPermissionCode())
+                .collect(Collectors.toList());
+            
+            dto.setPermissions(permCodes);
+        } else {
+            // Nếu không có userPermissions, khởi tạo permissions rỗng
+            dto.setPermissions(new java.util.ArrayList<>());
+        }
+        
+        return dto;
     }
     
     public static UserShiftDTO convertUserShift(UserShift us) {
