@@ -20,4 +20,6 @@ public interface ActivityService {
     void removeParticipant(Long activityId, String participantType, Long participantId);
     List<ActivityDTO> getActivitiesForUser(Integer userId);
     void pinActivity(Long id, boolean pinned);
+    List<ActivityDTO> getPinnedActivities();
+    void clearUserActivitiesCache(Integer userId);
 }

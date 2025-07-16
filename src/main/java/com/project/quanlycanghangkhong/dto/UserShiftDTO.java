@@ -10,8 +10,6 @@ import com.project.quanlycanghangkhong.model.UserShift;
 
 public class UserShiftDTO {
 	private Integer id;
-	private Integer userId;
-	private String userName;
 	private String shiftCode;
 	private String startTime;
 	private String endTime;
@@ -40,13 +38,8 @@ public class UserShiftDTO {
 		// Lấy thông tin user
 		User user = userShift.getUser();
 		if (user != null) {
-			this.userId = user.getId();
-			this.userName = user.getName();
-			// Tạo UserDTO để có thông tin đầy đủ
-			this.user = new UserDTO();
-			this.user.setId(user.getId());
-			this.user.setName(user.getName());
-			this.user.setEmail(user.getEmail());
+			// Tạo UserDTO với đầy đủ thông tin từ User entity
+			this.user = new UserDTO(user);
 		}
 		// Gán trực tiếp LocalDate nếu DTO cũng là LocalDate
 		this.shiftDate = userShift.getShiftDate();
@@ -113,22 +106,6 @@ public class UserShiftDTO {
 
 	public void setUpdatedAt(LocalDateTime updatedAt) {
 		this.updatedAt = updatedAt;
-	}
-
-	public Integer getUserId() {
-		return userId;
-	}
-
-	public void setUserId(Integer userId) {
-		this.userId = userId;
-	}
-
-	public String getUserName() {
-		return userName;
-	}
-
-	public void setUserName(String userName) {
-		this.userName = userName;
 	}
 
 	public String getShiftCode() {

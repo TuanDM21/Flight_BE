@@ -42,4 +42,26 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
 
     @Query("SELECT a FROM Activity a WHERE a.startTime >= :startDate AND a.endTime <= :endDate")
     List<Activity> findByDateRange(@Param("startDate") java.time.LocalDateTime startDate, @Param("endDate") java.time.LocalDateTime endDate);
+
+    // Optimized query for pinned activities with JOIN FETCH
+    @EntityGraph(attributePaths = "participants")
+    @Query("SELECT DISTINCT a FROM Activity a WHERE a.pinned = true ORDER BY a.startTime DESC")
+    List<Activity> findPinnedActivitiesOptimized();
+
+    // Basic pinned activities query (fallback)
+    @Query("SELECT a FROM Activity a WHERE a.pinned = true ORDER BY a.startTime DESC")
+    List<Activity> findByPinnedTrue();
+
+    // Optimized query for user activities with JOIN FETCH to avoid N+1 problem
+    @EntityGraph(attributePaths = "participants")
+    @Query("SELECT DISTINCT a FROM Activity a JOIN a.participants p " +
+           "WHERE (p.participantType = 'USER' AND p.participantId = :userId) " +
+           "OR (p.participantType = 'TEAM' AND p.participantId IN :teamIds) " +
+           "OR (p.participantType = 'UNIT' AND p.participantId IN :unitIds) " +
+           "ORDER BY a.startTime DESC")
+    List<Activity> findActivitiesForUserOptimized(
+        @Param("userId") Integer userId,
+        @Param("teamIds") List<Integer> teamIds,
+        @Param("unitIds") List<Integer> unitIds
+    );
 }

@@ -1,17 +1,28 @@
 package com.project.quanlycanghangkhong.dto;
 
 import java.util.List;
+import com.project.quanlycanghangkhong.model.TaskPriority;
 
 public class CreateTaskRequest {
+    private String title;
     private String content;
     private String instructions;
     private String notes;
+    private TaskPriority priority;
     private List<AssignmentRequest> assignments;
     
     // MỚI: Chỉ hỗ trợ attachment trực tiếp (thay thế hoàn toàn documents)
     private List<Integer> attachmentIds; // Gán attachment trực tiếp vào task
 
     // Getters and setters
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
     public String getContent() {
         return content;
     }
@@ -34,6 +45,14 @@ public class CreateTaskRequest {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public TaskPriority getPriority() {
+        return priority;
+    }
+
+    public void setPriority(TaskPriority priority) {
+        this.priority = priority;
     }
 
     public List<AssignmentRequest> getAssignments() {

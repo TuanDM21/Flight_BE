@@ -39,7 +39,7 @@ public class Assignment {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private AssignmentStatus status = AssignmentStatus.ASSIGNED;
+    private AssignmentStatus status = AssignmentStatus.WORKING;
 
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;

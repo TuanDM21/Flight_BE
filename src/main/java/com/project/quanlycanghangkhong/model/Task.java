@@ -28,6 +28,9 @@ public class Task {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    @Column(nullable = false, length = 255)
+    private String title;
+
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
@@ -52,7 +55,11 @@ public class Task {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private TaskStatus status = TaskStatus.NEW;
+    private TaskStatus status = TaskStatus.OPEN;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "priority", nullable = false)
+    private TaskPriority priority = TaskPriority.NORMAL;
 
     // MÔ HÌNH ADJACENCY LIST: Quan hệ cha-con cho task phân cấp
     @ManyToOne(fetch = FetchType.LAZY)
@@ -74,6 +81,14 @@ public class Task {
 
     public void setId(Integer id) {
         this.id = id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
     }
 
     public String getContent() {
@@ -138,6 +153,14 @@ public class Task {
 
     public void setStatus(TaskStatus status) {
         this.status = status;
+    }
+
+    public TaskPriority getPriority() {
+        return priority;
+    }
+
+    public void setPriority(TaskPriority priority) {
+        this.priority = priority;
     }
 
     /**

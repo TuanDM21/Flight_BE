@@ -67,4 +67,27 @@ public interface TaskService {
      * @return Danh sách attachment được liên kết trực tiếp với task
      */
     List<AttachmentDTO> getTaskAttachments(Integer taskId);
+    
+    // ============== SEARCH & FILTER METHODS ==============
+    
+    /**
+     * Tìm kiếm task theo title
+     * @param title Từ khóa tìm kiếm
+     * @return Danh sách task match
+     */
+    List<TaskDetailDTO> searchTasksByTitle(String title);
+    
+    /**
+     * Lọc task theo priority
+     * @param priority Priority level
+     * @return Danh sách task có priority cụ thể
+     */
+    List<TaskDetailDTO> getTasksByPriority(com.project.quanlycanghangkhong.model.TaskPriority priority);
+    
+    /**
+     * Tìm kiếm task theo title hoặc content
+     * @param keyword Từ khóa tìm kiếm
+     * @return Danh sách task match
+     */
+    List<TaskDetailDTO> searchTasks(String keyword);
 }

@@ -2,9 +2,11 @@ package com.project.quanlycanghangkhong.dto;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import com.project.quanlycanghangkhong.model.TaskPriority;
 
 public class TaskDetailDTO {
     private Integer id;
+    private String title;
     private String content;
     private String instructions;
     private String notes;
@@ -13,6 +15,7 @@ public class TaskDetailDTO {
     private UserDTO createdByUser;
     private List<AssignmentDTO> assignments;
     private com.project.quanlycanghangkhong.model.TaskStatus status;
+    private TaskPriority priority;
     
     // MỚI: Hỗ trợ subtask cho mô hình Adjacency List
     private Integer parentId; // Tham chiếu đến ID task cha
@@ -27,6 +30,14 @@ public class TaskDetailDTO {
 
     public void setId(Integer id) {
         this.id = id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
     }
 
     public String getContent() {
@@ -91,6 +102,14 @@ public class TaskDetailDTO {
 
     public void setStatus(com.project.quanlycanghangkhong.model.TaskStatus status) {
         this.status = status;
+    }
+
+    public TaskPriority getPriority() {
+        return priority;
+    }
+
+    public void setPriority(TaskPriority priority) {
+        this.priority = priority;
     }
 
     /**

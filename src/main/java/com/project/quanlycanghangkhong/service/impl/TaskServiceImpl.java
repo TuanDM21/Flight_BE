@@ -41,24 +41,29 @@ public class TaskServiceImpl implements TaskService {
     private TaskDTO convertToDTO(Task task) {
         TaskDTO dto = new TaskDTO();
         dto.setId(task.getId());
+        dto.setTitle(task.getTitle());
         dto.setContent(task.getContent());
         dto.setInstructions(task.getInstructions());
         dto.setNotes(task.getNotes());
         dto.setCreatedAt(task.getCreatedAt());
         dto.setUpdatedAt(task.getUpdatedAt());
         dto.setCreatedBy(task.getCreatedBy() != null ? task.getCreatedBy().getId() : null);
-        dto.setStatus(task.getStatus()); // ✅ THÊM field status bị thiếu
+        dto.setStatus(task.getStatus());
+        dto.setPriority(task.getPriority());
         return dto;
     }
 
     private Task convertToEntity(TaskDTO dto) {
         Task task = new Task();
         task.setId(dto.getId());
+        task.setTitle(dto.getTitle());
         task.setContent(dto.getContent());
         task.setInstructions(dto.getInstructions());
         task.setNotes(dto.getNotes());
         task.setCreatedAt(dto.getCreatedAt());
         task.setUpdatedAt(dto.getUpdatedAt());
+        task.setStatus(dto.getStatus());
+        task.setPriority(dto.getPriority());
         if (dto.getCreatedBy() != null) {
             Optional<User> userOpt = userRepository.findById(dto.getCreatedBy());
             userOpt.ifPresent(task::setCreatedBy);
@@ -91,9 +96,11 @@ public class TaskServiceImpl implements TaskService {
 
         // Tạo Task
         Task task = new Task();
+        task.setTitle(request.getTitle());
         task.setContent(request.getContent());
         task.setInstructions(request.getInstructions());
         task.setNotes(request.getNotes());
+        task.setPriority(request.getPriority() != null ? request.getPriority() : com.project.quanlycanghangkhong.model.TaskPriority.NORMAL);
         task.setCreatedAt(LocalDateTime.now());
         task.setUpdatedAt(LocalDateTime.now());
         if (creator != null) task.setCreatedBy(creator);
@@ -120,7 +127,7 @@ public class TaskServiceImpl implements TaskService {
                 assignment.setNote(a.getNote());
                 assignment.setAssignedAt(LocalDateTime.now());
                 assignment.setAssignedBy(creator); // Đảm bảo luôn set người giao việc
-                assignment.setStatus(AssignmentStatus.ASSIGNED);
+                assignment.setStatus(AssignmentStatus.WORKING);
                 if (a.getDueAt() != null) {
                     assignment.setDueAt(new java.sql.Timestamp(a.getDueAt().getTime()).toLocalDateTime());
                 }
@@ -141,9 +148,15 @@ public class TaskServiceImpl implements TaskService {
             Task task = optionalTask.get();
             
             // Cập nhật thông tin cơ bản
+            if (updateTaskDTO.getTitle() != null) {
+                task.setTitle(updateTaskDTO.getTitle());
+            }
             task.setContent(updateTaskDTO.getContent());
             task.setInstructions(updateTaskDTO.getInstructions());
             task.setNotes(updateTaskDTO.getNotes());
+            if (updateTaskDTO.getPriority() != null) {
+                task.setPriority(updateTaskDTO.getPriority());
+            }
             task.setUpdatedAt(LocalDateTime.now());
             
             // MỚI: Cập nhật attachment list
@@ -197,12 +210,14 @@ public class TaskServiceImpl implements TaskService {
         if (task == null) return null;
         TaskDetailDTO dto = new TaskDetailDTO();
         dto.setId(task.getId());
+        dto.setTitle(task.getTitle());
         dto.setContent(task.getContent());
         dto.setInstructions(task.getInstructions());
         dto.setNotes(task.getNotes());
         dto.setCreatedAt(task.getCreatedAt());
         dto.setUpdatedAt(task.getUpdatedAt());
         dto.setStatus(task.getStatus()); // Mapping status enum
+        dto.setPriority(task.getPriority());
         
         // NEW: Set parent ID if exists
         if (task.getParent() != null) {
@@ -372,53 +387,36 @@ public class TaskServiceImpl implements TaskService {
             .collect(Collectors.toList());
     }
 
-    // Logic cập nhật trạng thái Task dựa trên trạng thái các Assignment con
+    // ✅ LOGIC MỚI - ĐƠN GIẢN: Cập nhật trạng thái Task dựa trên trạng thái các Assignment con
     public void updateTaskStatus(Task task) {
         List<Assignment> assignments = assignmentRepository.findAll().stream()
             .filter(a -> a.getTask().getId().equals(task.getId()))
             .collect(Collectors.toList());
+            
+        // Không có assignment nào → OPEN
         if (assignments == null || assignments.isEmpty()) {
-            task.setStatus(TaskStatus.NEW);
+            task.setStatus(TaskStatus.OPEN);
             taskRepository.save(task);
             return;
         }
-        boolean allCancelled = assignments.stream()
-                .allMatch(a -> a.getStatus() == AssignmentStatus.CANCELLED);
-        boolean allCompletedOrLate = assignments.stream()
-                .allMatch(a -> a.getStatus() == AssignmentStatus.COMPLETED
-                        || a.getStatus() == AssignmentStatus.LATE_COMPLETED);
-        boolean anyLate = assignments.stream()
-                .anyMatch(a -> a.getStatus() == AssignmentStatus.LATE_COMPLETED);
-        boolean anyCompletedOrLate = assignments.stream()
-                .anyMatch(a -> a.getStatus() == AssignmentStatus.COMPLETED
-                        || a.getStatus() == AssignmentStatus.LATE_COMPLETED);
-        boolean anyNotCompleted = assignments.stream()
-                .anyMatch(a -> a.getStatus() != AssignmentStatus.COMPLETED && a.getStatus() != AssignmentStatus.LATE_COMPLETED && a.getStatus() != AssignmentStatus.CANCELLED);
-
-        if (allCancelled) {
-            task.setStatus(TaskStatus.CANCELLED);
-        } else if (allCompletedOrLate) {
-            if (anyLate) {
-                task.setStatus(TaskStatus.LATE_COMPLETED);
-            } else {
-                task.setStatus(TaskStatus.COMPLETED);
-            }
-        } else if (anyCompletedOrLate && anyNotCompleted) {
-            task.setStatus(TaskStatus.PARTIALLY_COMPLETED);
+        
+        // Tất cả assignments đều DONE → COMPLETED  
+        boolean allDone = assignments.stream()
+                .allMatch(a -> a.getStatus() == AssignmentStatus.DONE);
+                
+        // Có ít nhất 1 assignment WORKING → IN_PROGRESS
+        boolean anyWorking = assignments.stream()
+                .anyMatch(a -> a.getStatus() == AssignmentStatus.WORKING);
+        
+        if (allDone) {
+            task.setStatus(TaskStatus.COMPLETED);
+        } else if (anyWorking) {
+            task.setStatus(TaskStatus.IN_PROGRESS);
         } else {
-            boolean anySubmittedOrReviewing = assignments.stream()
-                    .anyMatch(a -> a.getStatus() == AssignmentStatus.SUBMITTED
-                            || a.getStatus() == AssignmentStatus.REVIEWING);
-            boolean anyInProgress = assignments.stream()
-                    .anyMatch(a -> a.getStatus() == AssignmentStatus.IN_PROGRESS);
-            if (anySubmittedOrReviewing) {
-                task.setStatus(TaskStatus.UNDER_REVIEW);
-            } else if (anyInProgress) {
-                task.setStatus(TaskStatus.IN_PROGRESS);
-            } else {
-                task.setStatus(TaskStatus.ASSIGNED);
-            }
+            // Tất cả assignments đều CANCELLED → OPEN (task có thể assign lại)
+            task.setStatus(TaskStatus.OPEN);
         }
+        
         taskRepository.save(task);
     }
 
@@ -443,9 +441,11 @@ public class TaskServiceImpl implements TaskService {
 
         // Create subtask
         Task subtask = new Task();
+        subtask.setTitle(request.getTitle());
         subtask.setContent(request.getContent());
         subtask.setInstructions(request.getInstructions());
         subtask.setNotes(request.getNotes());
+        subtask.setPriority(request.getPriority() != null ? request.getPriority() : com.project.quanlycanghangkhong.model.TaskPriority.NORMAL);
         subtask.setParent(parentTask);
         subtask.setCreatedAt(LocalDateTime.now());
         subtask.setUpdatedAt(LocalDateTime.now());
@@ -473,7 +473,7 @@ public class TaskServiceImpl implements TaskService {
                 assignment.setNote(a.getNote());
                 assignment.setAssignedAt(LocalDateTime.now());
                 assignment.setAssignedBy(creator);
-                assignment.setStatus(AssignmentStatus.ASSIGNED);
+                assignment.setStatus(AssignmentStatus.WORKING);
                 if (a.getDueAt() != null) {
                     assignment.setDueAt(new java.sql.Timestamp(a.getDueAt().getTime()).toLocalDateTime());
                 }
@@ -555,6 +555,35 @@ public class TaskServiceImpl implements TaskService {
                 }
                 return dto;
             })
+            .collect(Collectors.toList());
+    }
+
+    // ============== SEARCH & FILTER IMPLEMENTATIONS ==============
+
+    @Override
+    public List<TaskDetailDTO> searchTasksByTitle(String title) {
+        List<Task> tasks = taskRepository.findByTitleContainingIgnoreCaseAndDeletedFalse(title);
+        return tasks.stream()
+            .map(task -> getTaskDetailById(task.getId()))
+            .filter(taskDetail -> taskDetail != null)
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<TaskDetailDTO> getTasksByPriority(com.project.quanlycanghangkhong.model.TaskPriority priority) {
+        List<Task> tasks = taskRepository.findByPriorityAndDeletedFalse(priority);
+        return tasks.stream()
+            .map(task -> getTaskDetailById(task.getId()))
+            .filter(taskDetail -> taskDetail != null)
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<TaskDetailDTO> searchTasks(String keyword) {
+        List<Task> tasks = taskRepository.findByTitleContainingIgnoreCaseOrContentContainingIgnoreCaseAndDeletedFalse(keyword, keyword);
+        return tasks.stream()
+            .map(task -> getTaskDetailById(task.getId()))
+            .filter(taskDetail -> taskDetail != null)
             .collect(Collectors.toList());
     }
 

@@ -2,9 +2,11 @@ package com.project.quanlycanghangkhong.dto;
 
 import java.time.LocalDateTime;
 import com.project.quanlycanghangkhong.model.TaskStatus;
+import com.project.quanlycanghangkhong.model.TaskPriority;
 
 public class TaskDTO {
     private Integer id;
+    private String title;
     private String content;
     private String instructions;
     private String notes;
@@ -12,6 +14,7 @@ public class TaskDTO {
     private LocalDateTime updatedAt;
     private Integer createdBy; // userId
     private TaskStatus status;
+    private TaskPriority priority;
 
     // Getters and setters
     public Integer getId() {
@@ -20,6 +23,14 @@ public class TaskDTO {
 
     public void setId(Integer id) {
         this.id = id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
     }
 
     public String getContent() {
@@ -76,5 +87,13 @@ public class TaskDTO {
 
     public void setStatus(TaskStatus status) {
         this.status = status;
+    }
+
+    public TaskPriority getPriority() {
+        return priority;
+    }
+
+    public void setPriority(TaskPriority priority) {
+        this.priority = priority;
     }
 }

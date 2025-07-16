@@ -190,4 +190,57 @@ public class TaskController {
             "success", true
         ));
     }
+
+    // ============== SEARCH & FILTER ENDPOINTS ==============
+
+    @GetMapping("/search")
+    @Operation(summary = "Tìm kiếm task theo title", description = "Tìm kiếm task theo title (case-insensitive)")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiAllTasksResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Thiếu từ khóa tìm kiếm", content = @Content(schema = @Schema(implementation = ApiAllTasksResponse.class)))
+    })
+    public ResponseEntity<ApiAllTasksResponse> searchTasksByTitle(@RequestParam String title) {
+        if (title == null || title.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(
+                new ApiAllTasksResponse("Từ khóa tìm kiếm không được để trống", 400, null, false)
+            );
+        }
+        List<TaskDetailDTO> tasks = taskService.searchTasksByTitle(title.trim());
+        return ResponseEntity.ok(new ApiAllTasksResponse("Tìm thấy " + tasks.size() + " task", 200, tasks, true));
+    }
+
+    @GetMapping("/priority/{priority}")
+    @Operation(summary = "Lọc task theo priority", description = "Lấy danh sách task theo mức độ ưu tiên")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiAllTasksResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Priority không hợp lệ", content = @Content(schema = @Schema(implementation = ApiAllTasksResponse.class)))
+    })
+    public ResponseEntity<ApiAllTasksResponse> getTasksByPriority(@PathVariable String priority) {
+        try {
+            com.project.quanlycanghangkhong.model.TaskPriority taskPriority = 
+                com.project.quanlycanghangkhong.model.TaskPriority.valueOf(priority.toUpperCase());
+            List<TaskDetailDTO> tasks = taskService.getTasksByPriority(taskPriority);
+            return ResponseEntity.ok(new ApiAllTasksResponse("Tìm thấy " + tasks.size() + " task với priority " + priority, 200, tasks, true));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(
+                new ApiAllTasksResponse("Priority phải là: LOW, NORMAL, HIGH, hoặc URGENT", 400, null, false)
+            );
+        }
+    }
+
+    @GetMapping("/search/all")
+    @Operation(summary = "Tìm kiếm task theo title hoặc content", description = "Tìm kiếm task trong title hoặc content")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiAllTasksResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Thiếu từ khóa tìm kiếm", content = @Content(schema = @Schema(implementation = ApiAllTasksResponse.class)))
+    })
+    public ResponseEntity<ApiAllTasksResponse> searchAllTasks(@RequestParam String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(
+                new ApiAllTasksResponse("Từ khóa tìm kiếm không được để trống", 400, null, false)
+            );
+        }
+        List<TaskDetailDTO> tasks = taskService.searchTasks(keyword.trim());
+        return ResponseEntity.ok(new ApiAllTasksResponse("Tìm thấy " + tasks.size() + " task", 200, tasks, true));
+    }
 }

@@ -140,8 +140,8 @@ public class AssignmentServiceImpl implements AssignmentService {
         }
         if (request.getStatus() != null) {
             assignment.setStatus(request.getStatus());
-            // Nếu chuyển sang completed thì set completedAt, completedBy
-            if (request.getStatus() == com.project.quanlycanghangkhong.model.AssignmentStatus.COMPLETED) {
+            // Nếu chuyển sang DONE thì set completedAt, completedBy
+            if (request.getStatus() == com.project.quanlycanghangkhong.model.AssignmentStatus.DONE) {
                 assignment.setCompletedAt(java.time.LocalDateTime.now());
                 // assignment.setCompletedBy(currentUser); // Lấy user hiện tại nếu cần
             } else {
@@ -153,7 +153,7 @@ public class AssignmentServiceImpl implements AssignmentService {
         if (recipientChanged) {
             assignment.setCompletedAt(null);
             assignment.setCompletedBy(null);
-            assignment.setStatus(com.project.quanlycanghangkhong.model.AssignmentStatus.ASSIGNED);
+            assignment.setStatus(com.project.quanlycanghangkhong.model.AssignmentStatus.WORKING);
         }
         Assignment saved = assignmentRepository.save(assignment);
         if (saved.getTask() != null) {

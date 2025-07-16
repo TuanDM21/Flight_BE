@@ -1,12 +1,7 @@
 package com.project.quanlycanghangkhong.model;
 
 public enum TaskStatus {
-    NEW,
-    ASSIGNED,
-    IN_PROGRESS,
-    UNDER_REVIEW,
-    PARTIALLY_COMPLETED,
-    COMPLETED,
-    LATE_COMPLETED,
-    CANCELLED
+    OPEN,         // 📝 Chưa có ai làm
+    IN_PROGRESS,  // ⚡ Có ít nhất 1 assignment đang WORKING  
+    COMPLETED     // ✅ Tất cả assignments đều DONE
 }
