@@ -51,4 +51,16 @@ public class UnitController {
 	        response.setSuccess(true);
 	        return ResponseEntity.ok(response);
 	    }
+
+	    @GetMapping("/assignable")
+	    @Operation(summary = "Get assignable units", description = "Lấy danh sách unit mà user hiện tại có thể giao việc cho theo phân quyền")
+	    public ResponseEntity<ApiAllUnitsResponse> getAssignableUnits() {
+	        List<UnitDTO> dtos = unitService.getAssignableUnitsForCurrentUser();
+	        ApiAllUnitsResponse response = new ApiAllUnitsResponse();
+	        response.setMessage("Thành công");
+	        response.setStatusCode(200);
+	        response.setData(dtos);
+	        response.setSuccess(true);
+	        return ResponseEntity.ok(response);
+	    }
 }

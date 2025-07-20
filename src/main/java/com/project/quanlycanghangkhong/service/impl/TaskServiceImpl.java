@@ -101,6 +101,7 @@ public class TaskServiceImpl implements TaskService {
         task.setInstructions(request.getInstructions());
         task.setNotes(request.getNotes());
         task.setPriority(request.getPriority() != null ? request.getPriority() : com.project.quanlycanghangkhong.model.TaskPriority.NORMAL);
+        task.setStatus(com.project.quanlycanghangkhong.model.TaskStatus.OPEN); // ✅ Đảm bảo status được set
         task.setCreatedAt(LocalDateTime.now());
         task.setUpdatedAt(LocalDateTime.now());
         if (creator != null) task.setCreatedBy(creator);

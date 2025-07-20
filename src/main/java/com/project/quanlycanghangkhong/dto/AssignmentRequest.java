@@ -1,8 +1,14 @@
 package com.project.quanlycanghangkhong.dto;
 
 import java.util.Date;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class AssignmentRequest {
+    
+    // Constructor mặc định cần thiết cho Jackson
+    public AssignmentRequest() {}
+    
     private Integer recipientId;
     private String recipientType;
     private Date dueAt;

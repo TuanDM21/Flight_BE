@@ -15,5 +15,10 @@ public interface UnitService {
     void deleteUnit(Integer id);
 
     List<UnitDTO> getAllUnits();
+    
+    /**
+     * Lấy danh sách unit mà user hiện tại có thể giao việc cho (theo phân quyền).
+     */
+    List<UnitDTO> getAssignableUnitsForCurrentUser();
 
 }

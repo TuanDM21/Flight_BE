@@ -32,12 +32,31 @@ public class TaskController {
     @Autowired
     private TaskService taskService;
 
+    @PostMapping("/test")
+    @Operation(summary = "Test request body mapping", description = "Test endpoint để debug JSON mapping")
+    public ResponseEntity<ApiTaskResponse> testCreateTask(@RequestBody CreateTaskRequest request) {
+        System.out.println("[TEST] Test endpoint called with: " + request);
+        return ResponseEntity.ok(new ApiTaskResponse("Test thành công", 200, null, true));
+    }
+
     @PostMapping
     @Operation(summary = "Tạo task", description = "Tạo mới một công việc")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "Tạo thành công", content = @Content(schema = @Schema(implementation = ApiTaskResponse.class)))
     })
     public ResponseEntity<ApiTaskResponse> createTask(@RequestBody CreateTaskRequest request) {
+        System.out.println("[DEBUG] Received CreateTaskRequest: " + request);
+        System.out.println("[DEBUG] Request class: " + (request != null ? request.getClass().getName() : "null"));
+        if (request == null) {
+            System.out.println("[DEBUG] Request is null!");
+            return ResponseEntity.status(400).body(new ApiTaskResponse("Request body is null", 400, null, false));
+        } else {
+            System.out.println("[DEBUG] Request title: " + request.getTitle());
+            System.out.println("[DEBUG] Request content: " + request.getContent());
+            System.out.println("[DEBUG] Request priority: " + request.getPriority());
+            System.out.println("[DEBUG] Request assignments: " + request.getAssignments());
+            System.out.println("[DEBUG] Request attachmentIds: " + request.getAttachmentIds());
+        }
         TaskDTO created = taskService.createTaskWithAssignmentsAndAttachments(request);
         ApiTaskResponse res = new ApiTaskResponse("Tạo công việc thành công", 201, created, true);
         return ResponseEntity.status(HttpStatus.CREATED).body(res);

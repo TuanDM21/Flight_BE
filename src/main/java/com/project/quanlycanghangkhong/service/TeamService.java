@@ -12,4 +12,9 @@ public interface TeamService {
     Team createTeam(Team team);
 
     void deleteTeam(Integer id);
+    
+    /**
+     * Lấy danh sách team mà user hiện tại có thể giao việc cho (theo phân quyền).
+     */
+    List<TeamDTO> getAssignableTeamsForCurrentUser();
 }

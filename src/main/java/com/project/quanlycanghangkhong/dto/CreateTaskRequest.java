@@ -2,8 +2,19 @@ package com.project.quanlycanghangkhong.dto;
 
 import java.util.List;
 import com.project.quanlycanghangkhong.model.TaskPriority;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class CreateTaskRequest {
+    
+    // Constructor mặc định cần thiết cho Jackson
+    public CreateTaskRequest() {}
+    
+    public CreateTaskRequest(String title, String content) {
+        this.title = title;
+        this.content = content;
+    }
     private String title;
     private String content;
     private String instructions;
@@ -79,5 +90,18 @@ public class CreateTaskRequest {
      */
     public void setAttachmentIds(List<Integer> attachmentIds) {
         this.attachmentIds = attachmentIds;
+    }
+    
+    @Override
+    public String toString() {
+        return "CreateTaskRequest{" +
+                "title='" + title + '\'' +
+                ", content='" + content + '\'' +
+                ", instructions='" + instructions + '\'' +
+                ", notes='" + notes + '\'' +
+                ", priority=" + priority +
+                ", assignments=" + (assignments != null ? assignments.size() + " assignments" : "null") +
+                ", attachmentIds=" + (attachmentIds != null ? attachmentIds.size() + " attachments" : "null") +
+                '}';
     }
 }

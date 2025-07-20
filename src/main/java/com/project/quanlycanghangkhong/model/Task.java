@@ -54,7 +54,7 @@ public class Task {
     private boolean deleted = false;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
+    @Column(name = "status", nullable = false, length = 20)
     private TaskStatus status = TaskStatus.OPEN;
 
     @Enumerated(EnumType.STRING)

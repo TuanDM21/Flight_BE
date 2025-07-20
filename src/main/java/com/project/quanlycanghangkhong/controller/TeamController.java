@@ -59,4 +59,16 @@ public class TeamController {
 		TeamDTO dto = new TeamDTO(createdTeam.getId(), createdTeam.getTeamName());
 		return ResponseEntity.ok(new ApiResponse<>("Thành công", 200, dto, true));
 	}
+
+	@GetMapping("/assignable")
+	@Operation(summary = "Get assignable teams", description = "Lấy danh sách team mà user hiện tại có thể giao việc cho theo phân quyền")
+	public ResponseEntity<ApiAllTeamsResponse> getAssignableTeams() {
+		List<TeamDTO> dtos = teamService.getAssignableTeamsForCurrentUser();
+		ApiAllTeamsResponse response = new ApiAllTeamsResponse();
+		response.setMessage("Thành công");
+		response.setStatusCode(200);
+		response.setData(dtos);
+		response.setSuccess(true);
+		return ResponseEntity.ok(response);
+	}
 }
