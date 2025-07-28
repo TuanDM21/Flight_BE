@@ -11,7 +11,10 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -311,81 +314,56 @@ public class TaskServiceImpl implements TaskService {
         }
         
         Integer currentUserId = currentUser.getId();
-        List<Task> tasks = new ArrayList<>();
         
         switch (type.toLowerCase()) {
             case "created":
-                // Công việc đã tạo của tôi
-                tasks = taskRepository.findAllByDeletedFalse().stream()
-                    .filter(task -> task.getCreatedBy() != null && 
-                           task.getCreatedBy().getId().equals(currentUserId))
+                // 🚀 OPTIMIZED: Lấy tasks đã tạo nhưng chưa có assignment (logic cũ)
+                List<Task> createdTasks = taskRepository.findCreatedTasksWithoutAssignments(currentUserId);
+                
+                // ✅ Trả về flat list, KHÔNG cần hierarchy level
+                return createdTasks.stream()
+                    .map(task -> getTaskDetailById(task.getId()))
                     .collect(Collectors.toList());
-                break;
                 
             case "assigned":
-                // Công việc đã giao của tôi (tôi là assignedBy trong Assignment)
-                List<Assignment> assignedByMe = assignmentRepository.findAll().stream()
-                    .filter(assignment -> assignment.getAssignedBy() != null && 
-                           assignment.getAssignedBy().getId().equals(currentUserId))
-                    .collect(Collectors.toList());
+                // 🚀 OPTIMIZED + 🌲 HIERARCHICAL: Lấy tasks đã giao + tất cả subtasks
+                List<Task> assignedTasks = taskRepository.findAssignedTasksByUserId(currentUserId);
                 
-                Set<Integer> assignedTaskIds = assignedByMe.stream()
-                    .map(assignment -> assignment.getTask().getId())
-                    .collect(Collectors.toSet());
-                
-                tasks = taskRepository.findAllByDeletedFalse().stream()
-                    .filter(task -> assignedTaskIds.contains(task.getId()))
-                    .collect(Collectors.toList());
-                break;
+                // 🌳 Special handling for assigned: return hierarchy with levels
+                return getTaskHierarchyWithLevels(assignedTasks);
                 
             case "received":
-                // Công việc tôi được giao (tôi là recipient trong Assignment)
-                List<Assignment> assignedToMe = assignmentRepository.findAll().stream()
-                    .filter(assignment -> {
-                        if ("user".equalsIgnoreCase(assignment.getRecipientType())) {
-                            // Trực tiếp giao cho user
-                            return assignment.getRecipientId() != null && 
-                                   assignment.getRecipientId().equals(currentUserId);
-                        } else if ("team".equalsIgnoreCase(assignment.getRecipientType())) {
-                            // Chỉ TEAM_LEAD mới được nhận công việc giao cho team (không bao gồm TEAM_VICE_LEAD)
-                            if (currentUser.getRole() != null && 
-                                "TEAM_LEAD".equals(currentUser.getRole().getRoleName()) &&
-                                currentUser.getTeam() != null &&
-                                assignment.getRecipientId() != null) {
-                                return currentUser.getTeam().getId().equals(assignment.getRecipientId());
-                            }
-                            return false;
-                        } else if ("unit".equalsIgnoreCase(assignment.getRecipientType())) {
-                            // Chỉ UNIT_LEAD mới được nhận công việc giao cho unit (không bao gồm UNIT_VICE_LEAD)
-                            if (currentUser.getRole() != null && 
-                                "UNIT_LEAD".equals(currentUser.getRole().getRoleName()) &&
-                                currentUser.getUnit() != null &&
-                                assignment.getRecipientId() != null) {
-                                return currentUser.getUnit().getId().equals(assignment.getRecipientId());
-                            }
-                            return false;
-                        }
-                        return false;
-                    })
+                // 🚀 OPTIMIZED + 🌲 HIERARCHICAL: Lấy tasks được giao + hierarchy levels
+                List<Task> receivedTasks = new ArrayList<>();
+                
+                // 1. Tasks được giao trực tiếp cho user
+                receivedTasks.addAll(taskRepository.findReceivedTasksByUserId(currentUserId));
+                
+                // 2. Tasks được giao cho team (chỉ TEAM_LEAD mới nhận)
+                if (currentUser.getRole() != null && 
+                    "TEAM_LEAD".equals(currentUser.getRole().getRoleName()) &&
+                    currentUser.getTeam() != null) {
+                    receivedTasks.addAll(taskRepository.findReceivedTasksByTeamId(currentUser.getTeam().getId()));
+                }
+                
+                // 3. Tasks được giao cho unit (chỉ UNIT_LEAD mới nhận)
+                if (currentUser.getRole() != null && 
+                    "UNIT_LEAD".equals(currentUser.getRole().getRoleName()) &&
+                    currentUser.getUnit() != null) {
+                    receivedTasks.addAll(taskRepository.findReceivedTasksByUnitId(currentUser.getUnit().getId()));
+                }
+                
+                // Remove duplicates và apply hierarchy
+                List<Task> uniqueReceivedTasks = receivedTasks.stream()
+                    .distinct()
                     .collect(Collectors.toList());
                 
-                Set<Integer> receivedTaskIds = assignedToMe.stream()
-                    .map(assignment -> assignment.getTask().getId())
-                    .collect(Collectors.toSet());
-                
-                tasks = taskRepository.findAllByDeletedFalse().stream()
-                    .filter(task -> receivedTaskIds.contains(task.getId()))
-                    .collect(Collectors.toList());
-                break;
+                // 🌳 Special handling for received: return hierarchy with levels
+                return getTaskHierarchyWithLevels(uniqueReceivedTasks);
                 
             default:
                 return List.of();
         }
-        
-        return tasks.stream()
-            .map(task -> getTaskDetailById(task.getId()))
-            .filter(taskDetail -> taskDetail != null)
-            .collect(Collectors.toList());
     }
 
     // ✅ LOGIC MỚI - ĐƠN GIẢN: Cập nhật trạng thái Task dựa trên trạng thái các Assignment con
@@ -618,5 +596,214 @@ public class TaskServiceImpl implements TaskService {
             attachmentRepository.saveAll(newAttachments);
         }
         // Nếu attachmentIds empty = xóa hết attachment (đã làm ở trên)
+    }
+
+    // ============== HELPER METHODS FOR HIERARCHICAL TASK MANAGEMENT ==============
+    
+    /**
+     * 🌲 Lấy tất cả subtasks theo cấu trúc phân cấp (recursive)
+     * Method này sẽ traverse toàn bộ cây subtask và trả về flat list
+     * @param parentTask Task gốc
+     * @return Danh sách tất cả task con (bao gồm cả task gốc)
+     */
+    private List<Task> getAllSubtasksRecursive(Task parentTask) {
+        List<Task> allTasks = new ArrayList<>();
+        allTasks.add(parentTask); // Thêm task gốc
+        
+        // Lấy tất cả subtasks trực tiếp
+        List<Task> directSubtasks = taskRepository.findByParentIdAndDeletedFalse(parentTask.getId());
+        
+        // Recursive call cho mỗi subtask
+        for (Task subtask : directSubtasks) {
+            allTasks.addAll(getAllSubtasksRecursive(subtask));
+        }
+        
+        return allTasks;
+    }
+    
+    /**
+     * 🌳 Lấy tất cả subtasks cho nhiều task cha (batch processing)
+     * @param parentTasks Danh sách task cha
+     * @return Danh sách tất cả tasks bao gồm cả subtasks
+     */
+    private List<Task> getAllSubtasksForTasks(List<Task> parentTasks) {
+        List<Task> allTasks = new ArrayList<>();
+        
+        for (Task parentTask : parentTasks) {
+            allTasks.addAll(getAllSubtasksRecursive(parentTask));
+        }
+        
+        // Remove duplicates (trong trường hợp có subtask được reference nhiều lần)
+        return allTasks.stream()
+            .distinct()
+            .collect(Collectors.toList());
+    }
+    
+    /**
+     * 🌳 Lấy task hierarchy với level đúng cho type=assigned
+     * FIX: Tránh trùng lặp và đảm bảo hierarchy level chính xác
+     * @param assignedTasks Danh sách task được giao
+     * @return Danh sách TaskDetailDTO với hierarchyLevel được set đúng
+     */
+    private List<TaskDetailDTO> getTaskHierarchyWithLevels(List<Task> assignedTasks) {
+        // Use Map để tránh trùng lặp và lưu trữ kết quả
+        Map<Integer, TaskDetailDTO> resultMap = new HashMap<>();
+        Set<Integer> processedIds = new HashSet<>();
+        
+        // Xử lý từng assigned task
+        for (Task assignedTask : assignedTasks) {
+            if (!processedIds.contains(assignedTask.getId())) {
+                // Tính toán level thực tế của task này (dựa trên cấu trúc parent-child)
+                int actualLevel = calculateActualLevel(assignedTask);
+                
+                // Lấy toàn bộ hierarchy từ task này
+                List<TaskDetailDTO> hierarchy = getTaskHierarchyRecursive(assignedTask, actualLevel);
+                
+                // Merge vào result map
+                for (TaskDetailDTO task : hierarchy) {
+                    if (!resultMap.containsKey(task.getId())) {
+                        resultMap.put(task.getId(), task);
+                        processedIds.add(task.getId());
+                    }
+                }
+            }
+        }
+        
+        // Convert map to list và sort
+        return resultMap.values().stream()
+            .sorted((t1, t2) -> {
+                int levelCompare = Integer.compare(t1.getHierarchyLevel(), t2.getHierarchyLevel());
+                if (levelCompare != 0) return levelCompare;
+                return Integer.compare(t1.getId(), t2.getId());
+            })
+            .collect(Collectors.toList());
+    }
+    
+    /**
+     * 🧮 Tính toán level thực tế của task trong cây hierarchy
+     * @param task Task cần tính level
+     * @return Level thực tế (0 = root, 1 = child, etc.)
+     */
+    private int calculateActualLevel(Task task) {
+        int level = 0;
+        Task current = task;
+        
+        // Đi ngược lên parent để tính level
+        while (current.getParent() != null) {
+            level++;
+            current = current.getParent();
+            
+            // Tránh vòng lặp vô hạn
+            if (level > 10) break; 
+        }
+        
+        return level;
+    }
+    
+    /**
+     * 🌲 Đệ quy lấy task hierarchy với level chính xác
+     * @param task Task hiện tại
+     * @param level Level hiện tại trong hierarchy (0=root)
+     * @return Danh sách TaskDetailDTO bao gồm task hiện tại và tất cả subtasks
+     */
+    private List<TaskDetailDTO> getTaskHierarchyRecursive(Task task, int level) {
+        List<TaskDetailDTO> result = new ArrayList<>();
+        
+        // Convert task hiện tại với level (không include subtasks để tránh đệ quy vô hạn)
+        TaskDetailDTO taskDetail = convertToTaskDetailDTOSimple(task);
+        taskDetail.setHierarchyLevel(level);
+        result.add(taskDetail);
+        
+        // Lấy tất cả subtasks trực tiếp
+        List<Task> subtasks = taskRepository.findByParentIdAndDeletedFalse(task.getId());
+        
+        // Đệ quy cho mỗi subtask với level tăng lên
+        for (Task subtask : subtasks) {
+            result.addAll(getTaskHierarchyRecursive(subtask, level + 1));
+        }
+        
+        return result;
+    }
+    
+    /**
+     * 🔄 Convert Task to TaskDetailDTO (simple version without subtasks to avoid infinite recursion)
+     * @param task Task entity
+     * @return TaskDetailDTO không bao gồm subtasks
+     */
+    private TaskDetailDTO convertToTaskDetailDTOSimple(Task task) {
+        TaskDetailDTO dto = new TaskDetailDTO();
+        dto.setId(task.getId());
+        dto.setTitle(task.getTitle());
+        dto.setContent(task.getContent());
+        dto.setInstructions(task.getInstructions());
+        dto.setNotes(task.getNotes());
+        dto.setCreatedAt(task.getCreatedAt());
+        dto.setUpdatedAt(task.getUpdatedAt());
+        dto.setStatus(task.getStatus());
+        dto.setPriority(task.getPriority());
+        
+        // Set parent ID if exists
+        if (task.getParent() != null) {
+            dto.setParentId(task.getParent().getId());
+        }
+        
+        // Set created by user
+        if (task.getCreatedBy() != null) {
+            dto.setCreatedByUser(new UserDTO(task.getCreatedBy()));
+        }
+        
+        // Assignments
+        List<AssignmentDTO> assignmentDTOs = assignmentRepository.findAll().stream()
+            .filter(a -> a.getTask().getId().equals(task.getId()))
+            .map(a -> {
+                AssignmentDTO adto = new AssignmentDTO();
+                adto.setAssignmentId(a.getAssignmentId());
+                adto.setRecipientType(a.getRecipientType());
+                adto.setRecipientId(a.getRecipientId());
+                adto.setTaskId(a.getTask() != null ? a.getTask().getId() : null);
+                if (a.getAssignedBy() != null) {
+                    adto.setAssignedByUser(new UserDTO(a.getAssignedBy()));
+                }
+                adto.setAssignedAt(a.getAssignedAt() != null ? java.sql.Timestamp.valueOf(a.getAssignedAt()) : null);
+                adto.setDueAt(a.getDueAt() != null ? java.sql.Timestamp.valueOf(a.getDueAt()) : null);
+                adto.setNote(a.getNote());
+                adto.setCompletedAt(a.getCompletedAt() != null ? java.sql.Timestamp.valueOf(a.getCompletedAt()) : null);
+                if (a.getCompletedBy() != null) {
+                    adto.setCompletedByUser(new UserDTO(a.getCompletedBy()));
+                }
+                adto.setStatus(a.getStatus());
+                // Set recipient user based on type
+                if ("user".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null) {
+                    userRepository.findById(a.getRecipientId()).ifPresent(u -> adto.setRecipientUser(new UserDTO(u)));
+                } else if ("team".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null) {
+                    userRepository.findTeamLeadByTeamId(a.getRecipientId()).ifPresent(u -> adto.setRecipientUser(new UserDTO(u)));
+                } else if ("unit".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null) {
+                    userRepository.findUnitLeadByUnitId(a.getRecipientId()).ifPresent(u -> adto.setRecipientUser(new UserDTO(u)));
+                }
+                return adto;
+            }).toList();
+        dto.setAssignments(assignmentDTOs);
+        
+        // Direct attachments
+        List<AttachmentDTO> attachmentDTOs = new ArrayList<>();
+        List<Attachment> directAttachments = attachmentRepository.findByTask_IdAndIsDeletedFalse(task.getId());
+        for (Attachment att : directAttachments) {
+            AttachmentDTO attDto = new AttachmentDTO();
+            attDto.setId(att.getId());
+            attDto.setFilePath(att.getFilePath());
+            attDto.setFileName(att.getFileName());
+            attDto.setFileSize(att.getFileSize());
+            attDto.setCreatedAt(att.getCreatedAt());
+            if (att.getUploadedBy() != null) {
+                attDto.setUploadedBy(new UserDTO(att.getUploadedBy()));
+            }
+            attachmentDTOs.add(attDto);
+        }
+        dto.setAttachments(attachmentDTOs);
+        
+        // NOTE: Không include subtasks để tránh vô hạn đệ quy
+        dto.setSubtasks(new ArrayList<>());
+        
+        return dto;
     }
 }

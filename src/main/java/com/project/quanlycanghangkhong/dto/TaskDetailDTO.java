@@ -20,6 +20,7 @@ public class TaskDetailDTO {
     // MỚI: Hỗ trợ subtask cho mô hình Adjacency List
     private Integer parentId; // Tham chiếu đến ID task cha
     private List<TaskDetailDTO> subtasks; // Danh sách task con
+    private Integer hierarchyLevel; // Cấp độ trong hierarchy (0=root, 1=child, 2=grandchild...)
     
     // MỚI: Attachment trực tiếp (THAY THẾ hoàn toàn documents)
     private List<AttachmentDTO> attachments; // Quan hệ task-attachment trực tiếp
@@ -161,5 +162,44 @@ public class TaskDetailDTO {
      */
     public void setAttachments(List<AttachmentDTO> attachments) {
         this.attachments = attachments;
+    }
+
+    /**
+     * Lấy cấp độ hierarchy của task (0=root, 1=child, 2=grandchild...)
+     * @return Cấp độ trong cấu trúc phân cấp
+     */
+    public Integer getHierarchyLevel() {
+        return hierarchyLevel;
+    }
+
+    /**
+     * Đặt cấp độ hierarchy của task
+     * @param hierarchyLevel Cấp độ trong cấu trúc phân cấp
+     */
+    public void setHierarchyLevel(Integer hierarchyLevel) {
+        this.hierarchyLevel = hierarchyLevel;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        TaskDetailDTO that = (TaskDetailDTO) obj;
+        return id != null && id.equals(that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return id != null ? id.hashCode() : 0;
+    }
+    
+    @Override
+    public String toString() {
+        return "TaskDetailDTO{" +
+            "id=" + id +
+            ", title='" + title + '\'' +
+            ", hierarchyLevel=" + hierarchyLevel +
+            ", parentId=" + parentId +
+            '}';
     }
 }

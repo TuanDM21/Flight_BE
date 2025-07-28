@@ -133,7 +133,7 @@ public class TaskController {
     }
 
     @GetMapping("/my")
-    @Operation(summary = "Lấy công việc của tôi theo loại", description = "Lấy danh sách công việc theo loại: created (đã tạo), assigned (đã giao), received (được giao)")
+    @Operation(summary = "Lấy công việc của tôi theo loại", description = "Lấy danh sách công việc theo loại: created (đã tạo nhưng chưa giao việc - flat list), assigned (đã giao việc bao gồm tất cả subtasks với hierarchyLevel), received (được giao việc - flat list)")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiAllTasksResponse.class))),
         @ApiResponse(responseCode = "400", description = "Tham số type không hợp lệ", content = @Content(schema = @Schema(implementation = ApiAllTasksResponse.class)))
@@ -147,9 +147,9 @@ public class TaskController {
         
         List<TaskDetailDTO> tasks = taskService.getMyTasks(type);
         String message = switch (type.toLowerCase()) {
-            case "created" -> "Danh sách công việc đã tạo";
-            case "assigned" -> "Danh sách công việc đã giao";
-            case "received" -> "Danh sách công việc được giao";
+            case "created" -> "Danh sách công việc đã tạo nhưng chưa giao việc (flat list)";
+            case "assigned" -> "Danh sách công việc đã giao (bao gồm tất cả subtasks với hierarchyLevel)";
+            case "received" -> "Danh sách công việc được giao (flat list)";
             default -> "Thành công";
         };
         

@@ -3,6 +3,8 @@ package com.project.quanlycanghangkhong.repository;
 import com.project.quanlycanghangkhong.model.Task;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 import java.util.List;
@@ -69,4 +71,53 @@ public interface TaskRepository extends JpaRepository<Task, Integer> {
      * @return Danh sách task có priority cụ thể
      */
     List<Task> findByPriorityAndDeletedFalse(com.project.quanlycanghangkhong.model.TaskPriority priority);
+    
+    // ============== OPTIMIZED METHODS FOR MY TASKS API ==============
+    
+    /**
+     * 🟢 OPTIMIZED: Lấy tasks đã tạo nhưng chưa có assignment (type=created)
+     * Thay thế: findAllByDeletedFalse() + filter stream
+     * @param userId ID của user
+     * @return Danh sách task đã tạo nhưng chưa giao việc
+     */
+    @Query("SELECT t FROM Task t WHERE t.createdBy.id = :userId AND t.deleted = false " +
+           "AND NOT EXISTS (SELECT a FROM Assignment a WHERE a.task = t)")
+    List<Task> findCreatedTasksWithoutAssignments(@Param("userId") Integer userId);
+    
+    /**
+     * 🟢 OPTIMIZED: Lấy tasks đã giao việc (type=assigned)  
+     * Thay thế: assignmentRepository.findAll() + filter stream
+     * @param userId ID của user đã giao việc
+     * @return Danh sách task đã giao việc
+     */
+    @Query("SELECT DISTINCT a.task FROM Assignment a WHERE a.assignedBy.id = :userId AND a.task.deleted = false")
+    List<Task> findAssignedTasksByUserId(@Param("userId") Integer userId);
+    
+    /**
+     * 🟢 OPTIMIZED: Lấy tasks được giao cho user trực tiếp (type=received, recipientType=user)
+     * @param userId ID của user nhận việc
+     * @return Danh sách task được giao trực tiếp
+     */
+    @Query("SELECT DISTINCT a.task FROM Assignment a WHERE a.recipientType = 'user' " +
+           "AND a.recipientId = :userId AND a.task.deleted = false")
+    List<Task> findReceivedTasksByUserId(@Param("userId") Integer userId);
+    
+    /**
+     * 🟢 OPTIMIZED: Lấy tasks được giao cho team mà user làm team lead (type=received, recipientType=team)
+     * @param userId ID của team lead
+     * @param teamId ID của team
+     * @return Danh sách task được giao cho team
+     */
+    @Query("SELECT DISTINCT a.task FROM Assignment a WHERE a.recipientType = 'team' " +
+           "AND a.recipientId = :teamId AND a.task.deleted = false")
+    List<Task> findReceivedTasksByTeamId(@Param("teamId") Integer teamId);
+    
+    /**
+     * 🟢 OPTIMIZED: Lấy tasks được giao cho unit mà user làm unit lead (type=received, recipientType=unit)
+     * @param unitId ID của unit
+     * @return Danh sách task được giao cho unit
+     */
+    @Query("SELECT DISTINCT a.task FROM Assignment a WHERE a.recipientType = 'unit' " +
+           "AND a.recipientId = :unitId AND a.task.deleted = false")
+    List<Task> findReceivedTasksByUnitId(@Param("unitId") Integer unitId);
 }
