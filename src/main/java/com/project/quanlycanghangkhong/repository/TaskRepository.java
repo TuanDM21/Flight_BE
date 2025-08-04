@@ -43,7 +43,53 @@ public interface TaskRepository extends JpaRepository<Task, Integer> {
      */
     List<Task> findByParentIsNullAndDeletedFalse();
     
-    // ============== ALTERNATIVE SYNTAX (KHÔNG SỬ DỤNG) ==============
+    // ============== COUNT ROOT TASKS ONLY (FOR MY TASKS API) ==============
+    
+    /**
+     * 🟢 COUNT: Đếm tasks đã tạo nhưng chưa có assignment (chỉ root tasks)
+     * @param userId ID của user
+     * @return Số lượng root task đã tạo nhưng chưa giao việc
+     */
+    @Query("SELECT COUNT(t) FROM Task t WHERE t.createdBy.id = :userId AND t.deleted = false " +
+           "AND t.parent IS NULL " +
+           "AND NOT EXISTS (SELECT a FROM Assignment a WHERE a.task = t)")
+    long countCreatedRootTasksWithoutAssignments(@Param("userId") Integer userId);
+    
+    /**
+     * 🟢 COUNT: Đếm tasks đã giao việc (chỉ root tasks)
+     * @param userId ID của user đã giao việc
+     * @return Số lượng root task đã giao việc
+     */
+    @Query("SELECT COUNT(DISTINCT a.task) FROM Assignment a WHERE a.assignedBy.id = :userId " +
+           "AND a.task.deleted = false AND a.task.parent IS NULL")
+    long countAssignedRootTasksByUserId(@Param("userId") Integer userId);
+    
+    /**
+     * 🟢 COUNT: Đếm tasks được giao cho user trực tiếp (chỉ root tasks)
+     * @param userId ID của user nhận việc
+     * @return Số lượng root task được giao trực tiếp
+     */
+    @Query("SELECT COUNT(DISTINCT a.task) FROM Assignment a WHERE a.recipientType = 'user' " +
+           "AND a.recipientId = :userId AND a.task.deleted = false AND a.task.parent IS NULL")
+    long countReceivedRootTasksByUserId(@Param("userId") Integer userId);
+    
+    /**
+     * 🟢 COUNT: Đếm tasks được giao cho team (chỉ root tasks)
+     * @param teamId ID của team
+     * @return Số lượng root task được giao cho team
+     */
+    @Query("SELECT COUNT(DISTINCT a.task) FROM Assignment a WHERE a.recipientType = 'team' " +
+           "AND a.recipientId = :teamId AND a.task.deleted = false AND a.task.parent IS NULL")
+    long countReceivedRootTasksByTeamId(@Param("teamId") Integer teamId);
+    
+    /**
+     * 🟢 COUNT: Đếm tasks được giao cho unit (chỉ root tasks)
+     * @param unitId ID của unit
+     * @return Số lượng root task được giao cho unit
+     */
+    @Query("SELECT COUNT(DISTINCT a.task) FROM Assignment a WHERE a.recipientType = 'unit' " +
+           "AND a.recipientId = :unitId AND a.task.deleted = false AND a.task.parent IS NULL")
+    long countReceivedRootTasksByUnitId(@Param("unitId") Integer unitId);
     
     // ============== SEARCH & FILTER (HỮU ÍCH CHO FRONTEND) ==============
     
@@ -81,43 +127,48 @@ public interface TaskRepository extends JpaRepository<Task, Integer> {
      * @return Danh sách task đã tạo nhưng chưa giao việc
      */
     @Query("SELECT t FROM Task t WHERE t.createdBy.id = :userId AND t.deleted = false " +
-           "AND NOT EXISTS (SELECT a FROM Assignment a WHERE a.task = t)")
+           "AND NOT EXISTS (SELECT a FROM Assignment a WHERE a.task = t) " +
+           "ORDER BY t.updatedAt DESC, t.createdAt DESC")
     List<Task> findCreatedTasksWithoutAssignments(@Param("userId") Integer userId);
     
     /**
      * 🟢 OPTIMIZED: Lấy tasks đã giao việc (type=assigned)  
      * Thay thế: assignmentRepository.findAll() + filter stream
      * @param userId ID của user đã giao việc
-     * @return Danh sách task đã giao việc
+     * @return Danh sách task đã giao việc (sort mới nhất)
      */
-    @Query("SELECT DISTINCT a.task FROM Assignment a WHERE a.assignedBy.id = :userId AND a.task.deleted = false")
+    @Query("SELECT DISTINCT a.task FROM Assignment a WHERE a.assignedBy.id = :userId AND a.task.deleted = false " +
+           "ORDER BY a.task.updatedAt DESC, a.task.createdAt DESC")
     List<Task> findAssignedTasksByUserId(@Param("userId") Integer userId);
     
     /**
      * 🟢 OPTIMIZED: Lấy tasks được giao cho user trực tiếp (type=received, recipientType=user)
      * @param userId ID của user nhận việc
-     * @return Danh sách task được giao trực tiếp
+     * @return Danh sách task được giao trực tiếp (sort mới nhất)
      */
     @Query("SELECT DISTINCT a.task FROM Assignment a WHERE a.recipientType = 'user' " +
-           "AND a.recipientId = :userId AND a.task.deleted = false")
+           "AND a.recipientId = :userId AND a.task.deleted = false " +
+           "ORDER BY a.task.updatedAt DESC, a.task.createdAt DESC")
     List<Task> findReceivedTasksByUserId(@Param("userId") Integer userId);
     
     /**
      * 🟢 OPTIMIZED: Lấy tasks được giao cho team mà user làm team lead (type=received, recipientType=team)
      * @param userId ID của team lead
      * @param teamId ID của team
-     * @return Danh sách task được giao cho team
+     * @return Danh sách task được giao cho team (sort mới nhất)
      */
     @Query("SELECT DISTINCT a.task FROM Assignment a WHERE a.recipientType = 'team' " +
-           "AND a.recipientId = :teamId AND a.task.deleted = false")
+           "AND a.recipientId = :teamId AND a.task.deleted = false " +
+           "ORDER BY a.task.updatedAt DESC, a.task.createdAt DESC")
     List<Task> findReceivedTasksByTeamId(@Param("teamId") Integer teamId);
     
     /**
      * 🟢 OPTIMIZED: Lấy tasks được giao cho unit mà user làm unit lead (type=received, recipientType=unit)
      * @param unitId ID của unit
-     * @return Danh sách task được giao cho unit
+     * @return Danh sách task được giao cho unit (sort mới nhất)
      */
     @Query("SELECT DISTINCT a.task FROM Assignment a WHERE a.recipientType = 'unit' " +
-           "AND a.recipientId = :unitId AND a.task.deleted = false")
+           "AND a.recipientId = :unitId AND a.task.deleted = false " +
+           "ORDER BY a.task.updatedAt DESC, a.task.createdAt DESC")
     List<Task> findReceivedTasksByUnitId(@Param("unitId") Integer unitId);
 }

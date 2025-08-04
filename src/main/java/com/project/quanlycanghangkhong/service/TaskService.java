@@ -29,6 +29,13 @@ public interface TaskService {
     // Method mới để lấy task theo loại
     List<TaskDetailDTO> getMyTasks(String type);
     
+    /**
+     * Lấy tasks với count information
+     * @param type Loại task (created, assigned, received)
+     * @return Response bao gồm danh sách task và count metadata
+     */
+    com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse getMyTasksWithCount(String type);
+    
     // MÔ HÌNH ADJACENCY LIST: Các method subtask cho cấu trúc phân cấp
     
     /**

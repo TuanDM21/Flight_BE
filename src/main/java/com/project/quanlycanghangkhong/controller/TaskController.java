@@ -11,6 +11,7 @@ import com.project.quanlycanghangkhong.dto.response.task.ApiAllTasksResponse;
 import com.project.quanlycanghangkhong.dto.response.task.ApiTaskResponse;
 import com.project.quanlycanghangkhong.dto.response.task.ApiTaskDetailResponse;
 import com.project.quanlycanghangkhong.dto.response.task.ApiBulkDeleteTasksResponse;
+import com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse;
 import com.project.quanlycanghangkhong.service.TaskService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -133,27 +134,20 @@ public class TaskController {
     }
 
     @GetMapping("/my")
-    @Operation(summary = "Lấy công việc của tôi theo loại", description = "Lấy danh sách công việc theo loại: created (đã tạo nhưng chưa giao việc - flat list), assigned (đã giao việc bao gồm tất cả subtasks với hierarchyLevel), received (được giao việc - flat list)")
+    @Operation(summary = "Lấy công việc của tôi theo loại với ROOT TASKS count (sorted by latest)", description = "Lấy danh sách công việc theo loại với sort theo thời gian mới nhất và thông tin count ROOT TASKS: created (đã tạo nhưng chưa giao việc - flat list), assigned (đã giao việc bao gồm tất cả subtasks với hierarchyLevel), received (được giao việc - flat list). Count chỉ tính ROOT TASKS (parent IS NULL), data vẫn bao gồm tất cả tasks để hiển thị hierarchy.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiAllTasksResponse.class))),
-        @ApiResponse(responseCode = "400", description = "Tham số type không hợp lệ", content = @Content(schema = @Schema(implementation = ApiAllTasksResponse.class)))
+        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = MyTasksResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Tham số type không hợp lệ", content = @Content(schema = @Schema(implementation = MyTasksResponse.class)))
     })
-    public ResponseEntity<ApiAllTasksResponse> getMyTasks(@RequestParam String type) {
+    public ResponseEntity<MyTasksResponse> getMyTasks(@RequestParam String type) {
         if (!type.matches("created|assigned|received")) {
             return ResponseEntity.badRequest().body(
-                new ApiAllTasksResponse("Tham số type phải là: created, assigned, hoặc received", 400, null, false)
+                new MyTasksResponse("Tham số type phải là: created, assigned, hoặc received", 400, null, 0, type, false, null)
             );
         }
         
-        List<TaskDetailDTO> tasks = taskService.getMyTasks(type);
-        String message = switch (type.toLowerCase()) {
-            case "created" -> "Danh sách công việc đã tạo nhưng chưa giao việc (flat list)";
-            case "assigned" -> "Danh sách công việc đã giao (bao gồm tất cả subtasks với hierarchyLevel)";
-            case "received" -> "Danh sách công việc được giao (flat list)";
-            default -> "Thành công";
-        };
-        
-        return ResponseEntity.ok(new ApiAllTasksResponse(message, 200, tasks, true));
+        MyTasksResponse response = taskService.getMyTasksWithCount(type);
+        return ResponseEntity.ok(response);
     }
 
     // MÔ HÌNH ADJACENCY LIST: API Subtask

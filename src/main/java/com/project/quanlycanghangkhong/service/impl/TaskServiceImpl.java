@@ -353,9 +353,15 @@ public class TaskServiceImpl implements TaskService {
                     receivedTasks.addAll(taskRepository.findReceivedTasksByUnitId(currentUser.getUnit().getId()));
                 }
                 
-                // Remove duplicates và apply hierarchy
+                // Remove duplicates và giữ nguyên sort order
                 List<Task> uniqueReceivedTasks = receivedTasks.stream()
                     .distinct()
+                    .sorted((t1, t2) -> {
+                        // Sort theo updatedAt DESC, sau đó createdAt DESC
+                        int updatedCompare = t2.getUpdatedAt().compareTo(t1.getUpdatedAt());
+                        if (updatedCompare != 0) return updatedCompare;
+                        return t2.getCreatedAt().compareTo(t1.getCreatedAt());
+                    })
                     .collect(Collectors.toList());
                 
                 // 🌳 Special handling for received: return hierarchy with levels
@@ -669,11 +675,23 @@ public class TaskServiceImpl implements TaskService {
             }
         }
         
-        // Convert map to list và sort
+        // Convert map to list và sort: hierarchy level trước, sau đó thời gian mới nhất
         return resultMap.values().stream()
             .sorted((t1, t2) -> {
+                // 1. Sort theo hierarchyLevel (0=root, 1=child, ...)
                 int levelCompare = Integer.compare(t1.getHierarchyLevel(), t2.getHierarchyLevel());
                 if (levelCompare != 0) return levelCompare;
+                
+                // 2. Cùng level thì sort theo thời gian mới nhất (updatedAt DESC, createdAt DESC)
+                Task task1 = taskRepository.findById(t1.getId()).orElse(null);
+                Task task2 = taskRepository.findById(t2.getId()).orElse(null);
+                if (task1 != null && task2 != null) {
+                    int updatedCompare = task2.getUpdatedAt().compareTo(task1.getUpdatedAt());
+                    if (updatedCompare != 0) return updatedCompare;
+                    return task2.getCreatedAt().compareTo(task1.getCreatedAt());
+                }
+                
+                // Fallback: sort theo ID
                 return Integer.compare(t1.getId(), t2.getId());
             })
             .collect(Collectors.toList());
@@ -805,5 +823,121 @@ public class TaskServiceImpl implements TaskService {
         dto.setSubtasks(new ArrayList<>());
         
         return dto;
+    }
+
+    @Override
+    public com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse getMyTasksWithCount(String type) {
+        // Lấy danh sách tasks (vẫn bao gồm tất cả như cũ cho data)
+        List<TaskDetailDTO> tasks = getMyTasks(type);
+        
+        // Lấy user hiện tại để tính toàn bộ counts
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication != null ? authentication.getName() : null;
+        User currentUser = (email != null) ? userRepository.findByEmail(email).orElse(null) : null;
+        
+        if (currentUser == null) {
+            return new com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse(
+                "User không tìm thấy", 401, List.of(), 0, type, false, null);
+        }
+        
+        // Tính toán count cho tất cả các loại (CHỈ ROOT TASKS)
+        com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse.TaskCountMetadata metadata = 
+            calculateTaskCounts(currentUser.getId());
+            
+        // Tính totalCount CHỈ từ ROOT TASKS cho type hiện tại
+        int totalCount = switch (type.toLowerCase()) {
+            case "created" -> metadata.getCreatedCount();
+            case "assigned" -> metadata.getAssignedCount(); 
+            case "received" -> metadata.getReceivedCount();
+            default -> tasks.size();
+        };
+        
+        // Tạo response message với count root tasks
+        String message = switch (type.toLowerCase()) {
+            case "created" -> String.format("Danh sách công việc đã tạo nhưng chưa giao việc (%d root tasks)", totalCount);
+            case "assigned" -> String.format("Danh sách công việc đã giao (%d root tasks, %d total với subtasks)", totalCount, tasks.size());
+            case "received" -> String.format("Danh sách công việc được giao (%d root tasks)", totalCount);
+            default -> String.format("Thành công (%d tasks)", totalCount);
+        };
+        
+        return new com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse(
+            message, 200, tasks, totalCount, type, true, metadata);
+    }
+    
+    /**
+     * Tính toán count cho tất cả các loại task (CHỈ ROOT TASKS)
+     */
+    private com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse.TaskCountMetadata calculateTaskCounts(Integer userId) {
+        // Lấy user hiện tại để check team/unit
+        User currentUser = userRepository.findById(userId).orElse(null);
+        if (currentUser == null) {
+            return new com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse.TaskCountMetadata(
+                0, 0, 0, null);
+        }
+        
+        // Count created root tasks (chỉ root tasks)
+        long createdCount = taskRepository.countCreatedRootTasksWithoutAssignments(userId);
+        
+        // Count assigned root tasks (chỉ root tasks)  
+        long assignedCount = taskRepository.countAssignedRootTasksByUserId(userId);
+        
+        // Count received root tasks (user + team + unit)
+        long receivedCount = taskRepository.countReceivedRootTasksByUserId(userId);
+        
+        // Add team assignments if user is TEAM_LEAD
+        if (currentUser.getRole() != null && 
+            "TEAM_LEAD".equals(currentUser.getRole().getRoleName()) &&
+            currentUser.getTeam() != null) {
+            receivedCount += taskRepository.countReceivedRootTasksByTeamId(currentUser.getTeam().getId());
+        }
+        
+        // Add unit assignments if user is UNIT_LEAD
+        if (currentUser.getRole() != null && 
+            "UNIT_LEAD".equals(currentUser.getRole().getRoleName()) &&
+            currentUser.getUnit() != null) {
+            receivedCount += taskRepository.countReceivedRootTasksByUnitId(currentUser.getUnit().getId());
+        }
+        
+        // Calculate hierarchy info for assigned tasks (vẫn cần để hiển thị chi tiết)
+        List<Task> assignedTasks = taskRepository.findAssignedTasksByUserId(userId);
+        List<TaskDetailDTO> assignedTasksWithHierarchy = getTaskHierarchyWithLevels(assignedTasks);
+        com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse.HierarchyInfo hierarchyInfo = 
+            calculateHierarchyInfo(assignedTasksWithHierarchy);
+        
+        return new com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse.TaskCountMetadata(
+            (int)createdCount, (int)assignedCount, (int)receivedCount, hierarchyInfo);
+    }
+    
+    /**
+     * Tính toán thông tin hierarchy cho assigned tasks
+     */
+    private com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse.HierarchyInfo calculateHierarchyInfo(
+            List<TaskDetailDTO> tasksWithHierarchy) {
+        
+        if (tasksWithHierarchy.isEmpty()) {
+            return new com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse.HierarchyInfo(
+                0, 0, 0, new java.util.HashMap<>());
+        }
+        
+        int rootTasksCount = 0;
+        int subtasksCount = 0;
+        int maxLevel = 0;
+        java.util.Map<Integer, Integer> countByLevel = new java.util.HashMap<>();
+        
+        for (TaskDetailDTO task : tasksWithHierarchy) {
+            Integer level = task.getHierarchyLevel() != null ? task.getHierarchyLevel() : 0;
+            
+            if (level == 0) {
+                rootTasksCount++;
+            } else {
+                subtasksCount++;
+            }
+            
+            maxLevel = Math.max(maxLevel, level);
+            countByLevel.put(level, countByLevel.getOrDefault(level, 0) + 1);
+        }
+        
+        return new com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse.HierarchyInfo(
+            rootTasksCount, subtasksCount, maxLevel, countByLevel);
     }
 }
