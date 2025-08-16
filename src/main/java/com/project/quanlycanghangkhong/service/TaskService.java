@@ -6,6 +6,10 @@ import com.project.quanlycanghangkhong.dto.TaskDTO;
 import com.project.quanlycanghangkhong.dto.TaskDetailDTO;
 import com.project.quanlycanghangkhong.dto.UpdateTaskDTO;
 import com.project.quanlycanghangkhong.dto.AttachmentDTO;
+
+// ✅ PRIORITY 3: Simplified DTOs imports
+import com.project.quanlycanghangkhong.dto.simplified.TaskDetailSimplifiedDTO;
+
 import java.util.List;
 
 public interface TaskService {
@@ -26,6 +30,9 @@ public interface TaskService {
     List<TaskDetailDTO> getAllTaskDetails();
     void updateTaskStatus(com.project.quanlycanghangkhong.model.Task task);
     
+    // ✅ PRIORITY 3: Simplified DTO method
+    TaskDetailSimplifiedDTO getTaskDetailSimplifiedById(Integer id);
+    
     // Method mới để lấy task theo loại
     List<TaskDetailDTO> getMyTasks(String type);
     
@@ -35,6 +42,14 @@ public interface TaskService {
      * @return Response bao gồm danh sách task và count metadata
      */
     com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse getMyTasksWithCount(String type);
+    
+    /**
+     * Lấy tasks với count information - STANDARDIZED VERSION
+     * Returns data in standardized ApiResponseCustom structure
+     * @param type Loại task (created, assigned, received)
+     * @return MyTasksData với cấu trúc chuẩn hóa
+     */
+    com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithCountStandardized(String type);
     
     // MÔ HÌNH ADJACENCY LIST: Các method subtask cho cấu trúc phân cấp
     

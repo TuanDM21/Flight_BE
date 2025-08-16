@@ -60,3 +60,6 @@ target/
 
 ### VS Code ###
 .vscode/
+
+/scripts/*
+/docs/*

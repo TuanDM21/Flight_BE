@@ -6,6 +6,12 @@ import com.project.quanlycanghangkhong.repository.TaskRepository;
 import com.project.quanlycanghangkhong.repository.UserRepository;
 import com.project.quanlycanghangkhong.service.TaskService;
 
+// ✅ PRIORITY 3: Simplified DTOs imports
+import com.project.quanlycanghangkhong.dto.simplified.TaskDetailSimplifiedDTO;
+import com.project.quanlycanghangkhong.dto.simplified.SimpleAssignmentDTO;
+import com.project.quanlycanghangkhong.dto.simplified.SimpleAttachmentDTO;
+import com.project.quanlycanghangkhong.dto.simplified.SimpleUserInfo;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -214,11 +220,21 @@ public class TaskServiceImpl implements TaskService {
         Task task = taskRepository.findTaskWithAllRelationships(id).orElse(null);
         if (task == null) return null;
         
-        return convertToTaskDetailDTOOptimized(task);
+        // ✅ Sử dụng depth-controlled version bắt đầu từ depth 0
+        return convertToTaskDetailDTOOptimized(task, 0);
     }
 
-    // ✅ Method tối ưu không có recursive calls
-    private TaskDetailDTO convertToTaskDetailDTOOptimized(Task task) {
+    // ✅ PRIORITY 3: New method using Simplified DTOs
+    public TaskDetailSimplifiedDTO getTaskDetailSimplifiedById(Integer id) {
+        Task task = taskRepository.findTaskWithAllRelationships(id).orElse(null);
+        if (task == null) return null;
+        
+        return convertToTaskDetailSimplifiedDTO(task, 0);
+    }
+
+    // ✅ DEPTH CONTROL: Overloaded method với depth limiting
+    private TaskDetailDTO convertToTaskDetailDTOOptimized(Task task, int currentDepth) {
+        // ✅ Convert base task info (copy từ method gốc)
         TaskDetailDTO dto = new TaskDetailDTO();
         dto.setId(task.getId());
         dto.setTitle(task.getTitle());
@@ -251,8 +267,39 @@ public class TaskServiceImpl implements TaskService {
             .toList();
         dto.setAttachments(attachmentDTOs);
         
-        // ✅ KHÔNG load subtasks đệ quy - sẽ load riêng khi cần
-        dto.setSubtasks(new ArrayList<>());
+        // Set current depth
+        dto.setCurrentDepth(currentDepth);
+        dto.setHierarchyLevel(currentDepth);
+        
+        // ✅ DEPTH CONTROL: Chỉ load subtasks nếu chưa vượt quá MAX_SUBTASK_DEPTH
+        if (TaskDetailDTO.canLoadSubtasksAtLevel(currentDepth)) {
+            // Load subtasks với depth + 1
+            List<Task> subtasks = taskRepository.findByParentIdAndDeletedFalse(task.getId());
+            if (!subtasks.isEmpty()) {
+                List<TaskDetailDTO> subtaskDTOs = subtasks.stream()
+                    .map(subtask -> {
+                        // Load subtask với depth được tăng lên
+                        Task subtaskWithRelations = taskRepository.findTaskWithAllRelationships(subtask.getId())
+                            .orElse(subtask);
+                        return convertToTaskDetailDTOOptimized(subtaskWithRelations, currentDepth + 1);
+                    })
+                    .toList();
+                dto.setSubtasks(subtaskDTOs);
+            }
+            
+            // Check if có subtasks ở level tiếp theo (cho hasMoreSubtasks flag)
+            if (currentDepth + 1 >= TaskDetailDTO.MAX_SUBTASK_DEPTH) {
+                // Kiểm tra xem có subtasks ở level sâu hơn không
+                boolean hasDeepSubtasks = subtasks.stream()
+                    .anyMatch(subtask -> !taskRepository.findByParentIdAndDeletedFalse(subtask.getId()).isEmpty());
+                dto.setHasMoreSubtasks(hasDeepSubtasks);
+            }
+        } else {
+            // Đã vượt quá MAX_SUBTASK_DEPTH, không load subtasks nhưng check có subtasks không
+            List<Task> subtasks = taskRepository.findByParentIdAndDeletedFalse(task.getId());
+            dto.setHasMoreSubtasks(!subtasks.isEmpty());
+            dto.setSubtasks(new ArrayList<>()); // Empty list
+        }
         
         return dto;
     }
@@ -332,7 +379,7 @@ public class TaskServiceImpl implements TaskService {
             .map(task -> {
                 // Load task với relationships nếu chưa được fetch
                 Task taskWithRelations = taskRepository.findTaskWithAllRelationships(task.getId()).orElse(task);
-                return convertToTaskDetailDTOOptimized(taskWithRelations);
+                return convertToTaskDetailDTOOptimized(taskWithRelations, 0);
             })
             .toList();
     }
@@ -846,6 +893,74 @@ public class TaskServiceImpl implements TaskService {
             message, 200, taskDTOs, totalCount, type, true, metadata);
     }
 
+    @Override
+    public com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithCountStandardized(String type) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication != null ? authentication.getName() : null;
+        User currentUser = (email != null) ? userRepository.findByEmail(email).orElse(null) : null;
+        
+        if (currentUser == null) {
+            return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+                List.of(), 0, type, null);
+        }
+        
+        Integer userId = currentUser.getId();
+        Integer teamId = currentUser.getTeam() != null ? currentUser.getTeam().getId() : null;
+        Integer unitId = currentUser.getUnit() != null ? currentUser.getUnit().getId() : null;
+        
+        // ✅ Sử dụng optimized repository methods với JOIN FETCH
+        List<Task> tasks;
+        switch (type.toLowerCase()) {
+            case "created":
+                tasks = taskRepository.findCreatedTasksWithAllRelationships(userId);
+                break;
+            case "assigned":
+                tasks = taskRepository.findAssignedTasksWithAllRelationships(userId);
+                break;
+            case "received":
+                tasks = taskRepository.findReceivedTasksWithAllRelationships(userId, teamId, unitId);
+                break;
+            default:
+                tasks = List.of();
+        }
+        
+        // ✅ Convert với optimized method (không có N+1)
+        List<TaskDetailDTO> taskDTOs;
+        if ("assigned".equals(type.toLowerCase()) || "received".equals(type.toLowerCase())) {
+            // Cho assigned/received: cần hierarchy levels
+            taskDTOs = getTaskHierarchyWithLevelsOptimized(tasks);
+        } else {
+            // Cho created: flat list với batch loading attachments
+            taskDTOs = convertTasksToTaskDetailDTOsBatch(tasks);
+        }
+        
+        // ✅ Count sử dụng database count queries thay vì load data
+        com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse.TaskCountMetadata oldMetadata = 
+            calculateTaskCountsOptimized(userId, currentUser);
+            
+        // Convert to simplified metadata structure
+        com.project.quanlycanghangkhong.dto.response.task.MyTasksData.TaskMetadata newMetadata = 
+            new com.project.quanlycanghangkhong.dto.response.task.MyTasksData.TaskMetadata(
+                oldMetadata.getCreatedCount(),
+                oldMetadata.getAssignedCount(), 
+                oldMetadata.getReceivedCount(),
+                oldMetadata.getHierarchyInfo().getRootTasksCount(),
+                oldMetadata.getHierarchyInfo().getSubtasksCount(),
+                oldMetadata.getHierarchyInfo().getMaxLevel()
+            );
+            
+        // Tính totalCount CHỈ từ ROOT TASKS cho type hiện tại
+        int totalCount = switch (type.toLowerCase()) {
+            case "created" -> newMetadata.getCreatedCount();
+            case "assigned" -> newMetadata.getAssignedCount(); 
+            case "received" -> newMetadata.getReceivedCount();
+            default -> taskDTOs.size();
+        };
+        
+        return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+            taskDTOs, totalCount, type, newMetadata);
+    }
+
     // ✅ Optimize hierarchy calculation
     private List<TaskDetailDTO> getTaskHierarchyWithLevelsOptimized(List<Task> parentTasks) {
         Map<Integer, TaskDetailDTO> resultMap = new HashMap<>();
@@ -856,7 +971,7 @@ public class TaskServiceImpl implements TaskService {
             
             // Add parent with its level
             if (!resultMap.containsKey(parentTask.getId())) {
-                TaskDetailDTO parentDTO = convertToTaskDetailDTOOptimized(parentTask);
+                TaskDetailDTO parentDTO = convertToTaskDetailDTOOptimized(parentTask, 0);
                 parentDTO.setHierarchyLevel(parentLevel);
                 resultMap.put(parentTask.getId(), parentDTO);
             }
@@ -885,7 +1000,7 @@ public class TaskServiceImpl implements TaskService {
             if (!resultMap.containsKey(subtask.getId())) {
                 // Load subtask with relationships if not cached
                 Task subtaskWithRelations = taskRepository.findTaskWithAllRelationships(subtask.getId()).orElse(subtask);
-                TaskDetailDTO subtaskDTO = convertToTaskDetailDTOOptimized(subtaskWithRelations);
+                TaskDetailDTO subtaskDTO = convertToTaskDetailDTOOptimized(subtaskWithRelations, 0);
                 subtaskDTO.setHierarchyLevel(subtaskLevel);
                 resultMap.put(subtask.getId(), subtaskDTO);
                 
@@ -1000,6 +1115,185 @@ public class TaskServiceImpl implements TaskService {
         dto.setSubtasks(new ArrayList<>());
         
         return dto;
+    }
+    
+    // ===================================================================
+    // ✅ PRIORITY 3: SIMPLIFIED DTOs CONVERSION METHODS
+    // ===================================================================
+    
+    /**
+     * Convert Task to TaskDetailSimplifiedDTO với depth control
+     */
+    private TaskDetailSimplifiedDTO convertToTaskDetailSimplifiedDTO(Task task, int currentDepth) {
+        TaskDetailSimplifiedDTO dto = new TaskDetailSimplifiedDTO();
+        
+        // Basic task info
+        dto.setId(task.getId());
+        dto.setTitle(task.getTitle());
+        dto.setContent(task.getContent());
+        dto.setInstructions(task.getInstructions());
+        dto.setNotes(task.getNotes());
+        dto.setCreatedAt(task.getCreatedAt());
+        dto.setUpdatedAt(task.getUpdatedAt());
+        dto.setStatus(task.getStatus());
+        dto.setPriority(task.getPriority());
+        
+        // Parent info
+        if (task.getParent() != null) {
+            dto.setParentId(task.getParent().getId());
+        }
+        
+        // Flattened createdBy user info (thay thế nested UserDTO)
+        if (task.getCreatedBy() != null) {
+            dto.setCreatedByUserId(task.getCreatedBy().getId());
+            dto.setCreatedByUserName(task.getCreatedBy().getName());
+            dto.setCreatedByUserEmail(task.getCreatedBy().getEmail());
+            // Team info if available
+            if (task.getCreatedBy().getTeam() != null) {
+                dto.setCreatedByTeamName(task.getCreatedBy().getTeam().getTeamName());
+            }
+        }
+        
+        // Simplified assignments (thay thế nested AssignmentDTO)
+        List<SimpleAssignmentDTO> simpleAssignments = task.getAssignments().stream()
+            .map(this::convertToSimpleAssignmentDTO)
+            .toList();
+        dto.setAssignments(simpleAssignments);
+        
+        // Simplified attachments (thay thế nested AttachmentDTO)
+        List<SimpleAttachmentDTO> simpleAttachments = attachmentRepository.findByTask_IdAndIsDeletedFalse(task.getId())
+            .stream()
+            .map(this::convertToSimpleAttachmentDTO)
+            .toList();
+        dto.setAttachments(simpleAttachments);
+        
+        // Depth control (giữ nguyên logic từ TaskDetailDTO)
+        dto.setCurrentDepth(currentDepth);
+        dto.setHierarchyLevel(currentDepth);
+        
+        // Load subtasks với depth control
+        if (TaskDetailSimplifiedDTO.canLoadSubtasksAtLevel(currentDepth)) {
+            List<Task> subtasks = taskRepository.findByParentIdAndDeletedFalse(task.getId());
+            if (!subtasks.isEmpty()) {
+                List<TaskDetailSimplifiedDTO> subtaskDTOs = subtasks.stream()
+                    .map(subtask -> {
+                        Task subtaskWithRelations = taskRepository.findTaskWithAllRelationships(subtask.getId())
+                            .orElse(subtask);
+                        return convertToTaskDetailSimplifiedDTO(subtaskWithRelations, currentDepth + 1);
+                    })
+                    .toList();
+                dto.setSubtasks(subtaskDTOs);
+            }
+            
+            // Check if có subtasks ở level tiếp theo
+            if (currentDepth + 1 >= TaskDetailSimplifiedDTO.MAX_SUBTASK_DEPTH) {
+                boolean hasDeepSubtasks = subtasks.stream()
+                    .anyMatch(subtask -> !taskRepository.findByParentIdAndDeletedFalse(subtask.getId()).isEmpty());
+                dto.setHasMoreSubtasks(hasDeepSubtasks);
+            }
+        } else {
+            // Đã vượt quá MAX_SUBTASK_DEPTH
+            List<Task> subtasks = taskRepository.findByParentIdAndDeletedFalse(task.getId());
+            dto.setHasMoreSubtasks(!subtasks.isEmpty());
+            dto.setSubtasks(new ArrayList<>());
+        }
+        
+        return dto;
+    }
+    
+    /**
+     * Convert Assignment to SimpleAssignmentDTO (flattened)
+     */
+    private SimpleAssignmentDTO convertToSimpleAssignmentDTO(Assignment assignment) {
+        SimpleAssignmentDTO dto = new SimpleAssignmentDTO();
+        
+        dto.setAssignmentId(assignment.getAssignmentId());
+        dto.setTaskId(assignment.getTask() != null ? assignment.getTask().getId() : null);
+        dto.setRecipientType(assignment.getRecipientType());
+        dto.setRecipientId(assignment.getRecipientId());
+        dto.setAssignedAt(assignment.getAssignedAt());
+        dto.setDueAt(assignment.getDueAt());
+        dto.setCompletedAt(assignment.getCompletedAt());
+        dto.setStatus(assignment.getStatus());
+        dto.setNote(assignment.getNote());
+        
+        // Flattened assignedBy user info
+        if (assignment.getAssignedBy() != null) {
+            dto.setAssignedByUserId(assignment.getAssignedBy().getId());
+            dto.setAssignedByUserName(assignment.getAssignedBy().getName());
+            dto.setAssignedByUserEmail(assignment.getAssignedBy().getEmail());
+        }
+        
+        // Flattened completedBy user info
+        if (assignment.getCompletedBy() != null) {
+            dto.setCompletedByUserId(assignment.getCompletedBy().getId());
+            dto.setCompletedByUserName(assignment.getCompletedBy().getName());
+            dto.setCompletedByUserEmail(assignment.getCompletedBy().getEmail());
+        }
+        
+        // Flattened recipient user info (chỉ khi recipientType = 'user')
+        // Note: Cần thêm logic để resolve recipient user từ recipientId
+        if ("user".equals(assignment.getRecipientType()) && assignment.getRecipientId() != null) {
+            // TODO: Load recipient user info từ userRepository nếu cần
+            // User recipientUser = userRepository.findById(assignment.getRecipientId()).orElse(null);
+            // if (recipientUser != null) {
+            //     dto.setRecipientUserName(recipientUser.getName());
+            //     dto.setRecipientUserEmail(recipientUser.getEmail());
+            // }
+        }
+        
+        return dto;
+    }
+    
+    /**
+     * Convert Attachment to SimpleAttachmentDTO (flattened)
+     */
+    private SimpleAttachmentDTO convertToSimpleAttachmentDTO(Attachment attachment) {
+        SimpleAttachmentDTO dto = new SimpleAttachmentDTO();
+        
+        dto.setId(attachment.getId());
+        dto.setFilePath(attachment.getFilePath());
+        dto.setFileName(attachment.getFileName());
+        dto.setFileSize(attachment.getFileSize());
+        // dto.setFileType(attachment.getContentType()); // Field không tồn tại, bỏ qua
+        dto.setCreatedAt(attachment.getCreatedAt());
+        // dto.setSharedCount(attachment.getSharedCount()); // Field không tồn tại, set default
+        dto.setSharedCount(0);
+        // dto.setIsShared(attachment.getIsShared()); // Field không tồn tại, set default  
+        dto.setIsShared(false);
+        // dto.setIsDeleted(attachment.getIsDeleted()); // Field không tồn tại, set default
+        dto.setIsDeleted(false);
+        
+        // Flattened uploadedBy user info
+        if (attachment.getUploadedBy() != null) {
+            dto.setUploadedByUserId(attachment.getUploadedBy().getId());
+            dto.setUploadedByUserName(attachment.getUploadedBy().getName());
+            dto.setUploadedByUserEmail(attachment.getUploadedBy().getEmail());
+        }
+        
+        return dto;
+    }
+    
+    /**
+     * Convert User to SimpleUserInfo (flattened)
+     */
+    private SimpleUserInfo convertToSimpleUserInfo(User user) {
+        if (user == null) return null;
+        
+        SimpleUserInfo info = new SimpleUserInfo();
+        info.setUserId(user.getId());
+        info.setUserName(user.getName());
+        info.setUserEmail(user.getEmail());
+        
+        // Team and role info if available
+        if (user.getTeam() != null) {
+            info.setTeamName(user.getTeam().getTeamName());
+        }
+        if (user.getRole() != null) {
+            info.setRoleName(user.getRole().getRoleName());
+        }
+        
+        return info;
     }
     
 }

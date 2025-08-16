@@ -22,6 +22,11 @@ public class TaskDetailDTO {
     private List<TaskDetailDTO> subtasks; // Danh sách task con
     private Integer hierarchyLevel; // Cấp độ trong hierarchy (0=root, 1=child, 2=grandchild...)
     
+    // ✅ DEPTH CONTROL: Giới hạn độ sâu đệ quy
+    public static final int MAX_SUBTASK_DEPTH = 5; // Giới hạn tối đa 5 levels
+    private boolean hasMoreSubtasks; // Flag để biết có subtasks ở levels sâu hơn không
+    private int currentDepth; // Depth hiện tại khi loading subtasks
+    
     // MỚI: Attachment trực tiếp (THAY THẾ hoàn toàn documents)
     private List<AttachmentDTO> attachments; // Quan hệ task-attachment trực tiếp
 
@@ -178,6 +183,47 @@ public class TaskDetailDTO {
      */
     public void setHierarchyLevel(Integer hierarchyLevel) {
         this.hierarchyLevel = hierarchyLevel;
+    }
+
+    /**
+     * ✅ DEPTH CONTROL: Kiểm tra có subtasks ở levels sâu hơn không
+     * @return true nếu có subtasks nhưng bị giới hạn bởi MAX_SUBTASK_DEPTH
+     */
+    public boolean hasMoreSubtasks() {
+        return hasMoreSubtasks;
+    }
+
+    /**
+     * ✅ DEPTH CONTROL: Đặt flag cho subtasks ở levels sâu hơn
+     * @param hasMoreSubtasks true nếu có subtasks nhưng bị giới hạn
+     */
+    public void setHasMoreSubtasks(boolean hasMoreSubtasks) {
+        this.hasMoreSubtasks = hasMoreSubtasks;
+    }
+
+    /**
+     * ✅ DEPTH CONTROL: Lấy depth hiện tại khi loading subtasks
+     * @return Current depth level
+     */
+    public int getCurrentDepth() {
+        return currentDepth;
+    }
+
+    /**
+     * ✅ DEPTH CONTROL: Đặt depth hiện tại khi loading subtasks
+     * @param currentDepth Current depth level
+     */
+    public void setCurrentDepth(int currentDepth) {
+        this.currentDepth = currentDepth;
+    }
+
+    /**
+     * ✅ DEPTH CONTROL: Kiểm tra có thể load subtasks ở level này không
+     * @param currentLevel Level hiện tại
+     * @return true nếu có thể load subtasks (chưa vượt quá MAX_SUBTASK_DEPTH)
+     */
+    public static boolean canLoadSubtasksAtLevel(int currentLevel) {
+        return currentLevel < MAX_SUBTASK_DEPTH;
     }
 
     @Override

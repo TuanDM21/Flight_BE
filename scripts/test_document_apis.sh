@@ -63,49 +63,106 @@ log "\n==> [Xem chi tiết văn bản]"
 curl -s -X GET "$API_URL/documents/$DOC_ID" \
   -H "Authorization: Bearer $TOKEN" | jq
 
-# 5. Gắn file vào văn bản
-log "\n==> [Gắn file vào văn bản]"
-CREATE_ATT_RESPONSE=$(curl -s -X POST "$API_URL/attachments/document/$DOC_ID" \
+# 5. Tạo pre-signed URL để upload file
+log "\n==> [Tạo pre-signed URL để upload file]"
+PRESIGNED_RESPONSE=$(curl -s -X POST "$API_URL/attachments/generate-upload-urls" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
-    "filePath": "/files/test.pdf",
-    "fileName": "test.pdf",
-    "fileSize": 123456
+    "files": [
+      {
+        "fileName": "test.pdf",
+        "fileSize": 123456,
+        "contentType": "application/pdf"
+      }
+    ]
   }')
-echo "$CREATE_ATT_RESPONSE"
-ATT_ID=$(echo $CREATE_ATT_RESPONSE | grep -o '"id":[0-9]*' | head -1 | grep -o '[0-9]*')
+echo "$PRESIGNED_RESPONSE"
 
-if [ -z "$ATT_ID" ]; then
-  log "Không lấy được attachment id!"
+# Lấy attachment ID và pre-signed URL từ response
+ATT_ID=$(echo $PRESIGNED_RESPONSE | jq -r '.data.files[0].attachmentId // empty')
+UPLOAD_URL=$(echo $PRESIGNED_RESPONSE | jq -r '.data.files[0].uploadUrl // empty')
+
+if [ -z "$ATT_ID" ] || [ "$ATT_ID" = "null" ]; then
+  log "Không lấy được attachment id! Response: $PRESIGNED_RESPONSE"
   exit 1
 fi
 
-# 6. Cập nhật file trong văn bản
-log "\n==> [Cập nhật file trong văn bản]"
+log "Attachment ID: $ATT_ID"
+log "Upload URL được tạo thành công"
+
+# 6. Giả lập upload file (trong thực tế sẽ upload file thật lên Azure)
+log "\n==> [Giả lập upload file thành công]"
+log "Trong thực tế, bạn sẽ upload file lên: $UPLOAD_URL"
+
+# 7. Xác nhận upload thành công
+log "\n==> [Xác nhận upload thành công]"
+CONFIRM_RESPONSE=$(curl -s -X POST "$API_URL/attachments/confirm-upload" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "attachmentIds": ['$ATT_ID']
+  }')
+echo "$CONFIRM_RESPONSE"
+
+# 8. Gán attachment vào document
+log "\n==> [Gán attachment vào document]"
+ASSIGN_RESPONSE=$(curl -s -X POST "$API_URL/documents/$DOC_ID/attachments/assign" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "attachmentIds": ['$ATT_ID']
+  }')
+echo "$ASSIGN_RESPONSE"
+
+# 9. Cập nhật tên file đính kèm
+log "\n==> [Cập nhật tên file đính kèm]"
 UPDATE_ATT_RESPONSE=$(curl -s -X PUT "$API_URL/attachments/$ATT_ID" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
-    "filePath": "/files/test_update.pdf",
-    "fileName": "test_update.pdf",
-    "fileSize": 654321
+    "fileName": "test_updated.pdf"
   }')
 echo "$UPDATE_ATT_RESPONSE"
 
-# 7. Xem danh sách file đính kèm của văn bản
-log "\n==> [Xem danh sách file đính kèm của văn bản]"
-curl -s -X GET "$API_URL/attachments/document/$DOC_ID" \
+# 10. Xem chi tiết văn bản sau khi gán file
+log "\n==> [Xem chi tiết văn bản sau khi gán file]"
+curl -s -X GET "$API_URL/documents/$DOC_ID" \
   -H "Authorization: Bearer $TOKEN" | jq
 
-# 8. Xoá file trong văn bản
-# log "\n==> [Xoá file trong văn bản]"
+# 11. Xem tất cả attachments
+log "\n==> [Xem tất cả file đính kèm]"
+curl -s -X GET "$API_URL/attachments" \
+  -H "Authorization: Bearer $TOKEN" | jq
+
+# 12. Xem chi tiết một attachment
+log "\n==> [Xem chi tiết attachment]"
+curl -s -X GET "$API_URL/attachments/$ATT_ID" \
+  -H "Authorization: Bearer $TOKEN" | jq
+
+# 13. Tạo download URL
+log "\n==> [Tạo download URL]"
+DOWNLOAD_RESPONSE=$(curl -s -X GET "$API_URL/attachments/download-url/$ATT_ID" \
+  -H "Authorization: Bearer $TOKEN")
+echo "$DOWNLOAD_RESPONSE"
+
+# 14. Gỡ attachment khỏi document (tùy chọn)
+# log "\n==> [Gỡ attachment khỏi document]"
+# curl -s -X PATCH "$API_URL/documents/$DOC_ID/attachments/remove" \
+#   -H "Content-Type: application/json" \
+#   -H "Authorization: Bearer $TOKEN" \
+#   -d '{
+#     "attachmentIds": ['$ATT_ID']
+#   }'
+
+# 15. Xoá file đính kèm (tùy chọn)
+# log "\n==> [Xoá file đính kèm]"
 # curl -s -X DELETE "$API_URL/attachments/$ATT_ID" \
 #   -H "Authorization: Bearer $TOKEN"
-# log "\n==> Đã test xong các chức năng Document & Attachment!"
 
-# 9. Xoá văn bản
+# 16. Xoá văn bản (tùy chọn)
 # log "\n==> [Xoá văn bản]"
 # curl -s -X DELETE "$API_URL/documents/$DOC_ID" \
 #   -H "Authorization: Bearer $TOKEN"
-# log "\n==> Đã test xong toàn bộ chức năng!"
+
+log "\n==> ✅ Đã test xong toàn bộ workflow Document & Attachment!"

@@ -10,12 +10,12 @@ public class TaskDTO {
     private String content;
     private String instructions;
     private String notes;
+    private TaskStatus status;
+    private TaskPriority priority;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Integer createdBy; // userId
-    private TaskStatus status;
-    private TaskPriority priority;
-
+    
     // Getters and setters
     public Integer getId() {
         return id;

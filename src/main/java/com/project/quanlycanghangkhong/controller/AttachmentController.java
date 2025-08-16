@@ -78,11 +78,9 @@ public class AttachmentController {
             // Log success
             logger.info("Successfully generated {} upload URLs", result.getTotalFiles());
             
-            ApiGenerateUploadUrlsResponse response = new ApiGenerateUploadUrlsResponse();
-            response.setMessage(result.getMessage());
-            response.setStatusCode(200);
-            response.setData(result);
-            response.setSuccess(true);
+            ApiGenerateUploadUrlsResponse response = new ApiGenerateUploadUrlsResponse(
+                result.getMessage(), 200, result, true
+            );
             
             return ResponseEntity.ok(response);
             
@@ -118,11 +116,9 @@ public class AttachmentController {
                 "Xác nhận upload thành công" : 
                 "Xác nhận upload thành công " + result.size() + " file";
             
-            ApiConfirmUploadResponse response = new ApiConfirmUploadResponse();
-            response.setMessage(message);
-            response.setStatusCode(200);
-            response.setData(result);
-            response.setSuccess(true);
+            ApiConfirmUploadResponse response = new ApiConfirmUploadResponse(
+                message, 200, result, true
+            );
             
             return ResponseEntity.ok(response);
             
@@ -152,11 +148,9 @@ public class AttachmentController {
         try {
             String downloadUrl = preSignedUrlService.generateDownloadUrl(attachmentId);
             
-            ApiDownloadUrlResponse response = new ApiDownloadUrlResponse();
-            response.setMessage("Tạo download URL thành công");
-            response.setStatusCode(200);
-            response.setData(downloadUrl);
-            response.setSuccess(true);
+            ApiDownloadUrlResponse response = new ApiDownloadUrlResponse(
+                "Tạo download URL thành công", 200, downloadUrl, true
+            );
             
             return ResponseEntity.ok(response);
             

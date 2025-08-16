@@ -11,7 +11,13 @@ import com.project.quanlycanghangkhong.dto.response.task.ApiAllTasksResponse;
 import com.project.quanlycanghangkhong.dto.response.task.ApiTaskResponse;
 import com.project.quanlycanghangkhong.dto.response.task.ApiTaskDetailResponse;
 import com.project.quanlycanghangkhong.dto.response.task.ApiBulkDeleteTasksResponse;
-import com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse;
+import com.project.quanlycanghangkhong.dto.response.task.ApiMyTasksResponse;
+import com.project.quanlycanghangkhong.dto.response.task.MyTasksData;
+import com.project.quanlycanghangkhong.dto.response.task.ApiTaskAttachmentsResponse;
+
+// ✅ PRIORITY 3: Simplified DTOs imports
+import com.project.quanlycanghangkhong.dto.simplified.TaskDetailSimplifiedDTO;
+
 import com.project.quanlycanghangkhong.service.TaskService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -136,18 +142,18 @@ public class TaskController {
     @GetMapping("/my")
     @Operation(summary = "Lấy công việc của tôi theo loại với ROOT TASKS count (sorted by latest)", description = "Lấy danh sách công việc theo loại với sort theo thời gian mới nhất và thông tin count ROOT TASKS: created (đã tạo nhưng chưa giao việc - flat list), assigned (đã giao việc bao gồm tất cả subtasks với hierarchyLevel), received (được giao việc - flat list). Count chỉ tính ROOT TASKS (parent IS NULL), data vẫn bao gồm tất cả tasks để hiển thị hierarchy.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = MyTasksResponse.class))),
-        @ApiResponse(responseCode = "400", description = "Tham số type không hợp lệ", content = @Content(schema = @Schema(implementation = MyTasksResponse.class)))
+        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiMyTasksResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Tham số type không hợp lệ", content = @Content(schema = @Schema(implementation = ApiMyTasksResponse.class)))
     })
-    public ResponseEntity<MyTasksResponse> getMyTasks(@RequestParam String type) {
+    public ResponseEntity<ApiMyTasksResponse> getMyTasks(@RequestParam String type) {
         if (!type.matches("created|assigned|received")) {
             return ResponseEntity.badRequest().body(
-                new MyTasksResponse("Tham số type phải là: created, assigned, hoặc received", 400, null, 0, type, false, null)
+                ApiMyTasksResponse.error("Tham số type phải là: created, assigned, hoặc received", 400)
             );
         }
         
-        MyTasksResponse response = taskService.getMyTasksWithCount(type);
-        return ResponseEntity.ok(response);
+        MyTasksData response = taskService.getMyTasksWithCountStandardized(type);
+        return ResponseEntity.ok(ApiMyTasksResponse.success(response));
     }
 
     // MÔ HÌNH ADJACENCY LIST: API Subtask
@@ -191,17 +197,12 @@ public class TaskController {
     @GetMapping("/{id}/attachments")
     @Operation(summary = "Lấy danh sách file đính kèm của task", description = "Lấy tất cả file đính kèm trực tiếp của task")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Thành công"),
-        @ApiResponse(responseCode = "404", description = "Không tìm thấy task")
+        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiTaskAttachmentsResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy task", content = @Content(schema = @Schema(implementation = ApiTaskAttachmentsResponse.class)))
     })
-    public ResponseEntity<?> getTaskAttachments(@PathVariable Integer id) {
+    public ResponseEntity<ApiTaskAttachmentsResponse> getTaskAttachments(@PathVariable Integer id) {
         List<AttachmentDTO> attachments = taskService.getTaskAttachments(id);
-        return ResponseEntity.ok(Map.of(
-            "message", "Thành công",
-            "statusCode", 200,
-            "data", attachments,
-            "success", true
-        ));
+        return ResponseEntity.ok(new ApiTaskAttachmentsResponse("Thành công", 200, attachments, true));
     }
 
     // ============== SEARCH & FILTER ENDPOINTS ==============
@@ -256,4 +257,52 @@ public class TaskController {
         List<TaskDetailDTO> tasks = taskService.searchTasks(keyword.trim());
         return ResponseEntity.ok(new ApiAllTasksResponse("Tìm thấy " + tasks.size() + " task", 200, tasks, true));
     }
+    
+    // ===================================================================
+    // ✅ PRIORITY 3: SIMPLIFIED DTOs ENDPOINTS
+    // ===================================================================
+    
+    @GetMapping("/{id}/simplified")
+    @Operation(summary = "Lấy chi tiết task với Simplified DTO", 
+               description = "PRIORITY 3: Trả về task detail với cấu trúc đơn giản hóa, không có nested DTOs phức tạp")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Thành công"),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy task")
+    })
+    public ResponseEntity<?> getTaskDetailSimplified(@PathVariable Integer id) {
+        try {
+            TaskDetailSimplifiedDTO task = taskService.getTaskDetailSimplifiedById(id);
+            if (task == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    Map.of(
+                        "success", false,
+                        "message", "Không tìm thấy task với ID: " + id,
+                        "statusCode", 404,
+                        "data", null
+                    )
+                );
+            }
+            return ResponseEntity.ok(
+                Map.of(
+                    "success", true,
+                    "message", "Lấy chi tiết task thành công (Simplified DTO)",
+                    "statusCode", 200,
+                    "data", task,
+                    "simplifiedStructure", true,
+                    "explanation", "Flattened user info, no nested DTOs, better performance"
+                )
+            );
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                Map.of(
+                    "success", false,
+                    "message", "Lỗi server: " + e.getMessage(),
+                    "statusCode", 500,
+                    "data", null
+                )
+            );
+        }
+    }
+    
+
 }
