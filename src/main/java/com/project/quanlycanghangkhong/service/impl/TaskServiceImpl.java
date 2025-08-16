@@ -624,6 +624,35 @@ public class TaskServiceImpl implements TaskService {
             .collect(Collectors.toList());
     }
 
+    @Override
+    @Transactional
+    public List<AttachmentDTO> addAttachmentsToTask(Integer taskId, List<Integer> attachmentIds) {
+        // Kiểm tra task có tồn tại không
+        Task task = taskRepository.findByIdAndDeletedFalse(taskId).orElse(null);
+        if (task == null) {
+            throw new RuntimeException("Không tìm thấy task với ID: " + taskId);
+        }
+        
+        // Lấy danh sách attachment
+        List<Attachment> attachments = attachmentRepository.findAllByIdIn(attachmentIds);
+        List<AttachmentDTO> result = new ArrayList<>();
+        
+        for (Attachment attachment : attachments) {
+            if (!attachment.isDeleted()) {
+                // Kiểm tra attachment chưa được gán vào task nào khác
+                if (attachment.getTask() == null) {
+                    attachment.setTask(task);
+                    attachmentRepository.save(attachment);
+                    result.add(convertToAttachmentDTOOptimized(attachment));
+                } else {
+                    throw new RuntimeException("Attachment với ID " + attachment.getId() + " đã được gán vào task khác");
+                }
+            }
+        }
+        
+        return result;
+    }
+
     // ============== SEARCH & FILTER IMPLEMENTATIONS ==============
 
     @Override

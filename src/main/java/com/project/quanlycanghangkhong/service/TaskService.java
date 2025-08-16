@@ -90,6 +90,14 @@ public interface TaskService {
      */
     List<AttachmentDTO> getTaskAttachments(Integer taskId);
     
+    /**
+     * Thêm attachments vào task cụ thể
+     * @param taskId ID của task
+     * @param attachmentIds Danh sách ID attachment cần thêm
+     * @return Danh sách attachment đã được thêm
+     */
+    List<AttachmentDTO> addAttachmentsToTask(Integer taskId, List<Integer> attachmentIds);
+    
     // ============== SEARCH & FILTER METHODS ==============
     
     /**
