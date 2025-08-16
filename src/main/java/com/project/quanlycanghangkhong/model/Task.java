@@ -73,6 +73,10 @@ public class Task {
     // THAY ĐỔI LOGIC NGHIỆP VỤ: Quan hệ attachment trực tiếp (thay thế cách tiếp cận dựa trên document)
     @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Attachment> attachments = new ArrayList<>();
+    
+    // Quan hệ với Assignment để tối ưu query performance
+    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Assignment> assignments = new ArrayList<>();
 
     // Getters and setters
     public Integer getId() {
@@ -211,5 +215,21 @@ public class Task {
      */
     public void setAttachments(List<Attachment> attachments) {
         this.attachments = attachments;
+    }
+    
+    /**
+     * Lấy tất cả assignment của task này
+     * @return Danh sách assignment
+     */
+    public List<Assignment> getAssignments() {
+        return assignments;
+    }
+    
+    /**
+     * Đặt assignment cho task này
+     * @param assignments Danh sách assignment
+     */
+    public void setAssignments(List<Assignment> assignments) {
+        this.assignments = assignments;
     }
 }

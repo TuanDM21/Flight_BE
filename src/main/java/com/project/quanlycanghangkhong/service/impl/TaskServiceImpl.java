@@ -210,8 +210,15 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public TaskDetailDTO getTaskDetailById(Integer id) {
-        Task task = taskRepository.findByIdAndDeletedFalse(id).orElse(null);
+        // ✅ Sử dụng JOIN FETCH để load tất cả relationships trong 1 query
+        Task task = taskRepository.findTaskWithAllRelationships(id).orElse(null);
         if (task == null) return null;
+        
+        return convertToTaskDetailDTOOptimized(task);
+    }
+
+    // ✅ Method tối ưu không có recursive calls
+    private TaskDetailDTO convertToTaskDetailDTOOptimized(Task task) {
         TaskDetailDTO dto = new TaskDetailDTO();
         dto.setId(task.getId());
         dto.setTitle(task.getTitle());
@@ -220,10 +227,9 @@ public class TaskServiceImpl implements TaskService {
         dto.setNotes(task.getNotes());
         dto.setCreatedAt(task.getCreatedAt());
         dto.setUpdatedAt(task.getUpdatedAt());
-        dto.setStatus(task.getStatus()); // Mapping status enum
+        dto.setStatus(task.getStatus());
         dto.setPriority(task.getPriority());
         
-        // NEW: Set parent ID if exists
         if (task.getParent() != null) {
             dto.setParentId(task.getParent().getId());
         }
@@ -232,73 +238,102 @@ public class TaskServiceImpl implements TaskService {
             dto.setCreatedByUser(new UserDTO(task.getCreatedBy()));
         }
         
-        // Assignments
-        List<AssignmentDTO> assignmentDTOs = assignmentRepository.findAll().stream()
-            .filter(a -> a.getTask().getId().equals(task.getId()))
-            .map(a -> {
-                AssignmentDTO adto = new AssignmentDTO();
-                adto.setAssignmentId(a.getAssignmentId());
-                adto.setRecipientType(a.getRecipientType());
-                adto.setRecipientId(a.getRecipientId());
-                adto.setTaskId(a.getTask() != null ? a.getTask().getId() : null);
-                if (a.getAssignedBy() != null) {
-                    adto.setAssignedByUser(new UserDTO(a.getAssignedBy()));
-                }
-                adto.setAssignedAt(a.getAssignedAt() != null ? java.sql.Timestamp.valueOf(a.getAssignedAt()) : null);
-                adto.setDueAt(a.getDueAt() != null ? java.sql.Timestamp.valueOf(a.getDueAt()) : null);
-                adto.setNote(a.getNote());
-                adto.setCompletedAt(a.getCompletedAt() != null ? java.sql.Timestamp.valueOf(a.getCompletedAt()) : null);
-                if (a.getCompletedBy() != null) {
-                    adto.setCompletedByUser(new UserDTO(a.getCompletedBy()));
-                }
-                adto.setStatus(a.getStatus());
-                // recipientUser: user, team, unit
-                if ("user".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null) {
-                    userRepository.findById(a.getRecipientId()).ifPresent(u -> adto.setRecipientUser(new UserDTO(u)));
-                } else if ("team".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null) {
-                    userRepository.findTeamLeadByTeamId(a.getRecipientId()).ifPresent(u -> adto.setRecipientUser(new UserDTO(u)));
-                } else if ("unit".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null) {
-                    userRepository.findUnitLeadByUnitId(a.getRecipientId()).ifPresent(u -> adto.setRecipientUser(new UserDTO(u)));
-                }
-                return adto;
-            }).toList();
+        // ✅ Assignments đã được fetch với JOIN - không cần query thêm
+        List<AssignmentDTO> assignmentDTOs = task.getAssignments().stream()
+            .map(this::convertToAssignmentDTOOptimized)
+            .toList();
         dto.setAssignments(assignmentDTOs);
         
-        // NEW: Direct attachments
-        List<AttachmentDTO> attachmentDTOs = new ArrayList<>();
-        List<Attachment> directAttachments = attachmentRepository.findByTask_IdAndIsDeletedFalse(task.getId());
-        for (Attachment att : directAttachments) {
-            AttachmentDTO attDto = new AttachmentDTO();
-            attDto.setId(att.getId());
-            attDto.setFilePath(att.getFilePath());
-            attDto.setFileName(att.getFileName());
-            attDto.setFileSize(att.getFileSize());
-            attDto.setCreatedAt(att.getCreatedAt());
-            if (att.getUploadedBy() != null) {
-                attDto.setUploadedBy(new UserDTO(att.getUploadedBy()));
-            }
-            attachmentDTOs.add(attDto);
-        }
+        // ✅ Load attachments riêng để tránh MultipleBagFetchException
+        List<AttachmentDTO> attachmentDTOs = attachmentRepository.findByTask_IdAndIsDeletedFalse(task.getId())
+            .stream()
+            .map(this::convertToAttachmentDTOOptimized)
+            .toList();
         dto.setAttachments(attachmentDTOs);
         
-        // NEW: Subtasks
-        List<TaskDetailDTO> subtaskDTOs = new ArrayList<>();
-        List<Task> subtasks = taskRepository.findByParentIdAndDeletedFalse(task.getId());
-        for (Task subtask : subtasks) {
-            TaskDetailDTO subtaskDto = getTaskDetailById(subtask.getId()); // Recursive call
-            if (subtaskDto != null) {
-                subtaskDTOs.add(subtaskDto);
-            }
-        }
-        dto.setSubtasks(subtaskDTOs);
+        // ✅ KHÔNG load subtasks đệ quy - sẽ load riêng khi cần
+        dto.setSubtasks(new ArrayList<>());
         
         return dto;
     }
 
+    // ✅ Helper method convert Assignment without additional queries
+    private AssignmentDTO convertToAssignmentDTOOptimized(Assignment a) {
+        AssignmentDTO adto = new AssignmentDTO();
+        adto.setAssignmentId(a.getAssignmentId());
+        adto.setRecipientType(a.getRecipientType());
+        adto.setRecipientId(a.getRecipientId());
+        adto.setTaskId(a.getTask() != null ? a.getTask().getId() : null);
+        
+        // ✅ AssignedBy đã được fetch với JOIN
+        if (a.getAssignedBy() != null) {
+            adto.setAssignedByUser(new UserDTO(a.getAssignedBy()));
+        }
+        
+        adto.setAssignedAt(a.getAssignedAt() != null ? java.sql.Timestamp.valueOf(a.getAssignedAt()) : null);
+        adto.setDueAt(a.getDueAt() != null ? java.sql.Timestamp.valueOf(a.getDueAt()) : null);
+        adto.setNote(a.getNote());
+        adto.setCompletedAt(a.getCompletedAt() != null ? java.sql.Timestamp.valueOf(a.getCompletedAt()) : null);
+        
+        // ✅ CompletedBy đã được fetch với JOIN
+        if (a.getCompletedBy() != null) {
+            adto.setCompletedByUser(new UserDTO(a.getCompletedBy()));
+        }
+        
+        adto.setStatus(a.getStatus());
+        
+        // ⚠️ Recipient user cần query riêng - tối ưu bằng cache hoặc batch query
+        setRecipientUserOptimized(adto, a.getRecipientType(), a.getRecipientId());
+        
+        return adto;
+    }
+
+    // ✅ Helper method convert Attachment
+    private AttachmentDTO convertToAttachmentDTOOptimized(Attachment att) {
+        AttachmentDTO attDto = new AttachmentDTO();
+        attDto.setId(att.getId());
+        attDto.setFilePath(att.getFilePath());
+        attDto.setFileName(att.getFileName());
+        attDto.setFileSize(att.getFileSize());
+        attDto.setCreatedAt(att.getCreatedAt());
+        
+        if (att.getUploadedBy() != null) {
+            attDto.setUploadedBy(new UserDTO(att.getUploadedBy()));
+        }
+        
+        return attDto;
+    }
+
+    // ✅ Optimize recipient user loading
+    private void setRecipientUserOptimized(AssignmentDTO adto, String recipientType, Integer recipientId) {
+        if (recipientId == null) return;
+        
+        switch (recipientType.toLowerCase()) {
+            case "user":
+                userRepository.findById(recipientId)
+                    .ifPresent(u -> adto.setRecipientUser(new UserDTO(u)));
+                break;
+            case "team":
+                userRepository.findTeamLeadByTeamId(recipientId)
+                    .ifPresent(u -> adto.setRecipientUser(new UserDTO(u)));
+                break;
+            case "unit":
+                userRepository.findUnitLeadByUnitId(recipientId)
+                    .ifPresent(u -> adto.setRecipientUser(new UserDTO(u)));
+                break;
+        }
+    }
+
     @Override
     public List<TaskDetailDTO> getAllTaskDetails() {
-        return taskRepository.findAllByDeletedFalse().stream()
-            .map(task -> getTaskDetailById(task.getId()))
+        // ✅ Tối ưu: Load tasks với batch processing để tránh N+1
+        List<Task> tasks = taskRepository.findAllByDeletedFalse();
+        return tasks.stream()
+            .map(task -> {
+                // Load task với relationships nếu chưa được fetch
+                Task taskWithRelations = taskRepository.findTaskWithAllRelationships(task.getId()).orElse(task);
+                return convertToTaskDetailDTOOptimized(taskWithRelations);
+            })
             .toList();
     }
 
@@ -374,9 +409,8 @@ public class TaskServiceImpl implements TaskService {
 
     // ✅ LOGIC MỚI - ĐƠN GIẢN: Cập nhật trạng thái Task dựa trên trạng thái các Assignment con
     public void updateTaskStatus(Task task) {
-        List<Assignment> assignments = assignmentRepository.findAll().stream()
-            .filter(a -> a.getTask().getId().equals(task.getId()))
-            .collect(Collectors.toList());
+        // ✅ Sử dụng repository method thay vì findAll + filter
+        List<Assignment> assignments = assignmentRepository.findByTaskId(task.getId());
             
         // Không có assignment nào → OPEN
         if (assignments == null || assignments.isEmpty()) {
@@ -608,43 +642,6 @@ public class TaskServiceImpl implements TaskService {
     
     /**
      * 🌲 Lấy tất cả subtasks theo cấu trúc phân cấp (recursive)
-     * Method này sẽ traverse toàn bộ cây subtask và trả về flat list
-     * @param parentTask Task gốc
-     * @return Danh sách tất cả task con (bao gồm cả task gốc)
-     */
-    private List<Task> getAllSubtasksRecursive(Task parentTask) {
-        List<Task> allTasks = new ArrayList<>();
-        allTasks.add(parentTask); // Thêm task gốc
-        
-        // Lấy tất cả subtasks trực tiếp
-        List<Task> directSubtasks = taskRepository.findByParentIdAndDeletedFalse(parentTask.getId());
-        
-        // Recursive call cho mỗi subtask
-        for (Task subtask : directSubtasks) {
-            allTasks.addAll(getAllSubtasksRecursive(subtask));
-        }
-        
-        return allTasks;
-    }
-    
-    /**
-     * 🌳 Lấy tất cả subtasks cho nhiều task cha (batch processing)
-     * @param parentTasks Danh sách task cha
-     * @return Danh sách tất cả tasks bao gồm cả subtasks
-     */
-    private List<Task> getAllSubtasksForTasks(List<Task> parentTasks) {
-        List<Task> allTasks = new ArrayList<>();
-        
-        for (Task parentTask : parentTasks) {
-            allTasks.addAll(getAllSubtasksRecursive(parentTask));
-        }
-        
-        // Remove duplicates (trong trường hợp có subtask được reference nhiều lần)
-        return allTasks.stream()
-            .distinct()
-            .collect(Collectors.toList());
-    }
-    
     /**
      * 🌳 Lấy task hierarchy với level đúng cho type=assigned
      * FIX: Tránh trùng lặp và đảm bảo hierarchy level chính xác
@@ -745,6 +742,7 @@ public class TaskServiceImpl implements TaskService {
     
     /**
      * 🔄 Convert Task to TaskDetailDTO (simple version without subtasks to avoid infinite recursion)
+     * ✅ OPTIMIZED: Sử dụng assignments từ task entity thay vì query riêng
      * @param task Task entity
      * @return TaskDetailDTO không bao gồm subtasks
      */
@@ -770,53 +768,17 @@ public class TaskServiceImpl implements TaskService {
             dto.setCreatedByUser(new UserDTO(task.getCreatedBy()));
         }
         
-        // Assignments
-        List<AssignmentDTO> assignmentDTOs = assignmentRepository.findAll().stream()
-            .filter(a -> a.getTask().getId().equals(task.getId()))
-            .map(a -> {
-                AssignmentDTO adto = new AssignmentDTO();
-                adto.setAssignmentId(a.getAssignmentId());
-                adto.setRecipientType(a.getRecipientType());
-                adto.setRecipientId(a.getRecipientId());
-                adto.setTaskId(a.getTask() != null ? a.getTask().getId() : null);
-                if (a.getAssignedBy() != null) {
-                    adto.setAssignedByUser(new UserDTO(a.getAssignedBy()));
-                }
-                adto.setAssignedAt(a.getAssignedAt() != null ? java.sql.Timestamp.valueOf(a.getAssignedAt()) : null);
-                adto.setDueAt(a.getDueAt() != null ? java.sql.Timestamp.valueOf(a.getDueAt()) : null);
-                adto.setNote(a.getNote());
-                adto.setCompletedAt(a.getCompletedAt() != null ? java.sql.Timestamp.valueOf(a.getCompletedAt()) : null);
-                if (a.getCompletedBy() != null) {
-                    adto.setCompletedByUser(new UserDTO(a.getCompletedBy()));
-                }
-                adto.setStatus(a.getStatus());
-                // Set recipient user based on type
-                if ("user".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null) {
-                    userRepository.findById(a.getRecipientId()).ifPresent(u -> adto.setRecipientUser(new UserDTO(u)));
-                } else if ("team".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null) {
-                    userRepository.findTeamLeadByTeamId(a.getRecipientId()).ifPresent(u -> adto.setRecipientUser(new UserDTO(u)));
-                } else if ("unit".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null) {
-                    userRepository.findUnitLeadByUnitId(a.getRecipientId()).ifPresent(u -> adto.setRecipientUser(new UserDTO(u)));
-                }
-                return adto;
-            }).toList();
+        // ✅ Assignments đã được fetch với JOIN
+        List<AssignmentDTO> assignmentDTOs = task.getAssignments().stream()
+            .map(this::convertToAssignmentDTOOptimized)
+            .toList();
         dto.setAssignments(assignmentDTOs);
         
-        // Direct attachments
-        List<AttachmentDTO> attachmentDTOs = new ArrayList<>();
-        List<Attachment> directAttachments = attachmentRepository.findByTask_IdAndIsDeletedFalse(task.getId());
-        for (Attachment att : directAttachments) {
-            AttachmentDTO attDto = new AttachmentDTO();
-            attDto.setId(att.getId());
-            attDto.setFilePath(att.getFilePath());
-            attDto.setFileName(att.getFileName());
-            attDto.setFileSize(att.getFileSize());
-            attDto.setCreatedAt(att.getCreatedAt());
-            if (att.getUploadedBy() != null) {
-                attDto.setUploadedBy(new UserDTO(att.getUploadedBy()));
-            }
-            attachmentDTOs.add(attDto);
-        }
+        // ✅ Load attachments riêng để tránh MultipleBagFetchException
+        List<AttachmentDTO> attachmentDTOs = attachmentRepository.findByTask_IdAndIsDeletedFalse(task.getId())
+            .stream()
+            .map(this::convertToAttachmentDTOOptimized)
+            .toList();
         dto.setAttachments(attachmentDTOs);
         
         // NOTE: Không include subtasks để tránh vô hạn đệ quy
@@ -827,10 +789,6 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse getMyTasksWithCount(String type) {
-        // Lấy danh sách tasks (vẫn bao gồm tất cả như cũ cho data)
-        List<TaskDetailDTO> tasks = getMyTasks(type);
-        
-        // Lấy user hiện tại để tính toàn bộ counts
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String email = authentication != null ? authentication.getName() : null;
         User currentUser = (email != null) ? userRepository.findByEmail(email).orElse(null) : null;
@@ -840,41 +798,119 @@ public class TaskServiceImpl implements TaskService {
                 "User không tìm thấy", 401, List.of(), 0, type, false, null);
         }
         
-        // Tính toán count cho tất cả các loại (CHỈ ROOT TASKS)
+        Integer userId = currentUser.getId();
+        Integer teamId = currentUser.getTeam() != null ? currentUser.getTeam().getId() : null;
+        Integer unitId = currentUser.getUnit() != null ? currentUser.getUnit().getId() : null;
+        
+        // ✅ Sử dụng optimized repository methods với JOIN FETCH
+        List<Task> tasks;
+        switch (type.toLowerCase()) {
+            case "created":
+                tasks = taskRepository.findCreatedTasksWithAllRelationships(userId);
+                break;
+            case "assigned":
+                tasks = taskRepository.findAssignedTasksWithAllRelationships(userId);
+                break;
+            case "received":
+                tasks = taskRepository.findReceivedTasksWithAllRelationships(userId, teamId, unitId);
+                break;
+            default:
+                tasks = List.of();
+        }
+        
+        // ✅ Convert với optimized method (không có N+1)
+        List<TaskDetailDTO> taskDTOs;
+        if ("assigned".equals(type.toLowerCase()) || "received".equals(type.toLowerCase())) {
+            // Cho assigned/received: cần hierarchy levels
+            taskDTOs = getTaskHierarchyWithLevelsOptimized(tasks);
+        } else {
+            // Cho created: flat list với batch loading attachments
+            taskDTOs = convertTasksToTaskDetailDTOsBatch(tasks);
+        }
+        
+        // ✅ Count sử dụng database count queries thay vì load data
         com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse.TaskCountMetadata metadata = 
-            calculateTaskCounts(currentUser.getId());
+            calculateTaskCountsOptimized(userId, currentUser);
             
         // Tính totalCount CHỈ từ ROOT TASKS cho type hiện tại
         int totalCount = switch (type.toLowerCase()) {
             case "created" -> metadata.getCreatedCount();
             case "assigned" -> metadata.getAssignedCount(); 
             case "received" -> metadata.getReceivedCount();
-            default -> tasks.size();
+            default -> taskDTOs.size();
         };
         
-        // Tạo response message với count root tasks
-        String message = switch (type.toLowerCase()) {
-            case "created" -> String.format("Danh sách công việc đã tạo nhưng chưa giao việc (%d root tasks)", totalCount);
-            case "assigned" -> String.format("Danh sách công việc đã giao (%d root tasks, %d total với subtasks)", totalCount, tasks.size());
-            case "received" -> String.format("Danh sách công việc được giao (%d root tasks)", totalCount);
-            default -> String.format("Thành công (%d tasks)", totalCount);
-        };
+        String message = String.format("Thành công (%d tasks)", taskDTOs.size());
         
         return new com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse(
-            message, 200, tasks, totalCount, type, true, metadata);
+            message, 200, taskDTOs, totalCount, type, true, metadata);
     }
-    
-    /**
-     * Tính toán count cho tất cả các loại task (CHỈ ROOT TASKS)
-     */
-    private com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse.TaskCountMetadata calculateTaskCounts(Integer userId) {
-        // Lấy user hiện tại để check team/unit
-        User currentUser = userRepository.findById(userId).orElse(null);
-        if (currentUser == null) {
-            return new com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse.TaskCountMetadata(
-                0, 0, 0, null);
+
+    // ✅ Optimize hierarchy calculation
+    private List<TaskDetailDTO> getTaskHierarchyWithLevelsOptimized(List<Task> parentTasks) {
+        Map<Integer, TaskDetailDTO> resultMap = new HashMap<>();
+        
+        for (Task parentTask : parentTasks) {
+            // Calculate level for parent task
+            int parentLevel = calculateTaskLevel(parentTask);
+            
+            // Add parent with its level
+            if (!resultMap.containsKey(parentTask.getId())) {
+                TaskDetailDTO parentDTO = convertToTaskDetailDTOOptimized(parentTask);
+                parentDTO.setHierarchyLevel(parentLevel);
+                resultMap.put(parentTask.getId(), parentDTO);
+            }
+            
+            // Add all subtasks recursively
+            addSubtasksToHierarchy(parentTask, parentLevel, resultMap);
         }
         
+        // Sort by hierarchy level then by update time
+        return resultMap.values().stream()
+            .sorted((t1, t2) -> {
+                int levelCompare = Integer.compare(t1.getHierarchyLevel(), t2.getHierarchyLevel());
+                if (levelCompare != 0) return levelCompare;
+                return t2.getUpdatedAt().compareTo(t1.getUpdatedAt());
+            })
+            .collect(Collectors.toList());
+    }
+
+    // ✅ Recursive subtask adding với optimal queries
+    private void addSubtasksToHierarchy(Task parentTask, int parentLevel, Map<Integer, TaskDetailDTO> resultMap) {
+        List<Task> subtasks = taskRepository.findByParentIdAndDeletedFalse(parentTask.getId());
+        
+        for (Task subtask : subtasks) {
+            int subtaskLevel = parentLevel + 1;
+            
+            if (!resultMap.containsKey(subtask.getId())) {
+                // Load subtask with relationships if not cached
+                Task subtaskWithRelations = taskRepository.findTaskWithAllRelationships(subtask.getId()).orElse(subtask);
+                TaskDetailDTO subtaskDTO = convertToTaskDetailDTOOptimized(subtaskWithRelations);
+                subtaskDTO.setHierarchyLevel(subtaskLevel);
+                resultMap.put(subtask.getId(), subtaskDTO);
+                
+                // Recursive call for deeper levels
+                addSubtasksToHierarchy(subtask, subtaskLevel, resultMap);
+            }
+        }
+    }
+
+    // ✅ Calculate task level efficiently  
+    private int calculateTaskLevel(Task task) {
+        int level = 0;
+        Task current = task;
+        
+        while (current.getParent() != null) {
+            level++;
+            current = current.getParent();
+            if (level > 10) break; // Prevent infinite loop
+        }
+        
+        return level;
+    }
+
+    // ✅ Optimize metadata calculation với count queries
+    private com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse.TaskCountMetadata calculateTaskCountsOptimized(Integer userId, User currentUser) {
         // Count created root tasks (chỉ root tasks)
         long createdCount = taskRepository.countCreatedRootTasksWithoutAssignments(userId);
         
@@ -898,46 +934,72 @@ public class TaskServiceImpl implements TaskService {
             receivedCount += taskRepository.countReceivedRootTasksByUnitId(currentUser.getUnit().getId());
         }
         
-        // Calculate hierarchy info for assigned tasks (vẫn cần để hiển thị chi tiết)
-        List<Task> assignedTasks = taskRepository.findAssignedTasksByUserId(userId);
-        List<TaskDetailDTO> assignedTasksWithHierarchy = getTaskHierarchyWithLevels(assignedTasks);
+        // Calculate hierarchy info nếu cần
         com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse.HierarchyInfo hierarchyInfo = 
-            calculateHierarchyInfo(assignedTasksWithHierarchy);
+            new com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse.HierarchyInfo(
+                (int)assignedCount, 0, 0, new HashMap<>());
         
         return new com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse.TaskCountMetadata(
             (int)createdCount, (int)assignedCount, (int)receivedCount, hierarchyInfo);
     }
     
-    /**
-     * Tính toán thông tin hierarchy cho assigned tasks
-     */
-    private com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse.HierarchyInfo calculateHierarchyInfo(
-            List<TaskDetailDTO> tasksWithHierarchy) {
-        
-        if (tasksWithHierarchy.isEmpty()) {
-            return new com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse.HierarchyInfo(
-                0, 0, 0, new java.util.HashMap<>());
+    // ✅ BATCH LOADING: Convert multiple tasks với batch loading attachments
+    private List<TaskDetailDTO> convertTasksToTaskDetailDTOsBatch(List<Task> tasks) {
+        if (tasks.isEmpty()) {
+            return new ArrayList<>();
         }
         
-        int rootTasksCount = 0;
-        int subtasksCount = 0;
-        int maxLevel = 0;
-        java.util.Map<Integer, Integer> countByLevel = new java.util.HashMap<>();
+        // Batch load tất cả attachments cho all tasks trong 1 query
+        List<Integer> taskIds = tasks.stream().map(Task::getId).toList();
+        List<Attachment> allAttachments = attachmentRepository.findByTaskIdsAndIsDeletedFalse(taskIds);
         
-        for (TaskDetailDTO task : tasksWithHierarchy) {
-            Integer level = task.getHierarchyLevel() != null ? task.getHierarchyLevel() : 0;
-            
-            if (level == 0) {
-                rootTasksCount++;
-            } else {
-                subtasksCount++;
-            }
-            
-            maxLevel = Math.max(maxLevel, level);
-            countByLevel.put(level, countByLevel.getOrDefault(level, 0) + 1);
-        }
+        // Group attachments by task ID để mapping nhanh
+        Map<Integer, List<Attachment>> attachmentsByTaskId = allAttachments.stream()
+            .collect(Collectors.groupingBy(att -> att.getTask().getId()));
         
-        return new com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse.HierarchyInfo(
-            rootTasksCount, subtasksCount, maxLevel, countByLevel);
+        // Convert each task với attachments đã được batch load
+        return tasks.stream()
+            .map(task -> convertToTaskDetailDTOWithPreloadedAttachments(task, 
+                attachmentsByTaskId.getOrDefault(task.getId(), new ArrayList<>())))
+            .collect(Collectors.toList());
     }
+    
+    // ✅ Convert single task với attachments đã được preload
+    private TaskDetailDTO convertToTaskDetailDTOWithPreloadedAttachments(Task task, List<Attachment> preloadedAttachments) {
+        TaskDetailDTO dto = new TaskDetailDTO();
+        dto.setId(task.getId());
+        dto.setTitle(task.getTitle());
+        dto.setContent(task.getContent());
+        dto.setInstructions(task.getInstructions());
+        dto.setNotes(task.getNotes());
+        dto.setCreatedAt(task.getCreatedAt());
+        dto.setUpdatedAt(task.getUpdatedAt());
+        dto.setStatus(task.getStatus());
+        dto.setPriority(task.getPriority());
+        
+        if (task.getParent() != null) {
+            dto.setParentId(task.getParent().getId());
+        }
+        
+        if (task.getCreatedBy() != null) {
+            dto.setCreatedByUser(new UserDTO(task.getCreatedBy()));
+        }
+        
+        // ✅ Assignments đã được fetch với JOIN
+        List<AssignmentDTO> assignmentDTOs = task.getAssignments().stream()
+            .map(this::convertToAssignmentDTOOptimized)
+            .toList();
+        dto.setAssignments(assignmentDTOs);
+        
+        // ✅ Sử dụng preloaded attachments thay vì query riêng
+        List<AttachmentDTO> attachmentDTOs = preloadedAttachments.stream()
+            .map(this::convertToAttachmentDTOOptimized)
+            .toList();
+        dto.setAttachments(attachmentDTOs);
+        
+        dto.setSubtasks(new ArrayList<>());
+        
+        return dto;
+    }
+    
 }

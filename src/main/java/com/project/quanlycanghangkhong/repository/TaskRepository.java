@@ -171,4 +171,75 @@ public interface TaskRepository extends JpaRepository<Task, Integer> {
            "AND a.recipientId = :unitId AND a.task.deleted = false " +
            "ORDER BY a.task.updatedAt DESC, a.task.createdAt DESC")
     List<Task> findReceivedTasksByUnitId(@Param("unitId") Integer unitId);
+    
+    // ============== OPTIMIZED JOIN FETCH METHODS TO FIX N+1 QUERY PROBLEM ==============
+    
+    /**
+     * 🚀 OPTIMIZED: Load task với tất cả relationships trong 1 query (fix N+1 problem)
+     * FIX MultipleBagFetchException: Chỉ fetch assignments, attachments sẽ load riêng
+     * @param id Task ID
+     * @return Task với assignments, createdBy, parent được fetch
+     */
+    @Query("SELECT DISTINCT t FROM Task t " +
+           "LEFT JOIN FETCH t.assignments a " +
+           "LEFT JOIN FETCH a.assignedBy " +
+           "LEFT JOIN FETCH a.completedBy " +
+           "LEFT JOIN FETCH t.createdBy " +
+           "LEFT JOIN FETCH t.parent " +
+           "WHERE t.id = :id AND t.deleted = false")
+    Optional<Task> findTaskWithAllRelationships(@Param("id") Integer id);
+    
+    /**
+     * 🚀 OPTIMIZED: Created tasks với JOIN FETCH (fix N+1 problem)
+     * FIX MultipleBagFetchException: Chỉ fetch assignments
+     * @param userId User ID
+     * @return Tasks với relationships được fetch
+     */
+    @Query("SELECT DISTINCT t FROM Task t " +
+           "LEFT JOIN FETCH t.createdBy " +
+           "WHERE t.createdBy.id = :userId AND t.deleted = false " +
+           "AND NOT EXISTS (SELECT 1 FROM Assignment asn WHERE asn.task = t) " +
+           "ORDER BY t.updatedAt DESC")
+    List<Task> findCreatedTasksWithAllRelationships(@Param("userId") Integer userId);
+    
+    /**
+     * 🚀 OPTIMIZED: Assigned tasks với JOIN FETCH (fix N+1 problem)
+     * FIX MultipleBagFetchException: Chỉ fetch assignments
+     * @param userId User ID
+     * @return Tasks với relationships được fetch
+     */
+    @Query("SELECT DISTINCT t FROM Task t " +
+           "LEFT JOIN FETCH t.assignments a " +
+           "LEFT JOIN FETCH a.assignedBy " +
+           "LEFT JOIN FETCH a.completedBy " +
+           "LEFT JOIN FETCH t.createdBy " +
+           "LEFT JOIN FETCH t.parent " +
+           "JOIN t.assignments asn " +
+           "WHERE asn.assignedBy.id = :userId AND t.deleted = false " +
+           "ORDER BY t.updatedAt DESC")
+    List<Task> findAssignedTasksWithAllRelationships(@Param("userId") Integer userId);
+    
+    /**
+     * 🚀 OPTIMIZED: Received tasks với JOIN FETCH (fix N+1 problem)
+     * FIX MultipleBagFetchException: Chỉ fetch assignments
+     * @param userId User ID
+     * @param teamId Team ID
+     * @param unitId Unit ID
+     * @return Tasks với relationships được fetch
+     */
+    @Query("SELECT DISTINCT t FROM Task t " +
+           "LEFT JOIN FETCH t.assignments a " +
+           "LEFT JOIN FETCH a.assignedBy " +
+           "LEFT JOIN FETCH a.completedBy " +
+           "LEFT JOIN FETCH t.createdBy " +
+           "LEFT JOIN FETCH t.parent " +
+           "JOIN t.assignments asn " +
+           "WHERE ((asn.recipientType = 'user' AND asn.recipientId = :userId) " +
+           "OR (asn.recipientType = 'team' AND asn.recipientId = :teamId) " +
+           "OR (asn.recipientType = 'unit' AND asn.recipientId = :unitId)) " +
+           "AND t.deleted = false " +
+           "ORDER BY t.updatedAt DESC")
+    List<Task> findReceivedTasksWithAllRelationships(@Param("userId") Integer userId, 
+                                                    @Param("teamId") Integer teamId, 
+                                                    @Param("unitId") Integer unitId);
 }

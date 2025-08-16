@@ -3,6 +3,8 @@ package com.project.quanlycanghangkhong.repository;
 import com.project.quanlycanghangkhong.model.Attachment;
 import com.project.quanlycanghangkhong.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 
@@ -84,4 +86,12 @@ public interface AttachmentRepository extends JpaRepository<Attachment, Integer>
      * @return Danh sách attachment hoàn toàn chưa được gán
      */
     // List<Attachment> findByTaskIsNullAndDocumentIsNullAndIsDeletedFalse(); // Hoàn toàn chưa được gán
+    
+    /**
+     * 🚀 BATCH LOADING: Load attachments cho nhiều tasks cùng lúc để tránh N+1
+     * @param taskIds List of task IDs
+     * @return List attachments for multiple tasks
+     */
+    @Query("SELECT a FROM Attachment a WHERE a.task.id IN :taskIds AND a.isDeleted = false")
+    List<Attachment> findByTaskIdsAndIsDeletedFalse(@Param("taskIds") List<Integer> taskIds);
 }
