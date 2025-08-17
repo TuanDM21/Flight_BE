@@ -411,8 +411,30 @@ public class TaskServiceImpl implements TaskService {
                 // 🚀 OPTIMIZED + 🌲 HIERARCHICAL: Lấy tasks đã giao + tất cả subtasks
                 List<Task> assignedTasks = taskRepository.findAssignedTasksByUserId(currentUserId);
                 
-                // 🌳 Special handling for assigned: return hierarchy with levels
-                return getTaskHierarchyWithLevels(assignedTasks);
+                // 🔧 FIX DUPLICATE ISSUE: Chỉ lấy ROOT TASKS để tránh duplicate
+                // Loại bỏ subtasks khỏi root level nếu parent của chúng cũng trong list
+                List<Task> rootAssignedTasks = filterOnlyRootTasksFromAssigned(assignedTasks);
+                
+                // Convert to DTO với nested subtasks structure
+                return rootAssignedTasks.stream()
+                    .map(task -> {
+                        // Load với full relationships
+                        Task taskWithRelations = taskRepository.findTaskWithAllRelationships(task.getId())
+                            .orElse(task);
+                        return convertToTaskDetailDTOOptimized(taskWithRelations, 0);
+                    })
+                    .sorted((t1, t2) -> {
+                        // Sort theo thời gian mới nhất
+                        Task task1 = taskRepository.findById(t1.getId()).orElse(null);
+                        Task task2 = taskRepository.findById(t2.getId()).orElse(null);
+                        if (task1 != null && task2 != null) {
+                            int updatedCompare = task2.getUpdatedAt().compareTo(task1.getUpdatedAt());
+                            if (updatedCompare != 0) return updatedCompare;
+                            return task2.getCreatedAt().compareTo(task1.getCreatedAt());
+                        }
+                        return 0;
+                    })
+                    .collect(Collectors.toList());
                 
             case "received":
                 // 🚀 OPTIMIZED + 🌲 HIERARCHICAL: Lấy tasks được giao + hierarchy levels
@@ -446,8 +468,18 @@ public class TaskServiceImpl implements TaskService {
                     })
                     .collect(Collectors.toList());
                 
-                // 🌳 Special handling for received: return hierarchy with levels
-                return getTaskHierarchyWithLevels(uniqueReceivedTasks);
+                // 🔧 FIX DUPLICATE ISSUE: Chỉ lấy ROOT TASKS để tránh duplicate
+                List<Task> rootReceivedTasks = filterOnlyRootTasksFromAssigned(uniqueReceivedTasks);
+                
+                // Convert to DTO với nested subtasks structure
+                return rootReceivedTasks.stream()
+                    .map(task -> {
+                        // Load với full relationships
+                        Task taskWithRelations = taskRepository.findTaskWithAllRelationships(task.getId())
+                            .orElse(task);
+                        return convertToTaskDetailDTOOptimized(taskWithRelations, 0);
+                    })
+                    .collect(Collectors.toList());
                 
             default:
                 return List.of();
@@ -714,6 +746,32 @@ public class TaskServiceImpl implements TaskService {
         // Nếu attachmentIds empty = xóa hết attachment (đã làm ở trên)
     }
 
+    /**
+     * 🔧 ANTI-DUPLICATE: Filter để chỉ lấy root tasks từ assigned tasks list
+     * Loại bỏ các subtasks nếu parent task của chúng cũng có trong assigned list
+     * @param assignedTasks Danh sách tất cả tasks được assigned
+     * @return Chỉ root tasks (không có parent hoặc parent không trong assigned list)
+     */
+    private List<Task> filterOnlyRootTasksFromAssigned(List<Task> assignedTasks) {
+        // Create set of assigned task IDs for fast lookup
+        Set<Integer> assignedTaskIds = assignedTasks.stream()
+            .map(Task::getId)
+            .collect(Collectors.toSet());
+        
+        // Filter: chỉ giữ lại tasks mà parent không có trong assigned list
+        return assignedTasks.stream()
+            .filter(task -> {
+                if (task.getParent() == null) {
+                    // Root task (không có parent) -> always include
+                    return true;
+                } else {
+                    // Subtask -> chỉ include nếu parent KHÔNG có trong assigned list
+                    return !assignedTaskIds.contains(task.getParent().getId());
+                }
+            })
+            .collect(Collectors.toList());
+    }
+
     // ============== HELPER METHODS FOR HIERARCHICAL TASK MANAGEMENT ==============
     
     /**
@@ -956,8 +1014,29 @@ public class TaskServiceImpl implements TaskService {
         // ✅ Convert với optimized method (không có N+1)
         List<TaskDetailDTO> taskDTOs;
         if ("assigned".equals(type.toLowerCase()) || "received".equals(type.toLowerCase())) {
-            // Cho assigned/received: cần hierarchy levels
-            taskDTOs = getTaskHierarchyWithLevelsOptimized(tasks);
+            // 🔧 FIX DUPLICATE ISSUE: Chỉ lấy ROOT TASKS để tránh duplicate  
+            List<Task> rootTasks = filterOnlyRootTasksFromAssigned(tasks);
+            
+            // Convert to DTO với nested subtasks structure
+            taskDTOs = rootTasks.stream()
+                .map(task -> {
+                    // Load với full relationships nếu cần
+                    Task taskWithRelations = taskRepository.findTaskWithAllRelationships(task.getId())
+                        .orElse(task);
+                    return convertToTaskDetailDTOOptimized(taskWithRelations, 0);
+                })
+                .sorted((t1, t2) -> {
+                    // Sort theo thời gian mới nhất
+                    Task task1 = taskRepository.findById(t1.getId()).orElse(null);
+                    Task task2 = taskRepository.findById(t2.getId()).orElse(null);
+                    if (task1 != null && task2 != null) {
+                        int updatedCompare = task2.getUpdatedAt().compareTo(task1.getUpdatedAt());
+                        if (updatedCompare != 0) return updatedCompare;
+                        return task2.getCreatedAt().compareTo(task1.getCreatedAt());
+                    }
+                    return 0;
+                })
+                .collect(Collectors.toList());
         } else {
             // Cho created: flat list với batch loading attachments
             taskDTOs = convertTasksToTaskDetailDTOsBatch(tasks);
