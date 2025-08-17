@@ -13,7 +13,7 @@ import com.project.quanlycanghangkhong.dto.response.task.ApiTaskDetailResponse;
 import com.project.quanlycanghangkhong.dto.response.task.ApiBulkDeleteTasksResponse;
 import com.project.quanlycanghangkhong.dto.response.task.ApiMyTasksResponse;
 import com.project.quanlycanghangkhong.dto.response.task.MyTasksData;
-import com.project.quanlycanghangkhong.dto.response.task.ApiTaskAttachmentsResponse;
+import com.project.quanlycanghangkhong.dto.response.task.ApiTaskAttachmentsSimplifiedResponse;
 import com.project.quanlycanghangkhong.dto.response.task.ApiTaskAttachmentUploadResponse;
 import com.project.quanlycanghangkhong.dto.request.TaskAttachmentUploadRequest;
 
@@ -197,14 +197,31 @@ public class TaskController {
     // Đã loại bỏ các API riêng biệt để gán/gỡ attachment vì không cần thiết
     
     @GetMapping("/{id}/attachments")
-    @Operation(summary = "Lấy danh sách file đính kèm của task", description = "Lấy tất cả file đính kèm trực tiếp của task")
+    @Operation(summary = "Lấy danh sách file đính kèm của task (Simplified)", description = "Lấy tất cả file đính kèm trực tiếp của task với cấu trúc simplified, không có nested data")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiTaskAttachmentsResponse.class))),
-        @ApiResponse(responseCode = "404", description = "Không tìm thấy task", content = @Content(schema = @Schema(implementation = ApiTaskAttachmentsResponse.class)))
+        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiTaskAttachmentsSimplifiedResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy task", content = @Content(schema = @Schema(implementation = ApiTaskAttachmentsSimplifiedResponse.class)))
     })
-    public ResponseEntity<ApiTaskAttachmentsResponse> getTaskAttachments(@PathVariable Integer id) {
+    public ResponseEntity<ApiTaskAttachmentsSimplifiedResponse> getTaskAttachments(@PathVariable Integer id) {
+        List<com.project.quanlycanghangkhong.dto.simplified.SimpleAttachmentDTO> attachments = taskService.getTaskAttachmentsSimplified(id);
+        return ResponseEntity.ok(new ApiTaskAttachmentsSimplifiedResponse("Thành công", 200, attachments, true));
+    }
+
+    @GetMapping("/{id}/attachments/legacy")
+    @Operation(summary = "Lấy danh sách file đính kèm của task (Legacy - có nested data)", description = "Legacy endpoint với AttachmentDTO có nested UserDTO - có thể gây lồng data")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Thành công"),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy task")
+    })
+    public ResponseEntity<?> getTaskAttachmentsLegacy(@PathVariable Integer id) {
         List<AttachmentDTO> attachments = taskService.getTaskAttachments(id);
-        return ResponseEntity.ok(new ApiTaskAttachmentsResponse("Thành công", 200, attachments, true));
+        return ResponseEntity.ok(Map.of(
+            "message", "Thành công (Legacy endpoint)",
+            "statusCode", 200,
+            "data", attachments,
+            "success", true,
+            "warning", "Endpoint này có thể có nested data. Khuyến nghị dùng /{id}/attachments"
+        ));
     }
 
     @PostMapping("/{id}/attachments")

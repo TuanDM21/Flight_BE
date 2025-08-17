@@ -657,6 +657,31 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
+    public List<com.project.quanlycanghangkhong.dto.simplified.SimpleAttachmentDTO> getTaskAttachmentsSimplified(Integer taskId) {
+        List<Attachment> attachments = attachmentRepository.findByTask_IdAndIsDeletedFalse(taskId);
+        return attachments.stream()
+            .map(att -> {
+                com.project.quanlycanghangkhong.dto.simplified.SimpleAttachmentDTO dto = new com.project.quanlycanghangkhong.dto.simplified.SimpleAttachmentDTO();
+                dto.setId(att.getId());
+                dto.setFilePath(att.getFilePath());
+                dto.setFileName(att.getFileName());
+                dto.setFileSize(att.getFileSize());
+                dto.setCreatedAt(att.getCreatedAt());
+                dto.setIsDeleted(att.isDeleted());
+                
+                // Flattened user info instead of nested UserDTO
+                if (att.getUploadedBy() != null) {
+                    dto.setUploadedByUserId(att.getUploadedBy().getId());
+                    dto.setUploadedByUserName(att.getUploadedBy().getName());
+                    dto.setUploadedByUserEmail(att.getUploadedBy().getEmail());
+                }
+                
+                return dto;
+            })
+            .collect(Collectors.toList());
+    }
+
+    @Override
     @Transactional
     public List<AttachmentDTO> addAttachmentsToTask(Integer taskId, List<Integer> attachmentIds) {
         // Kiểm tra task có tồn tại không

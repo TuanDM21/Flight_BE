@@ -91,6 +91,13 @@ public interface TaskService {
     List<AttachmentDTO> getTaskAttachments(Integer taskId);
     
     /**
+     * Lấy tất cả attachment của task với simplified structure (không nested data)
+     * @param taskId ID Task
+     * @return Danh sách SimpleAttachmentDTO (flattened structure)
+     */
+    List<com.project.quanlycanghangkhong.dto.simplified.SimpleAttachmentDTO> getTaskAttachmentsSimplified(Integer taskId);
+    
+    /**
      * Thêm attachments vào task cụ thể
      * @param taskId ID của task
      * @param attachmentIds Danh sách ID attachment cần thêm
