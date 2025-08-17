@@ -221,13 +221,6 @@ public class TaskController {
             @PathVariable Integer id, 
             @Valid @RequestBody TaskAttachmentUploadRequest request) {
         try {
-            // Validate request
-            if (!id.equals(request.getTaskId())) {
-                return ResponseEntity.badRequest().body(
-                    new ApiTaskAttachmentUploadResponse("Task ID trong URL và body request không khớp", 400, null, false)
-                );
-            }
-            
             List<AttachmentDTO> addedAttachments = taskService.addAttachmentsToTask(id, request.getAttachmentIds());
             
             String message = String.format("Đã thêm %d file đính kèm vào task thành công", addedAttachments.size());
