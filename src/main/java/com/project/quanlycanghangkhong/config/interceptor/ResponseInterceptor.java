@@ -24,11 +24,27 @@ public class ResponseInterceptor implements ResponseBodyAdvice<Object> {
 
 	@Override
 	public boolean supports(MethodParameter returnType, Class<? extends HttpMessageConverter<?>> converterType) {
-		// Chỉ áp dụng cho các response không phải là ApiResponseCustom hoặc
-		// ResponseEntity<ApiResponseCustom>
-		return !returnType.getParameterType().equals(ApiResponseCustom.class) &&
-				!(returnType.getParameterType().equals(ResponseEntity.class) &&
-						returnType.getGenericParameterType().getTypeName().contains("ApiResponseCustom"));
+		// Chỉ áp dụng cho các response không phải là ApiResponseCustom hoặc các response wrapper khác
+		Class<?> returnClass = returnType.getParameterType();
+		
+		// Bỏ qua ApiResponseCustom
+		if (returnClass.equals(ApiResponseCustom.class)) {
+			return false;
+		}
+		
+		// Bỏ qua ResponseEntity<ApiResponseCustom>
+		if (returnClass.equals(ResponseEntity.class) &&
+				returnType.getGenericParameterType().getTypeName().contains("ApiResponseCustom")) {
+			return false;
+		}
+		
+		// Bỏ qua các response wrapper khác (có cấu trúc message, statusCode, data, success)
+		String className = returnClass.getSimpleName();
+		if (className.startsWith("Api") && className.endsWith("Response")) {
+			return false;
+		}
+		
+		return true;
 	}
 
 	@Override

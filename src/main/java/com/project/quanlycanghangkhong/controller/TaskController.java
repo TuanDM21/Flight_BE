@@ -234,33 +234,25 @@ public class TaskController {
         @ApiResponse(responseCode = "404", description = "Không tìm thấy task hoặc attachment"),
         @ApiResponse(responseCode = "409", description = "Attachment đã được gán vào task khác")
     })
-    public ResponseEntity<ApiTaskAttachmentUploadResponse> addAttachmentsToTask(
+    public ApiTaskAttachmentUploadResponse addAttachmentsToTask(
             @PathVariable Integer id, 
             @Valid @RequestBody TaskAttachmentUploadRequest request) {
         try {
             List<AttachmentDTO> addedAttachments = taskService.addAttachmentsToTask(id, request.getAttachmentIds());
             
             String message = String.format("Đã thêm %d file đính kèm vào task thành công", addedAttachments.size());
-            return ResponseEntity.ok(new ApiTaskAttachmentUploadResponse(message, 200, addedAttachments, true));
+            return new ApiTaskAttachmentUploadResponse(message, 200, addedAttachments, true);
             
         } catch (RuntimeException e) {
             if (e.getMessage().contains("Không tìm thấy")) {
-                return ResponseEntity.status(404).body(
-                    new ApiTaskAttachmentUploadResponse(e.getMessage(), 404, null, false)
-                );
+                return new ApiTaskAttachmentUploadResponse(e.getMessage(), 404, null, false);
             } else if (e.getMessage().contains("đã được gán vào task khác")) {
-                return ResponseEntity.status(409).body(
-                    new ApiTaskAttachmentUploadResponse(e.getMessage(), 409, null, false)
-                );
+                return new ApiTaskAttachmentUploadResponse(e.getMessage(), 409, null, false);
             } else {
-                return ResponseEntity.status(400).body(
-                    new ApiTaskAttachmentUploadResponse(e.getMessage(), 400, null, false)
-                );
+                return new ApiTaskAttachmentUploadResponse(e.getMessage(), 400, null, false);
             }
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(
-                new ApiTaskAttachmentUploadResponse("Lỗi server khi thêm file đính kèm: " + e.getMessage(), 500, null, false)
-            );
+            return new ApiTaskAttachmentUploadResponse("Lỗi server khi thêm file đính kèm: " + e.getMessage(), 500, null, false);
         }
     }
 
