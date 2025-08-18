@@ -498,6 +498,13 @@ public class TaskServiceImpl implements TaskService {
             return;
         }
         
+        // Check for overdue assignments first (highest priority)
+        LocalDateTime now = LocalDateTime.now();
+        boolean hasOverdueAssignments = assignments.stream()
+                .anyMatch(a -> a.getDueAt() != null && 
+                              a.getDueAt().isBefore(now) && 
+                              a.getStatus() != AssignmentStatus.DONE);
+        
         // Tất cả assignments đều DONE → COMPLETED  
         boolean allDone = assignments.stream()
                 .allMatch(a -> a.getStatus() == AssignmentStatus.DONE);
@@ -506,7 +513,10 @@ public class TaskServiceImpl implements TaskService {
         boolean anyWorking = assignments.stream()
                 .anyMatch(a -> a.getStatus() == AssignmentStatus.WORKING);
         
-        if (allDone) {
+        // Priority logic: OVERDUE > COMPLETED > IN_PROGRESS > OPEN
+        if (hasOverdueAssignments && !allDone) {
+            task.setStatus(TaskStatus.OVERDUE);
+        } else if (allDone) {
             task.setStatus(TaskStatus.COMPLETED);
         } else if (anyWorking) {
             task.setStatus(TaskStatus.IN_PROGRESS);

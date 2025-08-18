@@ -242,4 +242,30 @@ public interface TaskRepository extends JpaRepository<Task, Integer> {
     List<Task> findReceivedTasksWithAllRelationships(@Param("userId") Integer userId, 
                                                     @Param("teamId") Integer teamId, 
                                                     @Param("unitId") Integer unitId);
+    
+    // ============== OVERDUE SUPPORT METHODS ==============
+    
+    /**
+     * 🟢 OVERDUE: Tìm tasks có assignments overdue nhưng task status chưa phải OVERDUE hoặc COMPLETED
+     * @return Danh sách task cần cập nhật status
+     */
+    @Query("SELECT DISTINCT t FROM Task t JOIN t.assignments a WHERE " +
+           "a.dueAt IS NOT NULL AND a.dueAt < CURRENT_TIMESTAMP " +
+           "AND a.status != 'DONE' AND t.status NOT IN ('OVERDUE', 'COMPLETED') " +
+           "AND t.deleted = false")
+    List<Task> findTasksWithOverdueAssignments();
+    
+    /**
+     * 🟢 OVERDUE: Đếm số task overdue của user
+     * @param userId User ID
+     * @return Số lượng task overdue
+     */
+    @Query("SELECT COUNT(DISTINCT t) FROM Task t JOIN t.assignments a WHERE " +
+           "((a.recipientType = 'user' AND a.recipientId = :userId) OR " +
+           " (a.recipientType = 'team' AND a.recipientId IN " +
+           "  (SELECT u.team.id FROM User u WHERE u.id = :userId)) OR " +
+           " (a.recipientType = 'unit' AND a.recipientId IN " +
+           "  (SELECT u.unit.id FROM User u WHERE u.id = :userId))) " +
+           "AND t.status = 'OVERDUE' AND t.deleted = false")
+    long countOverdueTasksForUser(@Param("userId") Integer userId);
 }

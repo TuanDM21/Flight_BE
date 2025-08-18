@@ -38,7 +38,7 @@ public class Assignment {
     private User completedBy;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
+    @Column(name = "status", nullable = false, length = 20)
     private AssignmentStatus status = AssignmentStatus.WORKING;
 
     @Column(name = "note", columnDefinition = "TEXT")
