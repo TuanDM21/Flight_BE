@@ -3,6 +3,7 @@ package com.project.quanlycanghangkhong.dto.request;
 import com.project.quanlycanghangkhong.model.TaskPriority;
 import java.time.LocalDateTime;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
  * DTO cho tìm kiếm nâng cao tasks
@@ -61,6 +62,7 @@ public class AdvancedSearchRequest {
         public Integer getRecipientId() { return recipientId; }
         public void setRecipientId(Integer recipientId) { this.recipientId = recipientId; }
         
+        @JsonIgnore
         public boolean isValid() {
             return recipientType != null && recipientType.matches("user|team|unit") && recipientId != null;
         }
@@ -132,6 +134,7 @@ public class AdvancedSearchRequest {
      * Validate dữ liệu đầu vào
      * @return true nếu valid, false nếu không
      */
+    @JsonIgnore
     public boolean isValid() {
         // Validate recipients
         if (recipients != null) {
@@ -159,6 +162,7 @@ public class AdvancedSearchRequest {
      * Check xem có tiêu chí tìm kiếm nào không
      * @return true nếu có ít nhất 1 tiêu chí tìm kiếm
      */
+    @JsonIgnore
     public boolean hasSearchCriteria() {
         return keyword != null || startTime != null || endTime != null || 
                (priorities != null && !priorities.isEmpty()) ||
