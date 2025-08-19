@@ -1104,6 +1104,500 @@ public class TaskServiceImpl implements TaskService {
             taskDTOs, totalCount, type, newMetadata);
     }
 
+    @Override
+    public com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithCountStandardized(String type, String filter) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication != null ? authentication.getName() : null;
+        User currentUser = (email != null) ? userRepository.findByEmail(email).orElse(null) : null;
+        
+        if (currentUser == null) {
+            return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+                List.of(), 0, type, null);
+        }
+        
+        Integer userId = currentUser.getId();
+        Integer teamId = currentUser.getTeam() != null ? currentUser.getTeam().getId() : null;
+        Integer unitId = currentUser.getUnit() != null ? currentUser.getUnit().getId() : null;
+        
+        // ✅ Sử dụng optimized repository methods với JOIN FETCH
+        List<Task> tasks;
+        switch (type.toLowerCase()) {
+            case "created":
+                tasks = taskRepository.findCreatedTasksWithAllRelationships(userId);
+                break;
+            case "assigned":
+                tasks = taskRepository.findAssignedTasksWithAllRelationships(userId);
+                break;
+            case "received":
+                tasks = taskRepository.findReceivedTasksWithAllRelationships(userId, teamId, unitId);
+                break;
+            default:
+                tasks = List.of();
+        }
+        
+        // ✅ Apply filter chỉ cho type=assigned
+        if ("assigned".equals(type.toLowerCase()) && filter != null) {
+            tasks = filterAssignedTasks(tasks, filter);
+        }
+        
+        // ✅ Convert với optimized method (không có N+1)
+        List<TaskDetailDTO> taskDTOs;
+        if ("assigned".equals(type.toLowerCase()) || "received".equals(type.toLowerCase())) {
+            // 🔧 FIX DUPLICATE ISSUE: Chỉ lấy ROOT TASKS để tránh duplicate  
+            List<Task> rootTasks = filterOnlyRootTasksFromAssigned(tasks);
+            
+            // Convert to DTO với nested subtasks structure
+            taskDTOs = rootTasks.stream()
+                .map(task -> {
+                    // Load với full relationships nếu cần
+                    Task taskWithRelations = taskRepository.findTaskWithAllRelationships(task.getId())
+                        .orElse(task);
+                    return convertToTaskDetailDTOOptimized(taskWithRelations, 0);
+                })
+                .sorted((t1, t2) -> {
+                    // Sort theo thời gian mới nhất
+                    Task task1 = taskRepository.findById(t1.getId()).orElse(null);
+                    Task task2 = taskRepository.findById(t2.getId()).orElse(null);
+                    if (task1 != null && task2 != null) {
+                        int updatedCompare = task2.getUpdatedAt().compareTo(task1.getUpdatedAt());
+                        if (updatedCompare != 0) return updatedCompare;
+                        return task2.getCreatedAt().compareTo(task1.getCreatedAt());
+                    }
+                    return 0;
+                })
+                .collect(Collectors.toList());
+        } else {
+            // Cho created: flat list với batch loading attachments
+            taskDTOs = convertTasksToTaskDetailDTOsBatch(tasks);
+        }
+        
+        // ✅ Count sử dụng database count queries thay vì load data
+        com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse.TaskCountMetadata oldMetadata = 
+            calculateTaskCountsOptimized(userId, currentUser);
+            
+        // Convert to simplified metadata structure
+        com.project.quanlycanghangkhong.dto.response.task.MyTasksData.TaskMetadata newMetadata = 
+            new com.project.quanlycanghangkhong.dto.response.task.MyTasksData.TaskMetadata(
+                oldMetadata.getCreatedCount(),
+                oldMetadata.getAssignedCount(), 
+                oldMetadata.getReceivedCount(),
+                oldMetadata.getHierarchyInfo().getRootTasksCount(),
+                oldMetadata.getHierarchyInfo().getSubtasksCount(),
+                oldMetadata.getHierarchyInfo().getMaxLevel()
+            );
+            
+        // Tính totalCount CHỈ từ ROOT TASKS cho type hiện tại hoặc sau filter
+        int totalCount;
+        if ("assigned".equals(type.toLowerCase()) && filter != null) {
+            // Nếu có filter, count từ filtered results
+            totalCount = taskDTOs.size();
+        } else {
+            // Không có filter, dùng metadata count
+            totalCount = switch (type.toLowerCase()) {
+                case "created" -> newMetadata.getCreatedCount();
+                case "assigned" -> newMetadata.getAssignedCount(); 
+                case "received" -> newMetadata.getReceivedCount();
+                default -> taskDTOs.size();
+            };
+        }
+        
+        return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+            taskDTOs, totalCount, type, newMetadata);
+    }
+
+    /**
+     * Filter assigned tasks dựa trên filter parameter
+     * @param tasks Danh sách tasks đã assigned
+     * @param filter Filter type: completed, pending, urgent, overdue
+     * @return Danh sách tasks đã filter
+     */
+    private List<Task> filterAssignedTasks(List<Task> tasks, String filter) {
+        return tasks.stream()
+            .filter(task -> {
+                switch (filter.toLowerCase()) {
+                    case "completed":
+                        // Task đã hoàn thành: TaskStatus = COMPLETED
+                        return task.getStatus() == TaskStatus.COMPLETED;
+                        
+                    case "pending":
+                        // Task chưa hoàn thành: TaskStatus = IN_PROGRESS hoặc OPEN
+                        return task.getStatus() == TaskStatus.IN_PROGRESS || 
+                               task.getStatus() == TaskStatus.OPEN;
+                        
+                    case "urgent":
+                        // Task khẩn cấp: priority = URGENT
+                        return task.getPriority() == com.project.quanlycanghangkhong.model.TaskPriority.URGENT;
+                        
+                    case "overdue":
+                        // Task quá hạn: TaskStatus = OVERDUE
+                        return task.getStatus() == TaskStatus.OVERDUE;
+                        
+                    default:
+                        return true; // Không filter nếu filter không hợp lệ
+                }
+            })
+            .collect(Collectors.toList());
+    }
+    
+    @Override
+    public com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithAdvancedSearch(
+            String type, String filter, String keyword, String startTime, String endTime,
+            java.util.List<String> priorities, java.util.List<String> recipientTypes, java.util.List<Integer> recipientIds) {
+        
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication != null ? authentication.getName() : null;
+        User currentUser = (email != null) ? userRepository.findByEmail(email).orElse(null) : null;
+        
+        if (currentUser == null) {
+            return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+                List.of(), 0, type, null);
+        }
+        
+        Integer userId = currentUser.getId();
+        
+        // Convert string parameters to appropriate types
+        LocalDateTime startDateTime = null;
+        LocalDateTime endDateTime = null;
+        List<com.project.quanlycanghangkhong.model.TaskPriority> priorityEnums = new ArrayList<>();
+        
+        try {
+            if (startTime != null && !startTime.trim().isEmpty()) {
+                startDateTime = LocalDateTime.parse(startTime);
+            }
+            if (endTime != null && !endTime.trim().isEmpty()) {
+                endDateTime = LocalDateTime.parse(endTime);
+            }
+        } catch (Exception e) {
+            // Invalid date format, ignore
+        }
+        
+        // Convert priority strings to enums
+        if (priorities != null && !priorities.isEmpty()) {
+            for (String priority : priorities) {
+                try {
+                    priorityEnums.add(com.project.quanlycanghangkhong.model.TaskPriority.valueOf(priority.toUpperCase()));
+                } catch (IllegalArgumentException e) {
+                    // Invalid priority, ignore
+                }
+            }
+        }
+        
+        // Handle different types
+        if ("assigned".equals(type)) {
+            return handleAssignedTasksAdvancedSearch(userId, filter, keyword, startDateTime, endDateTime, 
+                priorityEnums, recipientTypes, recipientIds);
+        } else if ("created".equals(type)) {
+            return handleCreatedTasksAdvancedSearch(userId, keyword, startDateTime, endDateTime, priorityEnums);
+        } else if ("received".equals(type)) {
+            return handleReceivedTasksAdvancedSearch(currentUser, keyword, startDateTime, endDateTime, priorityEnums);
+        } else {
+            // Fallback to standard method
+            return getMyTasksWithCountStandardized(type, filter);
+        }
+    }
+    
+    private com.project.quanlycanghangkhong.dto.response.task.MyTasksData handleAssignedTasksAdvancedSearch(
+            Integer userId, String filter, String keyword, LocalDateTime startDateTime, LocalDateTime endDateTime,
+            List<com.project.quanlycanghangkhong.model.TaskPriority> priorityEnums, 
+            List<String> recipientTypes, List<Integer> recipientIds) {
+        if (recipientTypes != null && recipientIds != null && 
+            recipientTypes.size() != recipientIds.size()) {
+            // Invalid recipient data, ignore recipients
+            recipientTypes = new ArrayList<>();
+            recipientIds = new ArrayList<>();
+        }
+        
+        // Search with repository method
+        List<Task> tasks = taskRepository.findAssignedTasksWithAdvancedSearchMulti(
+            userId,
+            keyword,
+            startDateTime,
+            endDateTime,
+            priorityEnums,
+            recipientTypes != null ? recipientTypes : List.of(),
+            recipientIds != null ? recipientIds : List.of()
+        );
+        
+        // Apply basic filter if provided
+        if (filter != null && !filter.trim().isEmpty()) {
+            tasks = filterAssignedTasks(tasks, filter);
+        }
+        
+        // Filter chỉ lấy root tasks để tránh duplicate
+        List<Task> rootTasks = filterOnlyRootTasksFromAssigned(tasks);
+        
+        // Convert to DTO
+        List<TaskDetailDTO> taskDTOs = rootTasks.stream()
+            .map(task -> {
+                Task taskWithRelations = taskRepository.findTaskWithAllRelationships(task.getId())
+                    .orElse(task);
+                return convertToTaskDetailDTOOptimized(taskWithRelations, 0);
+            })
+            .sorted((t1, t2) -> {
+                // Sort theo thời gian mới nhất
+                Task task1 = taskRepository.findById(t1.getId()).orElse(null);
+                Task task2 = taskRepository.findById(t2.getId()).orElse(null);
+                if (task1 != null && task2 != null) {
+                    int updatedCompare = task2.getUpdatedAt().compareTo(task1.getUpdatedAt());
+                    if (updatedCompare != 0) return updatedCompare;
+                    return task2.getCreatedAt().compareTo(task1.getCreatedAt());
+                }
+                return 0;
+            })
+            .collect(Collectors.toList());
+        
+        // Count với repository method
+        long totalCount = taskRepository.countAssignedTasksWithAdvancedSearchMulti(
+            userId,
+            keyword,
+            startDateTime,
+            endDateTime,
+            priorityEnums,
+            recipientTypes != null ? recipientTypes : List.of(),
+            recipientIds != null ? recipientIds : List.of()
+        );
+        
+        // Apply filter count nếu có
+        if (filter != null && !filter.trim().isEmpty()) {
+            totalCount = taskDTOs.size(); // Count từ filtered results
+        }
+        
+        return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+            taskDTOs, (int)totalCount, "assigned", null);
+    }
+    
+    private com.project.quanlycanghangkhong.dto.response.task.MyTasksData handleCreatedTasksAdvancedSearch(
+            Integer userId, String keyword, LocalDateTime startDateTime, LocalDateTime endDateTime,
+            List<com.project.quanlycanghangkhong.model.TaskPriority> priorityEnums) {
+        
+        // Get created tasks (tasks created but not assigned)
+        List<Task> tasks = taskRepository.findCreatedTasksWithoutAssignments(userId);
+        
+        // Apply advanced search filters
+        tasks = tasks.stream()
+            .filter(task -> {
+                // Keyword filter
+                if (keyword != null && !keyword.trim().isEmpty()) {
+                    String lowerKeyword = keyword.toLowerCase();
+                    if (!task.getTitle().toLowerCase().contains(lowerKeyword) && 
+                        (task.getContent() == null || !task.getContent().toLowerCase().contains(lowerKeyword))) {
+                        return false;
+                    }
+                }
+                
+                // Time range filter
+                if (startDateTime != null && task.getCreatedAt().isBefore(startDateTime)) {
+                    return false;
+                }
+                if (endDateTime != null && task.getCreatedAt().isAfter(endDateTime)) {
+                    return false;
+                }
+                
+                // Priority filter
+                if (priorityEnums != null && !priorityEnums.isEmpty()) {
+                    return priorityEnums.contains(task.getPriority());
+                }
+                
+                return true;
+            })
+            .collect(Collectors.toList());
+        
+        // Convert to DTO
+        List<TaskDetailDTO> taskDTOs = tasks.stream()
+            .map(task -> {
+                Task taskWithRelations = taskRepository.findTaskWithAllRelationships(task.getId())
+                    .orElse(task);
+                return convertToTaskDetailDTOOptimized(taskWithRelations, 0);
+            })
+            .sorted((t1, t2) -> {
+                Task task1 = taskRepository.findById(t1.getId()).orElse(null);
+                Task task2 = taskRepository.findById(t2.getId()).orElse(null);
+                if (task1 != null && task2 != null) {
+                    int updatedCompare = task2.getUpdatedAt().compareTo(task1.getUpdatedAt());
+                    if (updatedCompare != 0) return updatedCompare;
+                    return task2.getCreatedAt().compareTo(task1.getCreatedAt());
+                }
+                return 0;
+            })
+            .collect(Collectors.toList());
+        
+        return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+            taskDTOs, taskDTOs.size(), "created", null);
+    }
+    
+    private com.project.quanlycanghangkhong.dto.response.task.MyTasksData handleReceivedTasksAdvancedSearch(
+            User currentUser, String keyword, LocalDateTime startDateTime, LocalDateTime endDateTime,
+            List<com.project.quanlycanghangkhong.model.TaskPriority> priorityEnums) {
+        
+        List<Task> allReceivedTasks = new ArrayList<>();
+        Integer userId = currentUser.getId();
+        
+        // Get tasks received directly by user
+        List<Task> directUserTasks = taskRepository.findReceivedTasksByUserId(userId);
+        allReceivedTasks.addAll(directUserTasks);
+        
+        // Get tasks received by teams user leads
+        if (currentUser.getTeam() != null && 
+            "TEAM_LEAD".equals(currentUser.getRole().getRoleName())) {
+            List<Task> teamTasks = taskRepository.findReceivedTasksByTeamId(currentUser.getTeam().getId());
+            allReceivedTasks.addAll(teamTasks);
+        }
+        
+        // Get tasks received by units user leads  
+        if (currentUser.getUnit() != null && 
+            "UNIT_LEAD".equals(currentUser.getRole().getRoleName())) {
+            List<Task> unitTasks = taskRepository.findReceivedTasksByUnitId(currentUser.getUnit().getId());
+            allReceivedTasks.addAll(unitTasks);
+        }
+        
+        // Remove duplicates
+        allReceivedTasks = allReceivedTasks.stream()
+            .distinct()
+            .collect(Collectors.toList());
+        
+        // Apply advanced search filters
+        List<Task> filteredTasks = allReceivedTasks.stream()
+            .filter(task -> {
+                // Keyword filter
+                if (keyword != null && !keyword.trim().isEmpty()) {
+                    String lowerKeyword = keyword.toLowerCase();
+                    if (!task.getTitle().toLowerCase().contains(lowerKeyword) && 
+                        (task.getContent() == null || !task.getContent().toLowerCase().contains(lowerKeyword))) {
+                        return false;
+                    }
+                }
+                
+                // Time range filter
+                if (startDateTime != null && task.getCreatedAt().isBefore(startDateTime)) {
+                    return false;
+                }
+                if (endDateTime != null && task.getCreatedAt().isAfter(endDateTime)) {
+                    return false;
+                }
+                
+                // Priority filter
+                if (priorityEnums != null && !priorityEnums.isEmpty()) {
+                    return priorityEnums.contains(task.getPriority());
+                }
+                
+                return true;
+            })
+            .collect(Collectors.toList());
+        
+        // Convert to DTO
+        List<TaskDetailDTO> taskDTOs = filteredTasks.stream()
+            .map(task -> {
+                Task taskWithRelations = taskRepository.findTaskWithAllRelationships(task.getId())
+                    .orElse(task);
+                return convertToTaskDetailDTOOptimized(taskWithRelations, 0);
+            })
+            .sorted((t1, t2) -> {
+                Task task1 = taskRepository.findById(t1.getId()).orElse(null);
+                Task task2 = taskRepository.findById(t2.getId()).orElse(null);
+                if (task1 != null && task2 != null) {
+                    int updatedCompare = task2.getUpdatedAt().compareTo(task1.getUpdatedAt());
+                    if (updatedCompare != 0) return updatedCompare;
+                    return task2.getCreatedAt().compareTo(task1.getCreatedAt());
+                }
+                return 0;
+            })
+            .collect(Collectors.toList());
+        
+        return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+            taskDTOs, taskDTOs.size(), "received", null);
+    }
+    
+    @Override
+    public com.project.quanlycanghangkhong.dto.response.task.MyTasksData searchMyTasksAdvanced(
+            com.project.quanlycanghangkhong.dto.request.AdvancedSearchRequest searchRequest) {
+        
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication != null ? authentication.getName() : null;
+        User currentUser = (email != null) ? userRepository.findByEmail(email).orElse(null) : null;
+        
+        if (currentUser == null) {
+            return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+                List.of(), 0, "assigned", null);
+        }
+        
+        Integer userId = currentUser.getId();
+        
+        // Validate input
+        if (!searchRequest.isValid()) {
+            return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+                List.of(), 0, "assigned", null);
+        }
+        
+        // Tìm kiếm với advanced criteria
+        List<String> recipientTypes = new ArrayList<>();
+        List<Integer> recipientIds = new ArrayList<>();
+        
+        // Extract recipients lists
+        if (searchRequest.getRecipients() != null && !searchRequest.getRecipients().isEmpty()) {
+            for (com.project.quanlycanghangkhong.dto.request.AdvancedSearchRequest.RecipientFilter recipient : searchRequest.getRecipients()) {
+                recipientTypes.add(recipient.getRecipientType());
+                recipientIds.add(recipient.getRecipientId());
+            }
+        }
+        
+        List<Task> tasks = taskRepository.findAssignedTasksWithAdvancedSearchMulti(
+            userId,
+            searchRequest.getKeyword(),
+            searchRequest.getStartTime(),
+            searchRequest.getEndTime(),
+            searchRequest.getPriorities() != null ? searchRequest.getPriorities() : List.of(),
+            recipientTypes,
+            recipientIds
+        );
+        
+        // Apply filter như cũ nếu có
+        if (searchRequest.getFilter() != null) {
+            tasks = filterAssignedTasks(tasks, searchRequest.getFilter());
+        }
+        
+        // Filter chỉ lấy root tasks để tránh duplicate
+        List<Task> rootTasks = filterOnlyRootTasksFromAssigned(tasks);
+        
+        // Convert to DTO
+        List<TaskDetailDTO> taskDTOs = rootTasks.stream()
+            .map(task -> {
+                Task taskWithRelations = taskRepository.findTaskWithAllRelationships(task.getId())
+                    .orElse(task);
+                return convertToTaskDetailDTOOptimized(taskWithRelations, 0);
+            })
+            .sorted((t1, t2) -> {
+                // Sort theo thời gian mới nhất
+                Task task1 = taskRepository.findById(t1.getId()).orElse(null);
+                Task task2 = taskRepository.findById(t2.getId()).orElse(null);
+                if (task1 != null && task2 != null) {
+                    int updatedCompare = task2.getUpdatedAt().compareTo(task1.getUpdatedAt());
+                    if (updatedCompare != 0) return updatedCompare;
+                    return task2.getCreatedAt().compareTo(task1.getCreatedAt());
+                }
+                return 0;
+            })
+            .collect(Collectors.toList());
+        
+        // Count cho search results
+        long totalCount = taskRepository.countAssignedTasksWithAdvancedSearchMulti(
+            userId,
+            searchRequest.getKeyword(),
+            searchRequest.getStartTime(),
+            searchRequest.getEndTime(),
+            searchRequest.getPriorities() != null ? searchRequest.getPriorities() : List.of(),
+            recipientTypes,
+            recipientIds
+        );
+        
+        // Apply filter count nếu có
+        if (searchRequest.getFilter() != null) {
+            totalCount = taskDTOs.size(); // Count từ filtered results
+        }
+        
+        return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+            taskDTOs, (int)totalCount, "assigned", null);
+    }
+
     // ✅ Optimize hierarchy calculation
     private List<TaskDetailDTO> getTaskHierarchyWithLevelsOptimized(List<Task> parentTasks) {
         Map<Integer, TaskDetailDTO> resultMap = new HashMap<>();

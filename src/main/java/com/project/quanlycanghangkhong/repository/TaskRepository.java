@@ -268,4 +268,63 @@ public interface TaskRepository extends JpaRepository<Task, Integer> {
            "  (SELECT u.unit.id FROM User u WHERE u.id = :userId))) " +
            "AND t.status = 'OVERDUE' AND t.deleted = false")
     long countOverdueTasksForUser(@Param("userId") Integer userId);
+    
+    // ============== ADVANCED SEARCH METHODS FOR MY TASKS API ==============
+    
+    /**
+     * 🔍 ADVANCED SEARCH: Tìm kiếm tasks đã giao việc với nhiều tiêu chí (Multi-select support)
+     * @param userId ID của user đã giao việc
+     * @param keyword Từ khóa tìm trong title hoặc content (có thể null)
+     * @param startTime Thời gian bắt đầu (có thể null)
+     * @param endTime Thời gian kết thúc (có thể null) 
+     * @param priorities Danh sách priority để filter (có thể empty)
+     * @param recipientTypes Danh sách recipient types (có thể empty)
+     * @param recipientIds Danh sách recipient IDs tương ứng (có thể empty)
+     * @return Danh sách task đã giao việc thỏa mãn điều kiện
+     */
+    @Query("SELECT DISTINCT a.task FROM Assignment a WHERE a.assignedBy.id = :userId AND a.task.deleted = false " +
+           "AND (:keyword IS NULL OR " +
+           "     (LOWER(a.task.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "      LOWER(a.task.content) LIKE LOWER(CONCAT('%', :keyword, '%')))) " +
+           "AND (:startTime IS NULL OR a.task.createdAt >= :startTime) " +
+           "AND (:endTime IS NULL OR a.task.createdAt <= :endTime) " +
+           "AND (:#{#priorities.isEmpty()} = true OR a.task.priority IN :priorities) " +
+           "AND (:#{#recipientTypes.isEmpty()} = true OR " +
+           "     (a.recipientType IN :recipientTypes AND a.recipientId IN :recipientIds)) " +
+           "ORDER BY a.task.updatedAt DESC, a.task.createdAt DESC")
+    List<Task> findAssignedTasksWithAdvancedSearchMulti(@Param("userId") Integer userId,
+                                                        @Param("keyword") String keyword,
+                                                        @Param("startTime") java.time.LocalDateTime startTime,
+                                                        @Param("endTime") java.time.LocalDateTime endTime,
+                                                        @Param("priorities") List<com.project.quanlycanghangkhong.model.TaskPriority> priorities,
+                                                        @Param("recipientTypes") List<String> recipientTypes,
+                                                        @Param("recipientIds") List<Integer> recipientIds);
+    
+    /**
+     * 🔍 COUNT: Đếm số lượng tasks đã giao việc thỏa mãn điều kiện tìm kiếm (Multi-select support)
+     * @param userId ID của user đã giao việc
+     * @param keyword Từ khóa tìm kiếm (có thể null)
+     * @param startTime Thời gian bắt đầu (có thể null)
+     * @param endTime Thời gian kết thúc (có thể null)
+     * @param priorities Danh sách priority để filter (có thể empty)
+     * @param recipientTypes Danh sách recipient types (có thể empty)
+     * @param recipientIds Danh sách recipient IDs tương ứng (có thể empty)
+     * @return Số lượng task thỏa mãn điều kiện
+     */
+    @Query("SELECT COUNT(DISTINCT a.task) FROM Assignment a WHERE a.assignedBy.id = :userId AND a.task.deleted = false " +
+           "AND (:keyword IS NULL OR " +
+           "     (LOWER(a.task.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "      LOWER(a.task.content) LIKE LOWER(CONCAT('%', :keyword, '%')))) " +
+           "AND (:startTime IS NULL OR a.task.createdAt >= :startTime) " +
+           "AND (:endTime IS NULL OR a.task.createdAt <= :endTime) " +
+           "AND (:#{#priorities.isEmpty()} = true OR a.task.priority IN :priorities) " +
+           "AND (:#{#recipientTypes.isEmpty()} = true OR " +
+           "     (a.recipientType IN :recipientTypes AND a.recipientId IN :recipientIds))")
+    long countAssignedTasksWithAdvancedSearchMulti(@Param("userId") Integer userId,
+                                                   @Param("keyword") String keyword,
+                                                   @Param("startTime") java.time.LocalDateTime startTime,
+                                                   @Param("endTime") java.time.LocalDateTime endTime,
+                                                   @Param("priorities") List<com.project.quanlycanghangkhong.model.TaskPriority> priorities,
+                                                   @Param("recipientTypes") List<String> recipientTypes,
+                                                   @Param("recipientIds") List<Integer> recipientIds);
 }

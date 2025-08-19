@@ -16,6 +16,7 @@ import com.project.quanlycanghangkhong.dto.response.task.MyTasksData;
 import com.project.quanlycanghangkhong.dto.response.task.ApiTaskAttachmentsSimplifiedResponse;
 import com.project.quanlycanghangkhong.dto.response.task.ApiTaskAttachmentUploadResponse;
 import com.project.quanlycanghangkhong.dto.request.TaskAttachmentUploadRequest;
+import com.project.quanlycanghangkhong.dto.request.AdvancedSearchRequest;
 
 // ✅ PRIORITY 3: Simplified DTOs imports
 import com.project.quanlycanghangkhong.dto.simplified.TaskDetailSimplifiedDTO;
@@ -142,19 +143,83 @@ public class TaskController {
     }
 
     @GetMapping("/my")
-    @Operation(summary = "Lấy công việc của tôi theo loại với ROOT TASKS count (sorted by latest)", description = "Lấy danh sách công việc theo loại với sort theo thời gian mới nhất và thông tin count ROOT TASKS: created (đã tạo nhưng chưa giao việc - flat list), assigned (đã giao việc bao gồm tất cả subtasks với hierarchyLevel), received (được giao việc - flat list). Count chỉ tính ROOT TASKS (parent IS NULL), data vẫn bao gồm tất cả tasks để hiển thị hierarchy.")
+    @Operation(summary = "Lấy công việc của tôi theo loại với ROOT TASKS count (sorted by latest) và advanced search", 
+               description = "Lấy danh sách công việc theo loại với sort theo thời gian mới nhất và thông tin count ROOT TASKS: created (đã tạo nhưng chưa giao việc - flat list), assigned (đã giao việc bao gồm tất cả subtasks với hierarchyLevel), received (được giao việc - flat list). Count chỉ tính ROOT TASKS (parent IS NULL), data vẫn bao gồm tất cả tasks để hiển thị hierarchy. Hỗ trợ filter cho type=assigned: completed, pending, urgent, overdue. Hỗ trợ advanced search cho TẤT CẢ TYPES với keyword, priorities, time range. Recipient search chỉ cho type=assigned")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiMyTasksResponse.class))),
-        @ApiResponse(responseCode = "400", description = "Tham số type không hợp lệ", content = @Content(schema = @Schema(implementation = ApiMyTasksResponse.class)))
+        @ApiResponse(responseCode = "400", description = "Tham số type hoặc filter không hợp lệ", content = @Content(schema = @Schema(implementation = ApiMyTasksResponse.class)))
     })
-    public ResponseEntity<ApiMyTasksResponse> getMyTasks(@RequestParam String type) {
+    public ResponseEntity<ApiMyTasksResponse> getMyTasks(
+            @RequestParam String type,
+            @RequestParam(required = false) String filter,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String startTime,
+            @RequestParam(required = false) String endTime,
+            @RequestParam(required = false) List<String> priorities,
+            @RequestParam(required = false) List<String> recipientTypes,
+            @RequestParam(required = false) List<Integer> recipientIds) {
         if (!type.matches("created|assigned|received")) {
             return ResponseEntity.badRequest().body(
                 ApiMyTasksResponse.error("Tham số type phải là: created, assigned, hoặc received", 400)
             );
         }
         
-        MyTasksData response = taskService.getMyTasksWithCountStandardized(type);
+        // Validate filter chỉ áp dụng cho type=assigned
+        if (filter != null && !"assigned".equals(type)) {
+            return ResponseEntity.badRequest().body(
+                ApiMyTasksResponse.error("Filter chỉ hỗ trợ cho type=assigned", 400)
+            );
+        }
+        
+        // Check advanced search features
+        boolean hasKeywordTimeOrPriority = keyword != null || startTime != null || endTime != null || 
+                                          (priorities != null && !priorities.isEmpty());
+        boolean hasRecipientSearch = (recipientTypes != null && !recipientTypes.isEmpty());
+        
+        // Validate recipient search chỉ áp dụng cho type=assigned
+        if (hasRecipientSearch && !"assigned".equals(type)) {
+            return ResponseEntity.badRequest().body(
+                ApiMyTasksResponse.error("Recipient search chỉ hỗ trợ cho type=assigned", 400)
+            );
+        }
+        
+        // Validate filter values
+        if (filter != null && !filter.matches("completed|pending|urgent|overdue")) {
+            return ResponseEntity.badRequest().body(
+                ApiMyTasksResponse.error("Filter phải là: completed, pending, urgent, hoặc overdue", 400)
+            );
+        }
+        
+        // Validate recipients matching
+        if (recipientTypes != null && recipientIds != null && recipientTypes.size() != recipientIds.size()) {
+            return ResponseEntity.badRequest().body(
+                ApiMyTasksResponse.error("Số lượng recipientTypes và recipientIds phải bằng nhau", 400)
+            );
+        }
+        
+        // Validate recipient types
+        if (recipientTypes != null) {
+            for (String recipientType : recipientTypes) {
+                if (!recipientType.matches("user|team|unit")) {
+                    return ResponseEntity.badRequest().body(
+                        ApiMyTasksResponse.error("recipientType phải là: user, team, hoặc unit", 400)
+                    );
+                }
+            }
+        }
+        
+        MyTasksData response;
+        boolean hasAdvancedSearch = hasKeywordTimeOrPriority || hasRecipientSearch;
+        
+        if (hasAdvancedSearch) {
+            // Sử dụng advanced search cho tất cả type với các feature được hỗ trợ
+            response = taskService.getMyTasksWithAdvancedSearch(type, filter, keyword, 
+                startTime, endTime, priorities, recipientTypes, recipientIds);
+        } else {
+            // Sử dụng search thông thường
+            response = taskService.getMyTasksWithCountStandardized(type, filter);
+        }
+        
         return ResponseEntity.ok(ApiMyTasksResponse.success(response));
     }
 
@@ -355,5 +420,34 @@ public class TaskController {
         }
     }
     
-
+    // ============== ADVANCED SEARCH ENDPOINTS ==============
+    
+    @PostMapping("/my/search")
+    @Operation(summary = "Tìm kiếm nâng cao tasks đã giao việc", 
+               description = "Tìm kiếm tasks với nhiều tiêu chí: keyword, time range, priority, recipient. Chỉ áp dụng cho type=assigned")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Tìm kiếm thành công", 
+                    content = @Content(schema = @Schema(implementation = ApiMyTasksResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Dữ liệu đầu vào không hợp lệ",
+                    content = @Content(schema = @Schema(implementation = ApiMyTasksResponse.class)))
+    })
+    public ResponseEntity<ApiMyTasksResponse> searchMyTasksAdvanced(@RequestBody AdvancedSearchRequest searchRequest) {
+        // Validate input
+        if (searchRequest == null || !searchRequest.isValid()) {
+            return ResponseEntity.badRequest().body(
+                ApiMyTasksResponse.error("Dữ liệu tìm kiếm không hợp lệ", 400)
+            );
+        }
+        
+        // Check có tiêu chí tìm kiếm không
+        if (!searchRequest.hasSearchCriteria()) {
+            return ResponseEntity.badRequest().body(
+                ApiMyTasksResponse.error("Cần ít nhất một tiêu chí tìm kiếm", 400)
+            );
+        }
+        
+        MyTasksData response = taskService.searchMyTasksAdvanced(searchRequest);
+        return ResponseEntity.ok(ApiMyTasksResponse.success(response));
+    }
+    
 }
