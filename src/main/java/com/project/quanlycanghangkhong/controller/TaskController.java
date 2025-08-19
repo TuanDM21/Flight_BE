@@ -144,7 +144,7 @@ public class TaskController {
 
     @GetMapping("/my")
     @Operation(summary = "Lấy công việc của tôi theo loại với ROOT TASKS count (sorted by latest) và advanced search", 
-               description = "Lấy danh sách công việc theo loại với sort theo thời gian mới nhất và thông tin count ROOT TASKS: created (đã tạo nhưng chưa giao việc - flat list), assigned (đã giao việc bao gồm tất cả subtasks với hierarchyLevel), received (được giao việc - flat list). Count chỉ tính ROOT TASKS (parent IS NULL), data vẫn bao gồm tất cả tasks để hiển thị hierarchy. Hỗ trợ filter cho type=assigned: completed, pending, urgent, overdue. Hỗ trợ advanced search cho TẤT CẢ TYPES với keyword, priorities, time range. Recipient search chỉ cho type=assigned")
+               description = "Lấy danh sách công việc theo loại với sort theo thời gian mới nhất và thông tin count ROOT TASKS: created (đã tạo nhưng chưa giao việc - flat list), assigned (đã giao việc bao gồm tất cả subtasks với hierarchyLevel), received (được giao việc - flat list). Count chỉ tính ROOT TASKS (parent IS NULL), data vẫn bao gồm tất cả tasks để hiển thị hierarchy. Hỗ trợ filter cho type=assigned: completed, pending, urgent, overdue. Hỗ trợ advanced search cho TẤT CẢ TYPES với keyword, priorities, time range (format: yyyy-MM-dd). Recipient search chỉ cho type=assigned")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiMyTasksResponse.class))),
         @ApiResponse(responseCode = "400", description = "Tham số type hoặc filter không hợp lệ", content = @Content(schema = @Schema(implementation = ApiMyTasksResponse.class)))
@@ -424,7 +424,7 @@ public class TaskController {
     
     @PostMapping("/my/search")
     @Operation(summary = "Tìm kiếm nâng cao tasks đã giao việc", 
-               description = "Tìm kiếm tasks với nhiều tiêu chí: keyword, time range, priority, recipient. Chỉ áp dụng cho type=assigned")
+               description = "Tìm kiếm tasks với nhiều tiêu chí: keyword, time range (format: yyyy-MM-dd), priority, recipient. Chỉ áp dụng cho type=assigned")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Tìm kiếm thành công", 
                     content = @Content(schema = @Schema(implementation = ApiMyTasksResponse.class))),

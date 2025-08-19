@@ -1540,11 +1540,17 @@ public class TaskServiceImpl implements TaskService {
             }
         }
         
+        // Convert LocalDate to LocalDateTime for repository calls
+        java.time.LocalDateTime startDateTime = searchRequest.getStartTime() != null ? 
+            searchRequest.getStartTime().atStartOfDay() : null;
+        java.time.LocalDateTime endDateTime = searchRequest.getEndTime() != null ? 
+            searchRequest.getEndTime().atTime(23, 59, 59) : null;
+        
         List<Task> tasks = taskRepository.findAssignedTasksWithAdvancedSearchMulti(
             userId,
             searchRequest.getKeyword(),
-            searchRequest.getStartTime(),
-            searchRequest.getEndTime(),
+            startDateTime,
+            endDateTime,
             searchRequest.getPriorities() != null ? searchRequest.getPriorities() : List.of(),
             recipientTypes,
             recipientIds
@@ -1582,8 +1588,8 @@ public class TaskServiceImpl implements TaskService {
         long totalCount = taskRepository.countAssignedTasksWithAdvancedSearchMulti(
             userId,
             searchRequest.getKeyword(),
-            searchRequest.getStartTime(),
-            searchRequest.getEndTime(),
+            startDateTime,
+            endDateTime,
             searchRequest.getPriorities() != null ? searchRequest.getPriorities() : List.of(),
             recipientTypes,
             recipientIds

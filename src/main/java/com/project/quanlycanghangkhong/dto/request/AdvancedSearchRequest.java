@@ -1,7 +1,7 @@
 package com.project.quanlycanghangkhong.dto.request;
 
 import com.project.quanlycanghangkhong.model.TaskPriority;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -16,14 +16,14 @@ public class AdvancedSearchRequest {
     private String keyword;
     
     /**
-     * Thời gian bắt đầu (format: yyyy-MM-dd'T'HH:mm:ss)
+     * Thời gian bắt đầu (format: yyyy-MM-dd)
      */
-    private LocalDateTime startTime;
+    private LocalDate startTime;
     
     /**
-     * Thời gian kết thúc (format: yyyy-MM-dd'T'HH:mm:ss)
+     * Thời gian kết thúc (format: yyyy-MM-dd)
      */
-    private LocalDateTime endTime;
+    private LocalDate endTime;
     
     /**
      * Danh sách priority để filter: LOW, NORMAL, HIGH, URGENT
@@ -71,7 +71,7 @@ public class AdvancedSearchRequest {
     // Constructors
     public AdvancedSearchRequest() {}
     
-    public AdvancedSearchRequest(String keyword, LocalDateTime startTime, LocalDateTime endTime, 
+    public AdvancedSearchRequest(String keyword, LocalDate startTime, LocalDate endTime, 
                                List<TaskPriority> priorities, List<RecipientFilter> recipients, String filter) {
         this.keyword = keyword;
         this.startTime = startTime;
@@ -90,19 +90,19 @@ public class AdvancedSearchRequest {
         this.keyword = keyword;
     }
     
-    public LocalDateTime getStartTime() {
+    public LocalDate getStartTime() {
         return startTime;
     }
     
-    public void setStartTime(LocalDateTime startTime) {
+    public void setStartTime(LocalDate startTime) {
         this.startTime = startTime;
     }
     
-    public LocalDateTime getEndTime() {
+    public LocalDate getEndTime() {
         return endTime;
     }
     
-    public void setEndTime(LocalDateTime endTime) {
+    public void setEndTime(LocalDate endTime) {
         this.endTime = endTime;
     }
     
