@@ -9,7 +9,6 @@ import java.util.List;
 
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 @Schema(description = "Data structure for my tasks API response")
 public class MyTasksData {
     
@@ -24,6 +23,27 @@ public class MyTasksData {
     
     @Schema(description = "Simplified metadata with task counts")
     private TaskMetadata metadata;
+    
+    @Schema(description = "Pagination information (optional)")
+    private PaginationInfo pagination;
+    
+    // Constructor với pagination
+    public MyTasksData(List<TaskDetailDTO> tasks, int totalCount, String type, TaskMetadata metadata, PaginationInfo pagination) {
+        this.tasks = tasks;
+        this.totalCount = totalCount;
+        this.type = type;
+        this.metadata = metadata;
+        this.pagination = pagination;
+    }
+    
+    // Constructor không có pagination (backward compatibility)
+    public MyTasksData(List<TaskDetailDTO> tasks, int totalCount, String type, TaskMetadata metadata) {
+        this.tasks = tasks;
+        this.totalCount = totalCount;
+        this.type = type;
+        this.metadata = metadata;
+        this.pagination = null;
+    }
     
     @Data
     @NoArgsConstructor

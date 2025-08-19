@@ -12,6 +12,10 @@ import com.project.quanlycanghangkhong.dto.simplified.SimpleAssignmentDTO;
 import com.project.quanlycanghangkhong.dto.simplified.SimpleAttachmentDTO;
 import com.project.quanlycanghangkhong.dto.simplified.SimpleUserInfo;
 
+// ✅ Pagination imports
+import com.project.quanlycanghangkhong.dto.response.task.PaginationInfo;
+import com.project.quanlycanghangkhong.dto.response.task.MyTasksData;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -1517,7 +1521,7 @@ public class TaskServiceImpl implements TaskService {
         
         if (currentUser == null) {
             return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
-                List.of(), 0, "assigned", null);
+                List.of(), 0, searchRequest.getType() != null ? searchRequest.getType() : "assigned", null);
         }
         
         Integer userId = currentUser.getId();
@@ -1525,14 +1529,42 @@ public class TaskServiceImpl implements TaskService {
         // Validate input
         if (!searchRequest.isValid()) {
             return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
-                List.of(), 0, "assigned", null);
+                List.of(), 0, searchRequest.getType() != null ? searchRequest.getType() : "assigned", null);
         }
         
-        // Tìm kiếm với advanced criteria
+        // Get type from request (default to "assigned" for backward compatibility)
+        String type = searchRequest.getType() != null ? searchRequest.getType().toLowerCase() : "assigned";
+        
+        // Validate type
+        if (!type.matches("created|assigned|received")) {
+            return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+                List.of(), 0, type, null);
+        }
+        
+        // Handle different types with pagination
+        return switch (type) {
+            case "created" -> handleCreatedTasksAdvancedSearchWithPagination(currentUser, searchRequest);
+            case "assigned" -> handleAssignedTasksAdvancedSearchWithPagination(currentUser, searchRequest);
+            case "received" -> handleReceivedTasksAdvancedSearchWithPagination(currentUser, searchRequest);
+            default -> new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+                List.of(), 0, type, null);
+        };
+    }
+
+    // ===== PAGINATION HANDLERS FOR ALL TYPES =====
+    
+    /**
+     * Handle assigned tasks advanced search with pagination
+     */
+    private com.project.quanlycanghangkhong.dto.response.task.MyTasksData handleAssignedTasksAdvancedSearchWithPagination(
+            User currentUser, com.project.quanlycanghangkhong.dto.request.AdvancedSearchRequest searchRequest) {
+        
+        Integer userId = currentUser.getId();
+        
+        // Extract recipients lists
         List<String> recipientTypes = new ArrayList<>();
         List<Integer> recipientIds = new ArrayList<>();
         
-        // Extract recipients lists
         if (searchRequest.getRecipients() != null && !searchRequest.getRecipients().isEmpty()) {
             for (com.project.quanlycanghangkhong.dto.request.AdvancedSearchRequest.RecipientFilter recipient : searchRequest.getRecipients()) {
                 recipientTypes.add(recipient.getRecipientType());
@@ -1600,8 +1632,236 @@ public class TaskServiceImpl implements TaskService {
             totalCount = taskDTOs.size(); // Count từ filtered results
         }
         
-        return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
-            taskDTOs, (int)totalCount, "assigned", null);
+        // ===== SIMPLE PAGINATION =====
+        // Apply pagination if requested
+        List<TaskDetailDTO> paginatedTasks = taskDTOs;
+        PaginationInfo paginationInfo = null;
+        
+        if (searchRequest.getPage() != null && searchRequest.getSize() != null) {
+            int page = searchRequest.getPage();
+            int size = searchRequest.getSize();
+            int fromIndex = page * size;
+            int toIndex = Math.min(fromIndex + size, taskDTOs.size());
+            
+            if (fromIndex < taskDTOs.size()) {
+                paginatedTasks = taskDTOs.subList(fromIndex, toIndex);
+            } else {
+                paginatedTasks = List.of(); // Empty if page is beyond available data
+            }
+            
+            // Create pagination info
+            paginationInfo = new PaginationInfo(
+                page, size, totalCount
+            );
+        }
+        
+        return new MyTasksData(
+            paginatedTasks, (int)totalCount, "assigned", null, paginationInfo);
+    }
+    
+    /**
+     * Handle created tasks advanced search with pagination
+     */
+    private com.project.quanlycanghangkhong.dto.response.task.MyTasksData handleCreatedTasksAdvancedSearchWithPagination(
+            User currentUser, com.project.quanlycanghangkhong.dto.request.AdvancedSearchRequest searchRequest) {
+        
+        Integer userId = currentUser.getId();
+        
+        // Get created tasks (tasks created but not assigned)
+        List<Task> tasks = taskRepository.findCreatedTasksWithoutAssignments(userId);
+        
+        // Convert LocalDate to LocalDateTime for filtering
+        java.time.LocalDateTime startDateTime = searchRequest.getStartTime() != null ? 
+            searchRequest.getStartTime().atStartOfDay() : null;
+        java.time.LocalDateTime endDateTime = searchRequest.getEndTime() != null ? 
+            searchRequest.getEndTime().atTime(23, 59, 59) : null;
+        
+        // Apply advanced search filters
+        List<Task> filteredTasks = tasks.stream()
+            .filter(task -> {
+                // Keyword filter
+                if (searchRequest.getKeyword() != null && !searchRequest.getKeyword().trim().isEmpty()) {
+                    String lowerKeyword = searchRequest.getKeyword().toLowerCase();
+                    if (!task.getTitle().toLowerCase().contains(lowerKeyword) && 
+                        (task.getContent() == null || !task.getContent().toLowerCase().contains(lowerKeyword))) {
+                        return false;
+                    }
+                }
+                
+                // Time range filter
+                if (startDateTime != null && task.getCreatedAt().isBefore(startDateTime)) {
+                    return false;
+                }
+                if (endDateTime != null && task.getCreatedAt().isAfter(endDateTime)) {
+                    return false;
+                }
+                
+                // Priority filter
+                if (searchRequest.getPriorities() != null && !searchRequest.getPriorities().isEmpty()) {
+                    return searchRequest.getPriorities().contains(task.getPriority());
+                }
+                
+                return true;
+            })
+            .collect(Collectors.toList());
+        
+        // Convert to DTO
+        List<TaskDetailDTO> taskDTOs = filteredTasks.stream()
+            .map(task -> {
+                Task taskWithRelations = taskRepository.findTaskWithAllRelationships(task.getId())
+                    .orElse(task);
+                return convertToTaskDetailDTOOptimized(taskWithRelations, 0);
+            })
+            .sorted((t1, t2) -> {
+                Task task1 = taskRepository.findById(t1.getId()).orElse(null);
+                Task task2 = taskRepository.findById(t2.getId()).orElse(null);
+                if (task1 != null && task2 != null) {
+                    int updatedCompare = task2.getUpdatedAt().compareTo(task1.getUpdatedAt());
+                    if (updatedCompare != 0) return updatedCompare;
+                    return task2.getCreatedAt().compareTo(task1.getCreatedAt());
+                }
+                return 0;
+            })
+            .collect(Collectors.toList());
+        
+        // ===== SIMPLE PAGINATION =====
+        // Apply pagination if requested
+        List<TaskDetailDTO> paginatedTasks = taskDTOs;
+        PaginationInfo paginationInfo = null;
+        
+        if (searchRequest.getPage() != null && searchRequest.getSize() != null) {
+            int page = searchRequest.getPage();
+            int size = searchRequest.getSize();
+            int fromIndex = page * size;
+            int toIndex = Math.min(fromIndex + size, taskDTOs.size());
+            
+            if (fromIndex < taskDTOs.size()) {
+                paginatedTasks = taskDTOs.subList(fromIndex, toIndex);
+            } else {
+                paginatedTasks = List.of(); // Empty if page is beyond available data
+            }
+            
+            // Create pagination info
+            paginationInfo = new PaginationInfo(
+                page, size, taskDTOs.size() // Use filtered count as total
+            );
+        }
+        
+        return new MyTasksData(
+            paginatedTasks, taskDTOs.size(), "created", null, paginationInfo);
+    }
+    
+    /**
+     * Handle received tasks advanced search with pagination
+     */
+    private com.project.quanlycanghangkhong.dto.response.task.MyTasksData handleReceivedTasksAdvancedSearchWithPagination(
+            User currentUser, com.project.quanlycanghangkhong.dto.request.AdvancedSearchRequest searchRequest) {
+        
+        List<Task> allReceivedTasks = new ArrayList<>();
+        Integer userId = currentUser.getId();
+        
+        // Get tasks received directly by user
+        List<Task> directUserTasks = taskRepository.findReceivedTasksByUserId(userId);
+        allReceivedTasks.addAll(directUserTasks);
+        
+        // Get tasks received by teams user leads
+        if (currentUser.getTeam() != null && 
+            "TEAM_LEAD".equals(currentUser.getRole().getRoleName())) {
+            List<Task> teamTasks = taskRepository.findReceivedTasksByTeamId(currentUser.getTeam().getId());
+            allReceivedTasks.addAll(teamTasks);
+        }
+        
+        // Get tasks received by units user leads  
+        if (currentUser.getUnit() != null && 
+            "UNIT_LEAD".equals(currentUser.getRole().getRoleName())) {
+            List<Task> unitTasks = taskRepository.findReceivedTasksByUnitId(currentUser.getUnit().getId());
+            allReceivedTasks.addAll(unitTasks);
+        }
+        
+        // Remove duplicates
+        allReceivedTasks = allReceivedTasks.stream()
+            .distinct()
+            .collect(Collectors.toList());
+        
+        // Convert LocalDate to LocalDateTime for filtering
+        java.time.LocalDateTime startDateTime = searchRequest.getStartTime() != null ? 
+            searchRequest.getStartTime().atStartOfDay() : null;
+        java.time.LocalDateTime endDateTime = searchRequest.getEndTime() != null ? 
+            searchRequest.getEndTime().atTime(23, 59, 59) : null;
+        
+        // Apply advanced search filters
+        List<Task> filteredTasks = allReceivedTasks.stream()
+            .filter(task -> {
+                // Keyword filter
+                if (searchRequest.getKeyword() != null && !searchRequest.getKeyword().trim().isEmpty()) {
+                    String lowerKeyword = searchRequest.getKeyword().toLowerCase();
+                    if (!task.getTitle().toLowerCase().contains(lowerKeyword) && 
+                        (task.getContent() == null || !task.getContent().toLowerCase().contains(lowerKeyword))) {
+                        return false;
+                    }
+                }
+                
+                // Time range filter
+                if (startDateTime != null && task.getCreatedAt().isBefore(startDateTime)) {
+                    return false;
+                }
+                if (endDateTime != null && task.getCreatedAt().isAfter(endDateTime)) {
+                    return false;
+                }
+                
+                // Priority filter
+                if (searchRequest.getPriorities() != null && !searchRequest.getPriorities().isEmpty()) {
+                    return searchRequest.getPriorities().contains(task.getPriority());
+                }
+                
+                return true;
+            })
+            .collect(Collectors.toList());
+        
+        // Convert to DTO
+        List<TaskDetailDTO> taskDTOs = filteredTasks.stream()
+            .map(task -> {
+                Task taskWithRelations = taskRepository.findTaskWithAllRelationships(task.getId())
+                    .orElse(task);
+                return convertToTaskDetailDTOOptimized(taskWithRelations, 0);
+            })
+            .sorted((t1, t2) -> {
+                Task task1 = taskRepository.findById(t1.getId()).orElse(null);
+                Task task2 = taskRepository.findById(t2.getId()).orElse(null);
+                if (task1 != null && task2 != null) {
+                    int updatedCompare = task2.getUpdatedAt().compareTo(task1.getUpdatedAt());
+                    if (updatedCompare != 0) return updatedCompare;
+                    return task2.getCreatedAt().compareTo(task1.getCreatedAt());
+                }
+                return 0;
+            })
+            .collect(Collectors.toList());
+        
+        // ===== SIMPLE PAGINATION =====
+        // Apply pagination if requested
+        List<TaskDetailDTO> paginatedTasks = taskDTOs;
+        PaginationInfo paginationInfo = null;
+        
+        if (searchRequest.getPage() != null && searchRequest.getSize() != null) {
+            int page = searchRequest.getPage();
+            int size = searchRequest.getSize();
+            int fromIndex = page * size;
+            int toIndex = Math.min(fromIndex + size, taskDTOs.size());
+            
+            if (fromIndex < taskDTOs.size()) {
+                paginatedTasks = taskDTOs.subList(fromIndex, toIndex);
+            } else {
+                paginatedTasks = List.of(); // Empty if page is beyond available data
+            }
+            
+            // Create pagination info
+            paginationInfo = new PaginationInfo(
+                page, size, taskDTOs.size() // Use filtered count as total
+            );
+        }
+        
+        return new MyTasksData(
+            paginatedTasks, taskDTOs.size(), "received", null, paginationInfo);
     }
 
     // ✅ Optimize hierarchy calculation

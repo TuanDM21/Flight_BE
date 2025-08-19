@@ -44,6 +44,22 @@ public class AdvancedSearchRequest {
     private String filter;
     
     /**
+     * Task type: created, assigned, received
+     * Mặc định là assigned để tương thích ngược
+     */
+    private String type = "assigned";
+    
+    /**
+     * Pagination - Số trang (bắt đầu từ 0)
+     */
+    private Integer page = 0;
+    
+    /**
+     * Pagination - Số lượng items per page (default 20, max 100)
+     */
+    private Integer size = 20;
+    
+    /**
      * Inner class cho recipient filter
      */
     public static class RecipientFilter {
@@ -72,13 +88,16 @@ public class AdvancedSearchRequest {
     public AdvancedSearchRequest() {}
     
     public AdvancedSearchRequest(String keyword, LocalDate startTime, LocalDate endTime, 
-                               List<TaskPriority> priorities, List<RecipientFilter> recipients, String filter) {
+                               List<TaskPriority> priorities, List<RecipientFilter> recipients, String filter,
+                               Integer page, Integer size) {
         this.keyword = keyword;
         this.startTime = startTime;
         this.endTime = endTime;
         this.priorities = priorities;
         this.recipients = recipients;
         this.filter = filter;
+        this.page = (page != null) ? page : 0;
+        this.size = (size != null) ? size : 20;
     }
     
     // Getters and Setters
@@ -130,6 +149,30 @@ public class AdvancedSearchRequest {
         this.filter = filter;
     }
     
+    public String getType() {
+        return type;
+    }
+    
+    public void setType(String type) {
+        this.type = type;
+    }
+    
+    public Integer getPage() {
+        return page;
+    }
+    
+    public void setPage(Integer page) {
+        this.page = (page != null && page >= 0) ? page : 0;
+    }
+    
+    public Integer getSize() {
+        return size;
+    }
+    
+    public void setSize(Integer size) {
+        this.size = (size != null && size > 0 && size <= 100) ? size : 20;
+    }
+    
     /**
      * Validate dữ liệu đầu vào
      * @return true nếu valid, false nếu không
@@ -155,17 +198,28 @@ public class AdvancedSearchRequest {
             return false;
         }
         
+        // Validate pagination
+        if (page != null && page < 0) {
+            return false;
+        }
+        if (size != null && (size <= 0 || size > 100)) {
+            return false;
+        }
+        
         return true;
     }
     
     /**
      * Check xem có tiêu chí tìm kiếm nào không
-     * @return true nếu có ít nhất 1 tiêu chí tìm kiếm
+     * @return true nếu có ít nhất 1 tiêu chí tìm kiếm (hoặc chỉ type với pagination)
      */
     @JsonIgnore
     public boolean hasSearchCriteria() {
+        // Nếu chỉ có type và pagination parameters thì vẫn được phép
         return keyword != null || startTime != null || endTime != null || 
                (priorities != null && !priorities.isEmpty()) ||
-               (recipients != null && !recipients.isEmpty()) || filter != null;
+               (recipients != null && !recipients.isEmpty()) || 
+               filter != null ||
+               (type != null && (page != null || size != null)); // Allow type-only search with pagination
     }
 }
