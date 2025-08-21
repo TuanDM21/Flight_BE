@@ -94,4 +94,13 @@ public interface AttachmentRepository extends JpaRepository<Attachment, Integer>
      */
     @Query("SELECT a FROM Attachment a WHERE a.task.id IN :taskIds AND a.isDeleted = false")
     List<Attachment> findByTaskIdsAndIsDeletedFalse(@Param("taskIds") List<Integer> taskIds);
+
+    /**
+     * 🟢 BATCH LOADING: Lấy tất cả attachments cho nhiều task ID một lần
+     * PERFORMANCE: Để tránh N+1 query trong batch processing
+     * Dùng cho: ultra-fast native queries với batch loading
+     * @param taskIds Danh sách task ID
+     * @return Map<taskId, List<Attachment>> grouped by task
+     */
+    List<Attachment> findByTask_IdInAndIsDeletedFalse(List<Integer> taskIds);
 }

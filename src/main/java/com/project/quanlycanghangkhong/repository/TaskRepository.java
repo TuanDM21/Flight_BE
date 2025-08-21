@@ -443,7 +443,7 @@ public interface TaskRepository extends JpaRepository<Task, Integer> {
      */
     @Query(value = 
         "SELECT DISTINCT t.id, t.title, t.content, t.status, t.priority, " +
-        "t.created_at, t.updated_at, t.created_by, t.parent_id " +
+        "t.created_at, t.updated_at, t.created_by, t.parent_id, t.instructions, t.notes " +
         "FROM task t " +
         "INNER JOIN assignment a ON t.id = a.task_id " +
         "WHERE a.assigned_by = :userId AND t.deleted = false " +
@@ -461,7 +461,7 @@ public interface TaskRepository extends JpaRepository<Task, Integer> {
      */
     @Query(value = 
         "SELECT DISTINCT t.id, t.title, t.content, t.status, t.priority, " +
-        "t.created_at, t.updated_at, t.created_by, t.parent_id " +
+        "t.created_at, t.updated_at, t.created_by, t.parent_id, t.instructions, t.notes " +
         "FROM task t " +
         "INNER JOIN assignment a ON t.id = a.task_id " +
         "WHERE ((a.recipient_type = 'user' AND a.recipient_id = :userId) " +

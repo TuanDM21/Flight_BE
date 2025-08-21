@@ -260,8 +260,9 @@ public class TaskServiceImpl implements TaskService {
             dto.setCreatedByUser(new UserDTO(task.getCreatedBy()));
         }
         
-        // ✅ Assignments đã được fetch với JOIN - không cần query thêm
-        List<AssignmentDTO> assignmentDTOs = task.getAssignments().stream()
+        // ✅ Load assignments riêng để tránh lazy loading issues
+        List<Assignment> assignments = assignmentRepository.findByTaskId(task.getId());
+        List<AssignmentDTO> assignmentDTOs = assignments.stream()
             .map(this::convertToAssignmentDTOOptimized)
             .toList();
         dto.setAssignments(assignmentDTOs);
@@ -315,6 +316,7 @@ public class TaskServiceImpl implements TaskService {
         attDto.setFileName(att.getFileName());
         attDto.setFileSize(att.getFileSize());
         attDto.setCreatedAt(att.getCreatedAt());
+        attDto.setSharedCount(0); // Set default value for sharedCount
         
         if (att.getUploadedBy() != null) {
             attDto.setUploadedBy(new UserDTO(att.getUploadedBy()));
@@ -1702,29 +1704,52 @@ public class TaskServiceImpl implements TaskService {
             (int)createdCount, (int)assignedCount, (int)receivedCount, hierarchyInfo);
     }
     
-    // ✅ OPTIMIZED BATCH LOADING: Convert multiple tasks với batch loading attachments only
+    // ✅ ULTRA OPTIMIZED BATCH LOADING: Convert multiple tasks với batch loading cả assignments, attachments và createdBy users
     private List<TaskDetailDTO> convertTasksToTaskDetailDTOsBatch(List<Task> tasks) {
         if (tasks.isEmpty()) {
             return new ArrayList<>();
         }
         
-        // 🚀 BATCH LOAD: Tất cả attachments cho all tasks trong 1 query
         List<Integer> taskIds = tasks.stream().map(Task::getId).toList();
-        List<Attachment> allAttachments = attachmentRepository.findByTaskIdsAndIsDeletedFalse(taskIds);
         
-        // Group attachments by task ID để mapping nhanh
+        // 🚀 BATCH LOAD: Tất cả assignments cho all tasks trong 1 query
+        List<Assignment> allAssignments = assignmentRepository.findByTaskIdIn(taskIds);
+        Map<Integer, List<Assignment>> assignmentsByTaskId = allAssignments.stream()
+            .collect(Collectors.groupingBy(ass -> ass.getTask().getId()));
+        
+        // 🚀 BATCH LOAD: Tất cả attachments cho all tasks trong 1 query
+        List<Attachment> allAttachments = attachmentRepository.findByTask_IdInAndIsDeletedFalse(taskIds);
         Map<Integer, List<Attachment>> attachmentsByTaskId = allAttachments.stream()
             .collect(Collectors.groupingBy(att -> att.getTask().getId()));
         
-        // Convert each task với attachments đã được batch load
+        // 🚀 BATCH LOAD: Tất cả createdBy users cho all tasks trong 1 query
+        List<Integer> createdByUserIds = tasks.stream()
+            .map(task -> task.getCreatedBy() != null ? task.getCreatedBy().getId() : null)
+            .filter(id -> id != null)
+            .distinct()
+            .toList();
+        
+        Map<Integer, User> createdByUsersMap = new HashMap<>();
+        if (!createdByUserIds.isEmpty()) {
+            List<User> createdByUsers = userRepository.findAllById(createdByUserIds);
+            createdByUsersMap = createdByUsers.stream()
+                .collect(Collectors.toMap(User::getId, user -> user));
+        }
+        
+        // Convert each task với tất cả data đã được batch load
+        final Map<Integer, User> finalCreatedByUsersMap = createdByUsersMap;
         return tasks.stream()
-            .map(task -> convertToTaskDetailDTOWithPreloadedAttachments(task, 
-                attachmentsByTaskId.getOrDefault(task.getId(), new ArrayList<>())))
+            .map(task -> convertToTaskDetailDTOWithAllPreloadedData(task, 
+                assignmentsByTaskId.getOrDefault(task.getId(), new ArrayList<>()),
+                attachmentsByTaskId.getOrDefault(task.getId(), new ArrayList<>()),
+                task.getCreatedBy() != null ? finalCreatedByUsersMap.get(task.getCreatedBy().getId()) : null))
             .collect(Collectors.toList());
     }
     
-    // ✅ Convert single task với attachments đã được preload
-    private TaskDetailDTO convertToTaskDetailDTOWithPreloadedAttachments(Task task, List<Attachment> preloadedAttachments) {
+
+    
+    // ✅ Convert single task với assignments, attachments và createdBy user đã được preload
+    private TaskDetailDTO convertToTaskDetailDTOWithAllPreloadedData(Task task, List<Assignment> preloadedAssignments, List<Attachment> preloadedAttachments, User preloadedCreatedBy) {
         TaskDetailDTO dto = new TaskDetailDTO();
         dto.setId(task.getId());
         dto.setTitle(task.getTitle());
@@ -1740,12 +1765,13 @@ public class TaskServiceImpl implements TaskService {
             dto.setParentId(task.getParent().getId());
         }
         
-        if (task.getCreatedBy() != null) {
-            dto.setCreatedByUser(new UserDTO(task.getCreatedBy()));
+        // ✅ Sử dụng preloaded createdBy user thay vì lazy loading
+        if (preloadedCreatedBy != null) {
+            dto.setCreatedByUser(new UserDTO(preloadedCreatedBy));
         }
         
-        // ✅ Assignments đã được fetch với JOIN
-        List<AssignmentDTO> assignmentDTOs = task.getAssignments().stream()
+        // ✅ Sử dụng preloaded assignments thay vì query riêng
+        List<AssignmentDTO> assignmentDTOs = preloadedAssignments.stream()
             .map(this::convertToAssignmentDTOOptimized)
             .toList();
         dto.setAssignments(assignmentDTOs);
@@ -1758,7 +1784,7 @@ public class TaskServiceImpl implements TaskService {
         
         return dto;
     }
-    
+
     // ===================================================================
     // ✅ PRIORITY 3: SIMPLIFIED DTOs CONVERSION METHODS
     // ===================================================================
@@ -1916,6 +1942,10 @@ public class TaskServiceImpl implements TaskService {
                 parent.setId(((Number) result[8]).intValue());
                 task.setParent(parent);
             }
+            
+            // ✅ FIX: Set instructions and notes from native query results
+            task.setInstructions((String) result[9]);
+            task.setNotes((String) result[10]);
             
             // Assignments và attachments sẽ được load riêng trong batch
             task.setAssignments(new ArrayList<>());

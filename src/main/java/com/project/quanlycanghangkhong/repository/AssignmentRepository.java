@@ -14,12 +14,26 @@ public interface AssignmentRepository extends JpaRepository<Assignment, Integer>
     List<Assignment> findByTask_Id(Integer taskId);
     
     /**
-     * 🚀 OPTIMIZED: Get assignments by task ID (thay thế findAll + filter)
+     * 🚀 OPTIMIZED: Get assignments by task ID with all relationships fetched
      * @param taskId Task ID
-     * @return List of assignments for the task
+     * @return List of assignments for the task with full data
      */
-    @Query("SELECT a FROM Assignment a WHERE a.task.id = :taskId")
+    @Query("SELECT a FROM Assignment a " +
+           "LEFT JOIN FETCH a.assignedBy " +
+           "LEFT JOIN FETCH a.completedBy " +
+           "WHERE a.task.id = :taskId")
     List<Assignment> findByTaskId(@Param("taskId") Integer taskId);
+    
+    /**
+     * 🚀 BATCH OPTIMIZED: Get assignments by multiple task IDs with all relationships fetched
+     * @param taskIds List of task IDs
+     * @return List of assignments for all tasks with full data
+     */
+    @Query("SELECT a FROM Assignment a " +
+           "LEFT JOIN FETCH a.assignedBy " +
+           "LEFT JOIN FETCH a.completedBy " +
+           "WHERE a.task.id IN :taskIds")
+    List<Assignment> findByTaskIdIn(@Param("taskIds") List<Integer> taskIds);
     
     // ============== OVERDUE SUPPORT METHODS ==============
     
