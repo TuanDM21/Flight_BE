@@ -143,8 +143,8 @@ public class TaskController {
     }
 
     @GetMapping("/my")
-    @Operation(summary = "Lấy công việc của tôi theo loại với ROOT TASKS count (sorted by latest) và advanced search", 
-               description = "Lấy danh sách công việc theo loại với sort theo thời gian mới nhất và thông tin count ROOT TASKS: created (đã tạo nhưng chưa giao việc - flat list), assigned (đã giao việc bao gồm tất cả subtasks với hierarchyLevel), received (được giao việc - flat list). Count chỉ tính ROOT TASKS (parent IS NULL), data vẫn bao gồm tất cả tasks để hiển thị hierarchy. Hỗ trợ filter cho type=assigned: completed, pending, urgent, overdue. Hỗ trợ advanced search cho TẤT CẢ TYPES với keyword, priorities, time range (format: yyyy-MM-dd). Recipient search chỉ cho type=assigned")
+    @Operation(summary = "Lấy công việc của tôi theo loại với ROOT TASKS count (sorted by latest), advanced search và pagination", 
+               description = "Lấy danh sách công việc theo loại với sort theo thời gian mới nhất và thông tin count ROOT TASKS: created (đã tạo nhưng chưa giao việc - flat list), assigned (đã giao việc bao gồm tất cả subtasks với hierarchyLevel), received (được giao việc - flat list). Count chỉ tính ROOT TASKS (parent IS NULL), data vẫn bao gồm tất cả tasks để hiển thị hierarchy. Hỗ trợ filter cho type=assigned: completed, pending, urgent, overdue. Hỗ trợ advanced search cho TẤT CẢ TYPES với keyword, priorities, time range (format: yyyy-MM-dd). Recipient search chỉ cho type=assigned. Hỗ trợ pagination với page (bắt đầu từ 0) và size (max 100, default 20)")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiMyTasksResponse.class))),
         @ApiResponse(responseCode = "400", description = "Tham số type hoặc filter không hợp lệ", content = @Content(schema = @Schema(implementation = ApiMyTasksResponse.class)))
@@ -157,7 +157,9 @@ public class TaskController {
             @RequestParam(required = false) String endTime,
             @RequestParam(required = false) List<String> priorities,
             @RequestParam(required = false) List<String> recipientTypes,
-            @RequestParam(required = false) List<Integer> recipientIds) {
+            @RequestParam(required = false) List<Integer> recipientIds,
+            @RequestParam(required = false, defaultValue = "0") Integer page,
+            @RequestParam(required = false, defaultValue = "20") Integer size) {
         if (!type.matches("created|assigned|received")) {
             return ResponseEntity.badRequest().body(
                 ApiMyTasksResponse.error("Tham số type phải là: created, assigned, hoặc received", 400)
@@ -208,16 +210,28 @@ public class TaskController {
             }
         }
         
+        // Validate pagination parameters
+        if (page != null && page < 0) {
+            return ResponseEntity.badRequest().body(
+                ApiMyTasksResponse.error("Page phải >= 0", 400)
+            );
+        }
+        if (size != null && (size <= 0 || size > 100)) {
+            return ResponseEntity.badRequest().body(
+                ApiMyTasksResponse.error("Size phải từ 1 đến 100", 400)
+            );
+        }
+        
         MyTasksData response;
         boolean hasAdvancedSearch = hasKeywordTimeOrPriority || hasRecipientSearch;
         
         if (hasAdvancedSearch) {
             // Sử dụng advanced search cho tất cả type với các feature được hỗ trợ
-            response = taskService.getMyTasksWithAdvancedSearch(type, filter, keyword, 
-                startTime, endTime, priorities, recipientTypes, recipientIds);
+            response = taskService.getMyTasksWithAdvancedSearchAndPagination(type, filter, keyword, 
+                startTime, endTime, priorities, recipientTypes, recipientIds, page, size);
         } else {
-            // Sử dụng search thông thường
-            response = taskService.getMyTasksWithCountStandardized(type, filter);
+            // Sử dụng search thông thường với pagination
+            response = taskService.getMyTasksWithCountStandardizedAndPagination(type, filter, page, size);
         }
         
         return ResponseEntity.ok(ApiMyTasksResponse.success(response));

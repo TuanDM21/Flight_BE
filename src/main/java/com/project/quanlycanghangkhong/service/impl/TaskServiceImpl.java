@@ -985,6 +985,99 @@ public class TaskServiceImpl implements TaskService {
             taskDTOs, totalCount, type, newMetadata);
     }
 
+    @Override
+    public com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithCountStandardizedAndPagination(String type, String filter, Integer page, Integer size) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication != null ? authentication.getName() : null;
+        User currentUser = (email != null) ? userRepository.findByEmail(email).orElse(null) : null;
+        
+        if (currentUser == null) {
+            return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+                List.of(), 0, type, null, new PaginationInfo(page != null ? page : 0, size != null ? size : 20, 0));
+        }
+        
+        Integer userId = currentUser.getId();
+        Integer teamId = currentUser.getTeam() != null ? currentUser.getTeam().getId() : null;
+        Integer unitId = currentUser.getUnit() != null ? currentUser.getUnit().getId() : null;
+        
+        // Set default pagination values
+        int currentPage = page != null ? page : 0;
+        int pageSize = size != null ? size : 20;
+        
+        // 🚀 ULTRA FAST: Sử dụng native queries cho assigned/received, relationships cho created
+        List<Task> tasks;
+        switch (type.toLowerCase()) {
+            case "created":
+                // Created tasks ít hơn, có thể dùng relationships
+                tasks = taskRepository.findCreatedTasksWithAllRelationships(userId);
+                break;
+            case "assigned":
+                // 🚀 ULTRA FAST: Use native query for maximum performance
+                List<Object[]> assignedResults = taskRepository.findAssignedTasksUltraFast(userId);
+                tasks = convertNativeResultsToTasks(assignedResults);
+                break;
+            case "received":
+                // 🚀 ULTRA FAST: Use native query for maximum performance
+                List<Object[]> receivedResults = taskRepository.findReceivedTasksUltraFast(userId, teamId, unitId);
+                tasks = convertNativeResultsToTasks(receivedResults);
+                break;
+            default:
+                tasks = List.of();
+        }
+        
+        // ✅ Apply filter chỉ cho type=assigned
+        if ("assigned".equals(type.toLowerCase()) && filter != null) {
+            tasks = filterAssignedTasks(tasks, filter);
+        }
+        
+        // Convert to DTO BEFORE pagination
+        List<TaskDetailDTO> allTaskDTOs = convertTasksToTaskDetailDTOsBatch(tasks);
+        
+        // ✅ Apply PAGINATION after conversion
+        List<TaskDetailDTO> paginatedTaskDTOs;
+        int fromIndex = currentPage * pageSize;
+        int toIndex = Math.min(fromIndex + pageSize, allTaskDTOs.size());
+        
+        if (fromIndex < allTaskDTOs.size()) {
+            paginatedTaskDTOs = allTaskDTOs.subList(fromIndex, toIndex);
+        } else {
+            paginatedTaskDTOs = List.of(); // Empty if page is beyond available data
+        }
+        
+        // ✅ Count sử dụng database count queries thay vì load data (for total count)
+        com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse.TaskCountMetadata oldMetadata = 
+            calculateTaskCountsOptimized(userId, currentUser);
+            
+        // Convert to simplified metadata structure (only basic counts)
+        com.project.quanlycanghangkhong.dto.response.task.MyTasksData.TaskMetadata newMetadata = 
+            new com.project.quanlycanghangkhong.dto.response.task.MyTasksData.TaskMetadata(
+                oldMetadata.getCreatedCount(),
+                oldMetadata.getAssignedCount(), 
+                oldMetadata.getReceivedCount()
+            );
+            
+        // Tính totalCount CHỈ từ ROOT TASKS cho type hiện tại hoặc sau filter
+        int totalCount;
+        if ("assigned".equals(type.toLowerCase()) && filter != null) {
+            // Nếu có filter, count từ filtered results
+            totalCount = allTaskDTOs.size();
+        } else {
+            // Không có filter, dùng metadata count
+            totalCount = switch (type.toLowerCase()) {
+                case "created" -> newMetadata.getCreatedCount();
+                case "assigned" -> newMetadata.getAssignedCount(); 
+                case "received" -> newMetadata.getReceivedCount();
+                default -> allTaskDTOs.size();
+            };
+        }
+        
+        // Create pagination info
+        PaginationInfo paginationInfo = new PaginationInfo(currentPage, pageSize, totalCount);
+        
+        return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+            paginatedTaskDTOs, totalCount, type, newMetadata, paginationInfo);
+    }
+
     /**
      * Filter assigned tasks dựa trên filter parameter
      * @param tasks Danh sách tasks đã assigned
@@ -1073,6 +1166,86 @@ public class TaskServiceImpl implements TaskService {
         } else {
             // Fallback to standard method
             return getMyTasksWithCountStandardized(type, filter);
+        }
+    }
+    
+    @Override
+    public com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithAdvancedSearchAndPagination(
+            String type, String filter, String keyword, String startTime, String endTime,
+            java.util.List<String> priorities, java.util.List<String> recipientTypes, java.util.List<Integer> recipientIds,
+            Integer page, Integer size) {
+        
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication != null ? authentication.getName() : null;
+        User currentUser = (email != null) ? userRepository.findByEmail(email).orElse(null) : null;
+        
+        if (currentUser == null) {
+            return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+                List.of(), 0, type, null, new PaginationInfo(page != null ? page : 0, size != null ? size : 20, 0));
+        }
+        
+        // Set default pagination values
+        int currentPage = page != null ? page : 0;
+        int pageSize = size != null ? size : 20;
+        
+        Integer userId = currentUser.getId();
+        
+        // Convert string parameters to appropriate types
+        LocalDateTime startDateTime = null;
+        LocalDateTime endDateTime = null;
+        List<com.project.quanlycanghangkhong.model.TaskPriority> priorityEnums = new ArrayList<>();
+        
+        try {
+            if (startTime != null && !startTime.trim().isEmpty()) {
+                startDateTime = LocalDateTime.parse(startTime);
+            }
+            if (endTime != null && !endTime.trim().isEmpty()) {
+                endDateTime = LocalDateTime.parse(endTime);
+            }
+        } catch (Exception e) {
+            // Invalid date format, ignore
+        }
+        
+        // Convert priority strings to enums
+        if (priorities != null && !priorities.isEmpty()) {
+            for (String priority : priorities) {
+                try {
+                    priorityEnums.add(com.project.quanlycanghangkhong.model.TaskPriority.valueOf(priority.toUpperCase()));
+                } catch (IllegalArgumentException e) {
+                    // Invalid priority, ignore
+                }
+            }
+        }
+        
+        // Handle different types
+        if ("assigned".equals(type)) {
+            // Use existing method and apply pagination
+            com.project.quanlycanghangkhong.dto.response.task.MyTasksData result = 
+                handleAssignedTasksAdvancedSearch(userId, filter, keyword, startDateTime, endDateTime, 
+                    priorityEnums, recipientTypes, recipientIds);
+            
+            // Apply pagination to the result
+            return applyPaginationToMyTasksData(result, currentPage, pageSize);
+            
+        } else if ("created".equals(type)) {
+            // Use existing method and apply pagination
+            com.project.quanlycanghangkhong.dto.response.task.MyTasksData result = 
+                handleCreatedTasksAdvancedSearch(userId, keyword, startDateTime, endDateTime, priorityEnums);
+            
+            // Apply pagination to the result
+            return applyPaginationToMyTasksData(result, currentPage, pageSize);
+            
+        } else if ("received".equals(type)) {
+            // Use existing method and apply pagination
+            com.project.quanlycanghangkhong.dto.response.task.MyTasksData result = 
+                handleReceivedTasksAdvancedSearch(currentUser, keyword, startDateTime, endDateTime, priorityEnums);
+            
+            // Apply pagination to the result
+            return applyPaginationToMyTasksData(result, currentPage, pageSize);
+            
+        } else {
+            // Fallback to standard method with pagination
+            return getMyTasksWithCountStandardizedAndPagination(type, filter, currentPage, pageSize);
         }
     }
     
@@ -1952,6 +2125,43 @@ public class TaskServiceImpl implements TaskService {
             
             return task;
         }).collect(Collectors.toList());
+    }
+    
+    /**
+     * Helper method để apply pagination vào MyTasksData response
+     * @param originalData Data gốc không có pagination
+     * @param page Số trang (bắt đầu từ 0)
+     * @param size Số lượng items per page
+     * @return MyTasksData đã được phân trang với PaginationInfo
+     */
+    private com.project.quanlycanghangkhong.dto.response.task.MyTasksData applyPaginationToMyTasksData(
+            com.project.quanlycanghangkhong.dto.response.task.MyTasksData originalData, int page, int size) {
+        
+        if (originalData == null || originalData.getTasks() == null) {
+            return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+                List.of(), 0, originalData != null ? originalData.getType() : "unknown", null, 
+                new PaginationInfo(page, size, 0));
+        }
+        
+        List<TaskDetailDTO> allTasks = originalData.getTasks();
+        int totalCount = originalData.getTotalCount();
+        
+        // Apply pagination
+        int fromIndex = page * size;
+        int toIndex = Math.min(fromIndex + size, allTasks.size());
+        
+        List<TaskDetailDTO> paginatedTasks;
+        if (fromIndex < allTasks.size()) {
+            paginatedTasks = allTasks.subList(fromIndex, toIndex);
+        } else {
+            paginatedTasks = List.of(); // Empty if page is beyond available data
+        }
+        
+        // Create pagination info
+        PaginationInfo paginationInfo = new PaginationInfo(page, size, totalCount);
+        
+        return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+            paginatedTasks, totalCount, originalData.getType(), originalData.getMetadata(), paginationInfo);
     }
     
 }
