@@ -21,7 +21,7 @@ import com.project.quanlycanghangkhong.config.VietnamTimestampListener;
 import jakarta.persistence.EntityListeners;
 
 @Entity
-@Table(name = "Task")
+@Table(name = "task")
 @EntityListeners(VietnamTimestampListener.class)
 public class Task {
     @Id

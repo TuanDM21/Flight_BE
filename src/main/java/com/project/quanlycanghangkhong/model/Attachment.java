@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 import com.project.quanlycanghangkhong.config.VietnamTimestampListener;
 
 @Entity
-@Table(name = "Attachment")
+@Table(name = "attachment")
 @EntityListeners(VietnamTimestampListener.class)
 public class Attachment {
     @Id

@@ -19,13 +19,6 @@ public class TaskDetailDTO {
     
     // MỚI: Hỗ trợ subtask cho mô hình Adjacency List
     private Integer parentId; // Tham chiếu đến ID task cha
-    private List<TaskDetailDTO> subtasks; // Danh sách task con
-    private Integer hierarchyLevel; // Cấp độ trong hierarchy (0=root, 1=child, 2=grandchild...)
-    
-    // ✅ DEPTH CONTROL: Giới hạn độ sâu đệ quy
-    public static final int MAX_SUBTASK_DEPTH = 5; // Giới hạn tối đa 5 levels
-    private boolean hasMoreSubtasks; // Flag để biết có subtasks ở levels sâu hơn không
-    private int currentDepth; // Depth hiện tại khi loading subtasks
     
     // MỚI: Attachment trực tiếp (THAY THẾ hoàn toàn documents)
     private List<AttachmentDTO> attachments; // Quan hệ task-attachment trực tiếp
@@ -135,23 +128,6 @@ public class TaskDetailDTO {
     }
 
     /**
-     * Lấy tất cả subtask (task con) của task này
-     * MÔ HÌNH ADJACENCY LIST: Tải đệ quy các task con
-     * @return Danh sách task con
-     */
-    public List<TaskDetailDTO> getSubtasks() {
-        return subtasks;
-    }
-
-    /**
-     * Đặt subtask (task con) cho task này
-     * @param subtasks Danh sách task con
-     */
-    public void setSubtasks(List<TaskDetailDTO> subtasks) {
-        this.subtasks = subtasks;
-    }
-
-    /**
      * Lấy attachment được liên kết trực tiếp với task này
      * THAY ĐỔI LOGIC NGHIỆP VỤ: Quan hệ task-attachment trực tiếp thay thế cách tiếp cận dựa trên document
      * @return Danh sách attachment được liên kết trực tiếp với task
@@ -167,63 +143,6 @@ public class TaskDetailDTO {
      */
     public void setAttachments(List<AttachmentDTO> attachments) {
         this.attachments = attachments;
-    }
-
-    /**
-     * Lấy cấp độ hierarchy của task (0=root, 1=child, 2=grandchild...)
-     * @return Cấp độ trong cấu trúc phân cấp
-     */
-    public Integer getHierarchyLevel() {
-        return hierarchyLevel;
-    }
-
-    /**
-     * Đặt cấp độ hierarchy của task
-     * @param hierarchyLevel Cấp độ trong cấu trúc phân cấp
-     */
-    public void setHierarchyLevel(Integer hierarchyLevel) {
-        this.hierarchyLevel = hierarchyLevel;
-    }
-
-    /**
-     * ✅ DEPTH CONTROL: Kiểm tra có subtasks ở levels sâu hơn không
-     * @return true nếu có subtasks nhưng bị giới hạn bởi MAX_SUBTASK_DEPTH
-     */
-    public boolean hasMoreSubtasks() {
-        return hasMoreSubtasks;
-    }
-
-    /**
-     * ✅ DEPTH CONTROL: Đặt flag cho subtasks ở levels sâu hơn
-     * @param hasMoreSubtasks true nếu có subtasks nhưng bị giới hạn
-     */
-    public void setHasMoreSubtasks(boolean hasMoreSubtasks) {
-        this.hasMoreSubtasks = hasMoreSubtasks;
-    }
-
-    /**
-     * ✅ DEPTH CONTROL: Lấy depth hiện tại khi loading subtasks
-     * @return Current depth level
-     */
-    public int getCurrentDepth() {
-        return currentDepth;
-    }
-
-    /**
-     * ✅ DEPTH CONTROL: Đặt depth hiện tại khi loading subtasks
-     * @param currentDepth Current depth level
-     */
-    public void setCurrentDepth(int currentDepth) {
-        this.currentDepth = currentDepth;
-    }
-
-    /**
-     * ✅ DEPTH CONTROL: Kiểm tra có thể load subtasks ở level này không
-     * @param currentLevel Level hiện tại
-     * @return true nếu có thể load subtasks (chưa vượt quá MAX_SUBTASK_DEPTH)
-     */
-    public static boolean canLoadSubtasksAtLevel(int currentLevel) {
-        return currentLevel < MAX_SUBTASK_DEPTH;
     }
 
     @Override
@@ -244,7 +163,6 @@ public class TaskDetailDTO {
         return "TaskDetailDTO{" +
             "id=" + id +
             ", title='" + title + '\'' +
-            ", hierarchyLevel=" + hierarchyLevel +
             ", parentId=" + parentId +
             '}';
     }

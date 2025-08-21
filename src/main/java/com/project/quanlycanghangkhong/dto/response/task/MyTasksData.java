@@ -48,29 +48,16 @@ public class MyTasksData {
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
-    @Schema(description = "Simplified task metadata - flattened structure")
+    @Schema(description = "Simplified task metadata - flat structure")
     public static class TaskMetadata {
         
-        @Schema(description = "Count of created ROOT tasks (not assigned yet)")
+        @Schema(description = "Count of created tasks")
         private int createdCount;
         
-        @Schema(description = "Count of assigned ROOT tasks (excludes subtasks in count)")
+        @Schema(description = "Count of assigned tasks")
         private int assignedCount;
         
-        @Schema(description = "Count of received ROOT tasks")
+        @Schema(description = "Count of received tasks")
         private int receivedCount;
-        
-        // Flattened hierarchy info - NO MORE NESTED HierarchyInfo object
-        @Schema(description = "Count of root tasks (level 0) - flattened from hierarchyInfo")
-        private int rootTasksCount;
-        
-        @Schema(description = "Count of subtasks (level > 0) - flattened from hierarchyInfo")
-        private int subtasksCount;
-        
-        @Schema(description = "Maximum hierarchy level - flattened from hierarchyInfo")
-        private int maxLevel;
-        
-        // REMOVED: countByLevel Map - too complex and nested
-        // Frontend can calculate this if needed from the tasks data
     }
 }

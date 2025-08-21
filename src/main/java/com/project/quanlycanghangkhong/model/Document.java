@@ -6,7 +6,7 @@ import java.util.List;
 import com.project.quanlycanghangkhong.config.VietnamTimestampListener;
 
 @Entity
-@Table(name = "Document")
+@Table(name = "document")
 @EntityListeners(VietnamTimestampListener.class)
 public class Document {
     @Id
