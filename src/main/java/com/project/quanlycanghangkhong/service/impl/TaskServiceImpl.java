@@ -692,6 +692,32 @@ public class TaskServiceImpl implements TaskService {
         return result;
     }
 
+    @Override
+    @Transactional
+    public int removeAttachmentsFromTask(Integer taskId, List<Integer> attachmentIds) {
+        // Kiểm tra task có tồn tại không
+        Task task = taskRepository.findByIdAndDeletedFalse(taskId).orElse(null);
+        if (task == null) {
+            throw new RuntimeException("Không tìm thấy task với ID: " + taskId);
+        }
+        
+        // Lấy danh sách attachment
+        List<Attachment> attachments = attachmentRepository.findAllByIdIn(attachmentIds);
+        int removedCount = 0;
+        
+        for (Attachment attachment : attachments) {
+            if (!attachment.isDeleted() && attachment.getTask() != null && 
+                attachment.getTask().getId().equals(taskId)) {
+                // Chỉ remove nếu attachment thực sự thuộc về task này
+                attachment.setTask(null);
+                attachmentRepository.save(attachment);
+                removedCount++;
+            }
+        }
+        
+        return removedCount;
+    }
+
     // ============== SEARCH & FILTER IMPLEMENTATIONS ==============
 
     @Override

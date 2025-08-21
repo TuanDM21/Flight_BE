@@ -140,6 +140,14 @@ public interface TaskService {
      */
     List<AttachmentDTO> addAttachmentsToTask(Integer taskId, List<Integer> attachmentIds);
     
+    /**
+     * Xóa attachments khỏi task cụ thể
+     * @param taskId ID của task
+     * @param attachmentIds Danh sách ID attachment cần xóa
+     * @return Số lượng attachment đã được xóa
+     */
+    int removeAttachmentsFromTask(Integer taskId, List<Integer> attachmentIds);
+    
     // ============== SEARCH & FILTER METHODS ==============
     
     /**

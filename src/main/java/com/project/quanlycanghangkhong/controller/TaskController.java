@@ -321,6 +321,58 @@ public class TaskController {
         }
     }
 
+    @DeleteMapping("/{id}/attachments")
+    @Operation(summary = "Xóa file đính kèm khỏi task", 
+               description = "Xóa các file đính kèm khỏi task cụ thể. File sẽ không bị xóa vĩnh viễn mà chỉ được gỡ liên kết khỏi task")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Xóa file đính kèm thành công"),
+        @ApiResponse(responseCode = "400", description = "Dữ liệu đầu vào không hợp lệ"),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy task")
+    })
+    public ResponseEntity<Map<String, Object>> removeAttachmentsFromTask(
+            @PathVariable Integer id, 
+            @Valid @RequestBody TaskAttachmentUploadRequest request) {
+        try {
+            int removedCount = taskService.removeAttachmentsFromTask(id, request.getAttachmentIds());
+            
+            String message = String.format("Đã xóa %d file đính kèm khỏi task thành công", removedCount);
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", message,
+                "statusCode", 200,
+                "data", Map.of(
+                    "taskId", id,
+                    "removedCount", removedCount,
+                    "removedAttachmentIds", request.getAttachmentIds()
+                )
+            ));
+            
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("Không tìm thấy")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                    "success", false,
+                    "message", e.getMessage(),
+                    "statusCode", 404,
+                    "data", null
+                ));
+            } else {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", e.getMessage(),
+                    "statusCode", 400,
+                    "data", null
+                ));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "success", false,
+                "message", "Lỗi server khi xóa file đính kèm: " + e.getMessage(),
+                "statusCode", 500,
+                "data", null
+            ));
+        }
+    }
+
     // ============== SEARCH & FILTER ENDPOINTS ==============
 
     @GetMapping("/search")
