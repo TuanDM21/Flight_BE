@@ -1,6 +1,5 @@
 package com.project.quanlycanghangkhong.dto;
 
-import java.util.List;
 import com.project.quanlycanghangkhong.model.TaskPriority;
 
 public class UpdateTaskDTO {
@@ -10,9 +9,6 @@ public class UpdateTaskDTO {
     private String instructions;
     private String notes;
     private TaskPriority priority;
-    
-    // MỚI: Hỗ trợ cập nhật attachment trong cùng 1 request
-    private List<Integer> attachmentIds; // null = không thay đổi, empty = xóa hết, có giá trị = replace
 
     public Integer getId() {
         return id;
@@ -54,13 +50,5 @@ public class UpdateTaskDTO {
     
     public void setPriority(TaskPriority priority) {
         this.priority = priority;
-    }
-    
-    public List<Integer> getAttachmentIds() {
-        return attachmentIds;
-    }
-    
-    public void setAttachmentIds(List<Integer> attachmentIds) {
-        this.attachmentIds = attachmentIds;
     }
 }

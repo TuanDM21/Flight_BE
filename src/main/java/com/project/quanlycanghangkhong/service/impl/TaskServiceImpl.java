@@ -163,19 +163,19 @@ public class TaskServiceImpl implements TaskService {
             if (updateTaskDTO.getTitle() != null) {
                 task.setTitle(updateTaskDTO.getTitle());
             }
-            task.setContent(updateTaskDTO.getContent());
-            task.setInstructions(updateTaskDTO.getInstructions());
-            task.setNotes(updateTaskDTO.getNotes());
+            if (updateTaskDTO.getContent() != null) {
+                task.setContent(updateTaskDTO.getContent());
+            }
+            if (updateTaskDTO.getInstructions() != null) {
+                task.setInstructions(updateTaskDTO.getInstructions());
+            }
+            if (updateTaskDTO.getNotes() != null) {
+                task.setNotes(updateTaskDTO.getNotes());
+            }
             if (updateTaskDTO.getPriority() != null) {
                 task.setPriority(updateTaskDTO.getPriority());
             }
             task.setUpdatedAt(LocalDateTime.now());
-            
-            // MỚI: Cập nhật attachment list
-            if (updateTaskDTO.getAttachmentIds() != null) {
-                updateTaskAttachments(task, updateTaskDTO.getAttachmentIds());
-            }
-            // null = không thay đổi attachment, chỉ cập nhật nội dung
             
             Task updated = taskRepository.save(task);
             return convertToDTO(updated);
@@ -732,38 +732,6 @@ public class TaskServiceImpl implements TaskService {
         
         // ✅ Use batch conversion instead of individual getTaskDetailById calls
         return convertTasksToTaskDetailDTOsBatch(tasks);
-    }
-
-    /**
-     * Cập nhật danh sách attachment của task
-     * Logic: 
-     * - null: không thay đổi 
-     * - empty list: xóa hết attachment
-     * - có giá trị: replace toàn bộ attachment list
-     * @param task Task cần cập nhật
-     * @param attachmentIds Danh sách attachment ID mới
-     */
-    private void updateTaskAttachments(Task task, List<Integer> attachmentIds) {
-        // Lấy danh sách attachment hiện tại của task
-        List<Attachment> currentAttachments = attachmentRepository.findByTask_IdAndIsDeletedFalse(task.getId());
-        
-        // Gỡ tất cả attachment hiện tại khỏi task
-        for (Attachment attachment : currentAttachments) {
-            attachment.setTask(null);
-        }
-        attachmentRepository.saveAll(currentAttachments);
-        
-        // Nếu có attachment mới, gán vào task
-        if (!attachmentIds.isEmpty()) {
-            List<Attachment> newAttachments = attachmentRepository.findAllByIdIn(attachmentIds);
-            for (Attachment attachment : newAttachments) {
-                if (!attachment.isDeleted()) {
-                    attachment.setTask(task);
-                }
-            }
-            attachmentRepository.saveAll(newAttachments);
-        }
-        // Nếu attachmentIds empty = xóa hết attachment (đã làm ở trên)
     }
 
     /**
