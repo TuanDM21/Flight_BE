@@ -474,4 +474,38 @@ public interface TaskRepository extends JpaRepository<Task, Integer> {
     List<Object[]> findReceivedTasksUltraFast(@Param("userId") Integer userId, 
                                              @Param("teamId") Integer teamId, 
                                              @Param("unitId") Integer unitId);
+    
+    /**
+     * 🚀 COUNT OPTIMIZATION: Count created tasks without assignments (root tasks only)
+     * @param userId User ID
+     * @return Count of created tasks without assignments
+     */
+    @Query("SELECT COUNT(t) FROM Task t WHERE t.createdBy.id = :userId AND t.parent IS NULL AND t.deleted = false " +
+           "AND NOT EXISTS (SELECT 1 FROM Assignment a WHERE a.task.id = t.id)")
+    int countCreatedTasksWithoutAssignments(@Param("userId") Integer userId);
+    
+    /**
+     * 🚀 COUNT OPTIMIZATION: Count assigned tasks by user ID (root tasks only)
+     * @param userId User ID
+     * @return Count of assigned tasks
+     */
+    @Query("SELECT COUNT(DISTINCT t) FROM Task t JOIN Assignment a ON t.id = a.task.id " +
+           "WHERE a.recipientType = 'user' AND a.recipientId = :userId AND t.deleted = false")
+    int countAssignedTasksByUserId(@Param("userId") Integer userId);
+    
+    /**
+     * 🚀 COUNT OPTIMIZATION: Count received tasks by user/team/unit ID (root tasks only)
+     * @param userId User ID
+     * @param teamId Team ID (can be null)
+     * @param unitId Unit ID (can be null)
+     * @return Count of received tasks
+     */
+    @Query("SELECT COUNT(DISTINCT t) FROM Task t JOIN Assignment a ON t.id = a.task.id " +
+           "WHERE t.deleted = false AND (" +
+           "(a.recipientType = 'user' AND a.recipientId = :userId) OR " +
+           "(:teamId IS NOT NULL AND a.recipientType = 'team' AND a.recipientId = :teamId) OR " +
+           "(:unitId IS NOT NULL AND a.recipientType = 'unit' AND a.recipientId = :unitId))")
+    int countReceivedTasksByUserId(@Param("userId") Integer userId, 
+                                   @Param("teamId") Integer teamId, 
+                                   @Param("unitId") Integer unitId);
 }

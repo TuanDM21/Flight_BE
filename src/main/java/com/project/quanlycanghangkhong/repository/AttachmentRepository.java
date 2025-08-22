@@ -63,6 +63,18 @@ public interface AttachmentRepository extends JpaRepository<Attachment, Integer>
      */
     List<Attachment> findByTask_IdAndIsDeletedFalse(Integer taskId);
     
+    /**
+     * 🚀 BATCH OPTIMIZED: Get attachments by multiple task IDs with all relationships fetched
+     * @param taskIds List of task IDs
+     * @return List of attachments for all tasks with full data
+     */
+    @Query("SELECT a FROM Attachment a " +
+           "LEFT JOIN FETCH a.uploadedBy " +
+           "LEFT JOIN FETCH a.task " +
+           "WHERE a.task.id IN :taskIds AND a.isDeleted = false " +
+           "ORDER BY a.createdAt DESC")
+    List<Attachment> findByTaskIdInAndIsDeletedFalse(@Param("taskIds") List<Integer> taskIds);
+    
     // ============== UTILITY QUERIES (ĐANG BỔ SUNG) ==============
     
     /**

@@ -50,6 +50,14 @@ public class MyTasksResponse {
         
         @Schema(description = "Hierarchy information for assigned tasks")
         private HierarchyInfo hierarchyInfo;
+        
+        // Constructor with just counts (no hierarchy info)
+        public TaskCountMetadata(int createdCount, int assignedCount, int receivedCount) {
+            this.createdCount = createdCount;
+            this.assignedCount = assignedCount;
+            this.receivedCount = receivedCount;
+            this.hierarchyInfo = null;
+        }
     }
     
     @Data

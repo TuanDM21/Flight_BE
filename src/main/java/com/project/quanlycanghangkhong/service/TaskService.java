@@ -72,6 +72,14 @@ public interface TaskService {
     com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithCountStandardizedAndPagination(String type, String filter, Integer page, Integer size);
     
     /**
+     * 🚀 ULTRA OPTIMIZED: Get my tasks with batch loading - Performance target <500ms
+     * Zero N+1 queries, batch loading for all relationships
+     * @param type Task type (created, assigned, received)
+     * @return MyTasksData with ultra-fast performance
+     */
+    com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithCountStandardizedUltraFast(String type);
+    
+    /**
      * Tìm kiếm nâng cao tasks với nhiều tiêu chí - ADVANCED SEARCH (query parameters)
      * Chỉ áp dụng cho type=assigned với các tiêu chí tìm kiếm nâng cao qua query parameters
      * @param type Loại task (chỉ "assigned" được hỗ trợ)
@@ -143,6 +151,20 @@ public interface TaskService {
      * @return Danh sách task gốc
      */
     List<TaskDetailDTO> getRootTasks();
+    
+    /**
+     * Lấy toàn bộ cây con (subtree) của một task - bao gồm task đó và tất cả subtask bên dưới
+     * @param taskId ID task gốc để lấy cây con
+     * @return Danh sách task theo thứ tự depth-first (task cha trước, subtask sau)
+     */
+    List<TaskDetailDTO> getTaskSubtree(Integer taskId);
+    
+    /**
+     * Lấy toàn bộ cây con (subtree) với cấu trúc phân cấp nested - dễ dàng cho frontend hiển thị
+     * @param taskId ID task gốc để lấy cây con
+     * @return TaskTreeDTO với cấu trúc nested hierarchy
+     */
+    com.project.quanlycanghangkhong.dto.response.task.TaskTreeDTO getTaskSubtreeHierarchical(Integer taskId);
     
     // === ATTACHMENT MANAGEMENT ===
     // Attachment chỉ được quản lý thông qua createTask và updateTask

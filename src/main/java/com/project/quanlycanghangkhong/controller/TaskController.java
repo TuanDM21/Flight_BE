@@ -15,6 +15,7 @@ import com.project.quanlycanghangkhong.dto.response.task.ApiMyTasksResponse;
 import com.project.quanlycanghangkhong.dto.response.task.MyTasksData;
 import com.project.quanlycanghangkhong.dto.response.task.ApiTaskAttachmentsSimplifiedResponse;
 import com.project.quanlycanghangkhong.dto.response.task.ApiTaskAttachmentUploadResponse;
+import com.project.quanlycanghangkhong.dto.response.task.TaskTreeDTO;
 import com.project.quanlycanghangkhong.dto.request.TaskAttachmentUploadRequest;
 import com.project.quanlycanghangkhong.dto.request.AdvancedSearchRequest;
 
@@ -229,9 +230,18 @@ public class TaskController {
             // Sử dụng advanced search cho tất cả type với các feature được hỗ trợ
             response = taskService.getMyTasksWithAdvancedSearchAndPagination(type, filter, keyword, 
                 startTime, endTime, priorities, recipientTypes, recipientIds, page, size);
-        } else {
+        } else if (page != null || size != null) {
             // Sử dụng search thông thường với pagination
             response = taskService.getMyTasksWithCountStandardizedAndPagination(type, filter, page, size);
+        } else {
+            // 🚀 ULTRA FAST: Sử dụng batch loading optimization cho simple requests
+            response = taskService.getMyTasksWithCountStandardizedUltraFast(type);
+            
+            // Apply filter if specified (for assigned type only)
+            if ("assigned".equals(type.toLowerCase()) && filter != null && !filter.isEmpty()) {
+                // Fall back to standard method with filter if ultra-fast doesn't support filtering yet
+                response = taskService.getMyTasksWithCountStandardized(type, filter);
+            }
         }
         
         return ResponseEntity.ok(ApiMyTasksResponse.success(response));
@@ -270,6 +280,42 @@ public class TaskController {
         List<TaskDetailDTO> rootTasks = taskService.getRootTasks();
         return ResponseEntity.ok(new ApiAllTasksResponse("Thành công", 200, rootTasks, true));
     }
+
+        @GetMapping("/{id}/subtree")
+    @Operation(summary = "Lấy toàn bộ cây con của task (flat list)", 
+               description = "Lấy task cùng với tất cả subtask dưới dạng flat list")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Thành công"),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy task")
+    })
+    public ResponseEntity<List<TaskDetailDTO>> getTaskSubtree(@PathVariable Integer id) {
+        List<TaskDetailDTO> subtree = taskService.getTaskSubtree(id);
+        
+        if (subtree.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        return ResponseEntity.ok(subtree);
+    }
+
+    @GetMapping("/{id}/tree")
+    @Operation(summary = "Lấy toàn bộ cây con của task (hierarchical structure)", 
+               description = "Lấy task cùng với tất cả subtask theo cấu trúc phân cấp nested - dễ dàng cho frontend hiển thị tree view")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Thành công"),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy task")
+    })
+    public ResponseEntity<TaskTreeDTO> getTaskTree(@PathVariable Integer id) {
+        TaskTreeDTO taskTree = taskService.getTaskSubtreeHierarchical(id);
+        
+        if (taskTree == null) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        return ResponseEntity.ok(taskTree);
+    }
+    
+    // Existing endpoints...
 
     // === ATTACHMENT MANAGEMENT ===
     // Attachment chỉ được quản lý thông qua createTask và updateTask

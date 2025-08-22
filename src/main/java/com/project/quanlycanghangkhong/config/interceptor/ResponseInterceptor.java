@@ -56,6 +56,11 @@ public class ResponseInterceptor implements ResponseBodyAdvice<Object> {
 		if (path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs")) {
 			return body;
 		}
+		
+		// Nếu là các endpoint subtree/tree của task, trả về nguyên vẹn (RESTful standard)
+		if (path.matches("/api/tasks/\\d+/(subtree|tree)")) {
+			return body;
+		}
 
 		// Nếu body là null, trả về ApiResponseCustom với data là null
 		if (body == null) {
