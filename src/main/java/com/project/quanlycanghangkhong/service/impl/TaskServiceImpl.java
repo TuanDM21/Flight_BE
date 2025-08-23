@@ -48,6 +48,12 @@ public class TaskServiceImpl implements TaskService {
     @Autowired
     private AttachmentRepository attachmentRepository;
 
+    @Autowired
+    private com.project.quanlycanghangkhong.repository.TeamRepository teamRepository;
+
+    @Autowired
+    private com.project.quanlycanghangkhong.repository.UnitRepository unitRepository;
+
     private TaskDTO convertToDTO(Task task) {
         TaskDTO dto = new TaskDTO();
         dto.setId(task.getId());
@@ -324,7 +330,7 @@ public class TaskServiceImpl implements TaskService {
         return attDto;
     }
 
-    // ✅ Optimize recipient user loading
+    // ✅ Optimize recipient user loading with team/unit info
     private void setRecipientUserOptimized(AssignmentDTO adto, String recipientType, Integer recipientId) {
         if (recipientId == null) return;
         
@@ -334,14 +340,23 @@ public class TaskServiceImpl implements TaskService {
                     .ifPresent(u -> adto.setRecipientUser(new UserDTO(u)));
                 break;
             case "team":
-                userRepository.findTeamLeadByTeamId(recipientId)
-                    .ifPresent(u -> adto.setRecipientUser(new UserDTO(u)));
+                teamRepository.findById(recipientId).ifPresent(team -> {
+                    adto.setRecipientTeamName(team.getTeamName());
+                    userRepository.findTeamLeadByTeamId(team.getId()).ifPresent(teamLead -> {
+                        adto.setRecipientTeamLead(new UserDTO(teamLead));
+                    });
+                });
                 break;
             case "unit":
-                userRepository.findUnitLeadByUnitId(recipientId)
-                    .ifPresent(u -> adto.setRecipientUser(new UserDTO(u)));
+                unitRepository.findById(recipientId).ifPresent(unit -> {
+                    adto.setRecipientUnitName(unit.getUnitName());
+                    userRepository.findUnitLeadByUnitId(unit.getId()).ifPresent(unitLead -> {
+                        adto.setRecipientUnitLead(new UserDTO(unitLead));
+                    });
+                });
                 break;
         }
+        // Note: This method is used for single conversions - batch conversion uses pre-loaded data
     }
 
     @Override
@@ -1170,7 +1185,11 @@ public class TaskServiceImpl implements TaskService {
     private TaskDetailDTO convertToTaskDetailDTOUltraFast(Task task, 
                                                          List<Assignment> assignments,
                                                          List<Attachment> attachments,
-                                                         Map<Integer, User> usersById) {
+                                                         Map<Integer, User> usersById,
+                                                         Map<Integer, com.project.quanlycanghangkhong.model.Team> teamsById,
+                                                         Map<Integer, com.project.quanlycanghangkhong.model.Unit> unitsById,
+                                                         Map<Integer, User> teamLeadsById,
+                                                         Map<Integer, User> unitLeadsById) {
         TaskDetailDTO dto = new TaskDetailDTO();
         dto.setId(task.getId());
         dto.setTitle(task.getTitle());
@@ -1200,7 +1219,7 @@ public class TaskServiceImpl implements TaskService {
         
         // Convert assignments using pre-loaded data
         List<AssignmentDTO> assignmentDTOs = assignments.stream()
-            .map(a -> convertToAssignmentDTOUltraFast(a, usersById))
+            .map(a -> convertToAssignmentDTOUltraFast(a, usersById, teamsById, unitsById, teamLeadsById, unitLeadsById))
             .toList();
         dto.setAssignments(assignmentDTOs);
         
@@ -1216,7 +1235,12 @@ public class TaskServiceImpl implements TaskService {
     /**
      * 🚀 ULTRA FAST: Convert assignment to DTO using pre-loaded user data - Zero additional queries
      */
-    private AssignmentDTO convertToAssignmentDTOUltraFast(Assignment a, Map<Integer, User> usersById) {
+    private AssignmentDTO convertToAssignmentDTOUltraFast(Assignment a, 
+                                                         Map<Integer, User> usersById,
+                                                         Map<Integer, com.project.quanlycanghangkhong.model.Team> teamsById,
+                                                         Map<Integer, com.project.quanlycanghangkhong.model.Unit> unitsById,
+                                                         Map<Integer, User> teamLeadsById,
+                                                         Map<Integer, User> unitLeadsById) {
         AssignmentDTO adto = new AssignmentDTO();
         adto.setAssignmentId(a.getAssignmentId());
         adto.setRecipientType(a.getRecipientType());
@@ -1238,14 +1262,41 @@ public class TaskServiceImpl implements TaskService {
         
         adto.setStatus(a.getStatus());
         
-        // Use pre-loaded user data - zero additional queries
-        if ("user".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null) {
-            User recipientUser = usersById.get(a.getRecipientId());
-            if (recipientUser != null) {
-                adto.setRecipientUser(new UserDTO(recipientUser));
+        // ✅ Populate recipient information using pre-loaded data - Zero additional queries
+        if (a.getRecipientId() != null) {
+            switch (a.getRecipientType().toLowerCase()) {
+                case "user":
+                    User recipientUser = usersById.get(a.getRecipientId());
+                    if (recipientUser != null) {
+                        adto.setRecipientUser(new UserDTO(recipientUser));
+                    }
+                    break;
+                case "team":
+                    // Use pre-loaded team information
+                    com.project.quanlycanghangkhong.model.Team team = teamsById.get(a.getRecipientId());
+                    if (team != null) {
+                        adto.setRecipientTeamName(team.getTeamName());
+                        // Use pre-loaded team lead
+                        User teamLead = teamLeadsById.get(a.getRecipientId());
+                        if (teamLead != null) {
+                            adto.setRecipientTeamLead(new UserDTO(teamLead));
+                        }
+                    }
+                    break;
+                case "unit":
+                    // Use pre-loaded unit information  
+                    com.project.quanlycanghangkhong.model.Unit unit = unitsById.get(a.getRecipientId());
+                    if (unit != null) {
+                        adto.setRecipientUnitName(unit.getUnitName());
+                        // Use pre-loaded unit lead
+                        User unitLead = unitLeadsById.get(a.getRecipientId());
+                        if (unitLead != null) {
+                            adto.setRecipientUnitLead(new UserDTO(unitLead));
+                        }
+                    }
+                    break;
             }
         }
-        // Note: For team/unit recipients, we could batch load team leads/unit leads too if needed
         
         return adto;
     }
@@ -1435,23 +1486,70 @@ public class TaskServiceImpl implements TaskService {
         Map<Integer, List<Attachment>> attachmentsByTaskId = allAttachments.stream()
             .collect(Collectors.groupingBy(a -> a.getTask().getId()));
         
-        // Batch load all recipient users
+        // Batch load all recipient IDs by type
         Set<Integer> allRecipientUserIds = allAssignments.stream()
             .filter(a -> "user".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null)
             .map(Assignment::getRecipientId)
             .collect(Collectors.toSet());
-        
+            
+        Set<Integer> allTeamIds = allAssignments.stream()
+            .filter(a -> "team".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null)
+            .map(Assignment::getRecipientId)
+            .collect(Collectors.toSet());
+            
+        Set<Integer> allUnitIds = allAssignments.stream()
+            .filter(a -> "unit".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null)
+            .map(Assignment::getRecipientId)
+            .collect(Collectors.toSet());
+
+        // Batch load users for direct user recipients
         Map<Integer, User> usersById = allRecipientUserIds.isEmpty() ? 
             Map.of() : 
             userRepository.findAllById(allRecipientUserIds).stream()
                 .collect(Collectors.toMap(User::getId, u -> u));
         
+        // Batch load teams
+        Map<Integer, com.project.quanlycanghangkhong.model.Team> teamsById = allTeamIds.isEmpty() ?
+            Map.of() :
+            teamRepository.findAllById(allTeamIds).stream()
+                .collect(Collectors.toMap(com.project.quanlycanghangkhong.model.Team::getId, t -> t));
+        
+        // Batch load units  
+        Map<Integer, com.project.quanlycanghangkhong.model.Unit> unitsById = allUnitIds.isEmpty() ?
+            Map.of() :
+            unitRepository.findAllById(allUnitIds).stream()
+                .collect(Collectors.toMap(com.project.quanlycanghangkhong.model.Unit::getId, u -> u));
+        
+        // Batch load team leads
+        Map<Integer, User> teamLeadsById = allTeamIds.isEmpty() ?
+            Map.of() :
+            allTeamIds.stream()
+                .collect(Collectors.toMap(
+                    teamId -> teamId,
+                    teamId -> userRepository.findTeamLeadByTeamId(teamId).orElse(null)
+                ))
+                .entrySet().stream()
+                .filter(entry -> entry.getValue() != null)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        
+        // Batch load unit leads
+        Map<Integer, User> unitLeadsById = allUnitIds.isEmpty() ?
+            Map.of() :
+            allUnitIds.stream()
+                .collect(Collectors.toMap(
+                    unitId -> unitId,
+                    unitId -> userRepository.findUnitLeadByUnitId(unitId).orElse(null)
+                ))
+                .entrySet().stream()
+                .filter(entry -> entry.getValue() != null)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
         // Convert all tasks using pre-loaded data
         return tasks.stream()
             .map(task -> convertToTaskDetailDTOUltraFast(task, 
                 assignmentsByTaskId.getOrDefault(task.getId(), List.of()),
                 attachmentsByTaskId.getOrDefault(task.getId(), List.of()),
-                usersById))
+                usersById, teamsById, unitsById, teamLeadsById, unitLeadsById))
             .collect(Collectors.toList());
     }
     

@@ -16,6 +16,12 @@ public class AssignmentDTO {
     private UserDTO completedByUser;
     private UserDTO recipientUser;
     private Integer recipientId; // Id của team hoặc unit nếu recipientType là 'team' hoặc 'unit'
+    
+    // Additional fields for team/unit information
+    private String recipientTeamName;    // Tên team nếu recipientType = 'team'
+    private String recipientUnitName;    // Tên unit nếu recipientType = 'unit'
+    private UserDTO recipientTeamLead;   // Team lead nếu recipientType = 'team'
+    private UserDTO recipientUnitLead;   // Unit lead nếu recipientType = 'unit'
 
     public Integer getAssignmentId() {
         return assignmentId;
@@ -111,5 +117,37 @@ public class AssignmentDTO {
 
     public void setRecipientId(Integer recipientId) {
         this.recipientId = recipientId;
+    }
+
+    public String getRecipientTeamName() {
+        return recipientTeamName;
+    }
+
+    public void setRecipientTeamName(String recipientTeamName) {
+        this.recipientTeamName = recipientTeamName;
+    }
+
+    public String getRecipientUnitName() {
+        return recipientUnitName;
+    }
+
+    public void setRecipientUnitName(String recipientUnitName) {
+        this.recipientUnitName = recipientUnitName;
+    }
+
+    public UserDTO getRecipientTeamLead() {
+        return recipientTeamLead;
+    }
+
+    public void setRecipientTeamLead(UserDTO recipientTeamLead) {
+        this.recipientTeamLead = recipientTeamLead;
+    }
+
+    public UserDTO getRecipientUnitLead() {
+        return recipientUnitLead;
+    }
+
+    public void setRecipientUnitLead(UserDTO recipientUnitLead) {
+        this.recipientUnitLead = recipientUnitLead;
     }
 }
