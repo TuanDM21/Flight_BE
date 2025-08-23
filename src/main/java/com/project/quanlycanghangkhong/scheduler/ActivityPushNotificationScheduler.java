@@ -8,7 +8,7 @@ import com.project.quanlycanghangkhong.repository.ActivityRepository;
 import com.project.quanlycanghangkhong.repository.UserRepository;
 import com.project.quanlycanghangkhong.service.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
+// import org.springframework.scheduling.annotation.Scheduled;  // ✅ COMMENTED: Import không cần thiết
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -28,7 +28,7 @@ public class ActivityPushNotificationScheduler {
     @Autowired
     private NotificationService notificationService;
 
-    @Scheduled(fixedRate = 60000)
+    // @Scheduled(fixedRate = 60000)  // ✅ COMMENTED: Tắt auto push notifications
     public void sendPushNotificationsBeforeActivity() {
         System.out.println("[Scheduler] Kiểm tra gửi push notification trước 30 phút cho activity...");
         ZoneId zoneId = ZoneId.of("Asia/Ho_Chi_Minh");

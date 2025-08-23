@@ -2,7 +2,7 @@ package com.project.quanlycanghangkhong.scheduler;
 
 import com.project.quanlycanghangkhong.service.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
+// import org.springframework.scheduling.annotation.Scheduled;  // ✅ COMMENTED: Import không cần thiết
 import org.springframework.stereotype.Component;
 
 @Component
@@ -11,7 +11,7 @@ public class NotificationCleanupScheduler {
     private NotificationService notificationService;
 
     // Chạy mỗi ngày lúc 2h sáng
-    @Scheduled(cron = "0 0 2 * * ?")
+    // @Scheduled(cron = "0 0 2 * * ?")  // ✅ COMMENTED: Tắt auto cleanup notifications
     public void cleanupOldNotifications() {
         notificationService.deleteOldNotifications();
     }

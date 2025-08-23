@@ -8,7 +8,7 @@ import com.project.quanlycanghangkhong.repository.AssignmentRepository;
 import com.project.quanlycanghangkhong.repository.TaskRepository;
 import com.project.quanlycanghangkhong.service.TaskService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
+// import org.springframework.scheduling.annotation.Scheduled;  // ✅ COMMENTED: Import không cần thiết
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,7 +35,7 @@ public class OverdueTaskService {
      * Scheduled job chạy mỗi giờ để cập nhật trạng thái overdue
      * Cron expression: 0 0 * * * * = chạy mỗi giờ đúng phút 0
      */
-    @Scheduled(cron = "0 0 * * * *") // Chạy mỗi giờ
+    // @Scheduled(cron = "0 0 * * * *") // ✅ COMMENTED: Tắt auto update overdue status
     @Transactional
     public void updateOverdueStatus() {
         LocalDateTime now = LocalDateTime.now();

@@ -476,11 +476,12 @@ public interface TaskRepository extends JpaRepository<Task, Integer> {
                                              @Param("unitId") Integer unitId);
     
     /**
-     * 🚀 COUNT OPTIMIZATION: Count created tasks without assignments (root tasks only)
+     * 🚀 COUNT OPTIMIZATION: Count created tasks without assignments (including subtasks)
+     * ✅ FIX: Remove parent IS NULL filter to match data method behavior
      * @param userId User ID
-     * @return Count of created tasks without assignments
+     * @return Count of created tasks without assignments (including subtasks)
      */
-    @Query("SELECT COUNT(t) FROM Task t WHERE t.createdBy.id = :userId AND t.parent IS NULL AND t.deleted = false " +
+    @Query("SELECT COUNT(t) FROM Task t WHERE t.createdBy.id = :userId AND t.deleted = false " +
            "AND NOT EXISTS (SELECT 1 FROM Assignment a WHERE a.task.id = t.id)")
     int countCreatedTasksWithoutAssignments(@Param("userId") Integer userId);
     
