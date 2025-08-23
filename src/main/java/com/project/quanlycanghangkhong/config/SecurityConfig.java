@@ -59,15 +59,19 @@ public class SecurityConfig {
 
 		return http.build();
 	}
+
 	@Bean
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration configuration = new CorsConfiguration();
 		configuration.addAllowedOriginPattern("*"); // Cho phép tất cả origin
-		configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT","PATCH" ,"DELETE", "OPTIONS"));
-		configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "*"));
+		configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+		configuration.setAllowedHeaders(List.of("*")); // Cho phép tất cả headers
 		configuration.setAllowCredentials(true);
 		configuration.setMaxAge(3600L);
-	
+
+		// Thêm exposed headers để client có thể đọc
+		configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));
+
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		source.registerCorsConfiguration("/**", configuration);
 		return source;
