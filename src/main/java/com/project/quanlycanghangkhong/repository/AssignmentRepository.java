@@ -36,16 +36,12 @@ public interface AssignmentRepository extends JpaRepository<Assignment, Integer>
     List<Assignment> findByTaskIdIn(@Param("taskIds") List<Integer> taskIds);
     
     /**
-     * 🚀 ULTRA BATCH OPTIMIZED: Get assignments by multiple task IDs with minimal data for list view
+     * 🚀 ULTRA OPTIMIZED: Batch load assignments without heavy JOINs
+     * Only load essential assignment data, users will be batch loaded separately
      * @param taskIds List of task IDs
-     * @return List of assignments with essential data only
+     * @return List of assignments with minimal data
      */
-    @Query("SELECT a FROM Assignment a " +
-           "LEFT JOIN FETCH a.assignedBy ab " +
-           "LEFT JOIN FETCH a.completedBy cb " +
-           "LEFT JOIN FETCH a.task t " +
-           "WHERE a.task.id IN :taskIds " +
-           "ORDER BY a.assignedAt DESC")
+    @Query("SELECT a FROM Assignment a WHERE a.task.id IN :taskIds ORDER BY a.assignedAt DESC")
     List<Assignment> findByTaskIdInOptimized(@Param("taskIds") List<Integer> taskIds);
     
     // ============== OVERDUE SUPPORT METHODS ==============

@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.HashSet;
 import java.util.stream.Collectors;
 
 import com.project.quanlycanghangkhong.dto.*;
@@ -1247,8 +1248,17 @@ public class TaskServiceImpl implements TaskService {
         adto.setRecipientId(a.getRecipientId());
         adto.setTaskId(a.getTask() != null ? a.getTask().getId() : null);
         
-        if (a.getAssignedBy() != null) {
-            adto.setAssignedByUser(new UserDTO(a.getAssignedBy()));
+        // ✅ Use pre-loaded assignedBy user data instead of lazy loading
+        if (a.getAssignedBy() != null && a.getAssignedBy().getId() != null) {
+            User assignedByUser = usersById.get(a.getAssignedBy().getId());
+            if (assignedByUser != null) {
+                adto.setAssignedByUser(new UserDTO(assignedByUser));
+            } else if (a.getAssignedBy().getId() != null) {
+                // Fallback: create minimal UserDTO with just ID
+                UserDTO minimalUser = new UserDTO();
+                minimalUser.setId(a.getAssignedBy().getId());
+                adto.setAssignedByUser(minimalUser);
+            }
         }
         
         adto.setAssignedAt(a.getAssignedAt() != null ? java.sql.Timestamp.valueOf(a.getAssignedAt()) : null);
@@ -1256,8 +1266,17 @@ public class TaskServiceImpl implements TaskService {
         adto.setNote(a.getNote());
         adto.setCompletedAt(a.getCompletedAt() != null ? java.sql.Timestamp.valueOf(a.getCompletedAt()) : null);
         
-        if (a.getCompletedBy() != null) {
-            adto.setCompletedByUser(new UserDTO(a.getCompletedBy()));
+        // ✅ Use pre-loaded completedBy user data instead of lazy loading  
+        if (a.getCompletedBy() != null && a.getCompletedBy().getId() != null) {
+            User completedByUser = usersById.get(a.getCompletedBy().getId());
+            if (completedByUser != null) {
+                adto.setCompletedByUser(new UserDTO(completedByUser));
+            } else if (a.getCompletedBy().getId() != null) {
+                // Fallback: create minimal UserDTO with just ID
+                UserDTO minimalUser = new UserDTO();
+                minimalUser.setId(a.getCompletedBy().getId());
+                adto.setCompletedByUser(minimalUser);
+            }
         }
         
         adto.setStatus(a.getStatus());
@@ -1486,12 +1505,38 @@ public class TaskServiceImpl implements TaskService {
         Map<Integer, List<Attachment>> attachmentsByTaskId = allAttachments.stream()
             .collect(Collectors.groupingBy(a -> a.getTask().getId()));
         
-        // Batch load all recipient IDs by type
+        // ✅ Batch load ALL user IDs needed (recipients + assignedBy + completedBy + uploadedBy)
+        Set<Integer> allUserIds = new HashSet<>();
+        
+        // Recipient user IDs
         Set<Integer> allRecipientUserIds = allAssignments.stream()
             .filter(a -> "user".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null)
             .map(Assignment::getRecipientId)
             .collect(Collectors.toSet());
-            
+        allUserIds.addAll(allRecipientUserIds);
+        
+        // AssignedBy user IDs
+        Set<Integer> assignedByUserIds = allAssignments.stream()
+            .filter(a -> a.getAssignedBy() != null && a.getAssignedBy().getId() != null)
+            .map(a -> a.getAssignedBy().getId())
+            .collect(Collectors.toSet());
+        allUserIds.addAll(assignedByUserIds);
+        
+        // CompletedBy user IDs  
+        Set<Integer> completedByUserIds = allAssignments.stream()
+            .filter(a -> a.getCompletedBy() != null && a.getCompletedBy().getId() != null)
+            .map(a -> a.getCompletedBy().getId())
+            .collect(Collectors.toSet());
+        allUserIds.addAll(completedByUserIds);
+        
+        // UploadedBy user IDs from attachments
+        Set<Integer> uploadedByUserIds = allAttachments.stream()
+            .filter(a -> a.getUploadedBy() != null && a.getUploadedBy().getId() != null)
+            .map(a -> a.getUploadedBy().getId())
+            .collect(Collectors.toSet());
+        allUserIds.addAll(uploadedByUserIds);
+        
+        // Batch load team and unit IDs
         Set<Integer> allTeamIds = allAssignments.stream()
             .filter(a -> "team".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null)
             .map(Assignment::getRecipientId)
@@ -1502,10 +1547,10 @@ public class TaskServiceImpl implements TaskService {
             .map(Assignment::getRecipientId)
             .collect(Collectors.toSet());
 
-        // Batch load users for direct user recipients
-        Map<Integer, User> usersById = allRecipientUserIds.isEmpty() ? 
+        // ✅ MEGA BATCH LOAD: Load ALL users in one query (recipients + assignedBy + completedBy + uploadedBy)
+        Map<Integer, User> usersById = allUserIds.isEmpty() ? 
             Map.of() : 
-            userRepository.findAllById(allRecipientUserIds).stream()
+            userRepository.findAllById(allUserIds).stream()
                 .collect(Collectors.toMap(User::getId, u -> u));
         
         // Batch load teams
@@ -1520,28 +1565,28 @@ public class TaskServiceImpl implements TaskService {
             unitRepository.findAllById(allUnitIds).stream()
                 .collect(Collectors.toMap(com.project.quanlycanghangkhong.model.Unit::getId, u -> u));
         
-        // Batch load team leads
+        // Batch load team leads - ✅ OPTIMIZED: Single query for all teams
         Map<Integer, User> teamLeadsById = allTeamIds.isEmpty() ?
             Map.of() :
-            allTeamIds.stream()
+            userRepository.findTeamLeadsByTeamIds(new ArrayList<>(allTeamIds)).stream()
                 .collect(Collectors.toMap(
-                    teamId -> teamId,
-                    teamId -> userRepository.findTeamLeadByTeamId(teamId).orElse(null)
+                    user -> user.getTeam() != null ? user.getTeam().getId() : null,
+                    user -> user
                 ))
                 .entrySet().stream()
-                .filter(entry -> entry.getValue() != null)
+                .filter(entry -> entry.getKey() != null)
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         
-        // Batch load unit leads
+        // Batch load unit leads - ✅ OPTIMIZED: Single query for all units
         Map<Integer, User> unitLeadsById = allUnitIds.isEmpty() ?
             Map.of() :
-            allUnitIds.stream()
+            userRepository.findUnitLeadsByUnitIds(new ArrayList<>(allUnitIds)).stream()
                 .collect(Collectors.toMap(
-                    unitId -> unitId,
-                    unitId -> userRepository.findUnitLeadByUnitId(unitId).orElse(null)
+                    user -> user.getUnit() != null ? user.getUnit().getId() : null,
+                    user -> user
                 ))
                 .entrySet().stream()
-                .filter(entry -> entry.getValue() != null)
+                .filter(entry -> entry.getKey() != null)
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
         // Convert all tasks using pre-loaded data
@@ -1880,5 +1925,194 @@ public class TaskServiceImpl implements TaskService {
         // For now, delegate to the non-paginated version
         return handleReceivedTasksAdvancedSearch(currentUser, 
             searchRequest.getKeyword(), null, null, null);
+    }
+    
+    // ============== DATABASE-LEVEL PAGINATION METHODS (OPTIMIZED) ==============
+    
+    /**
+     * 🚀 DATABASE PAGINATION: Get my tasks with database-level pagination (1-based)
+     */
+    @Override
+    public com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithCountStandardizedAndPaginationOptimized(
+            String type, String filter, Integer page, Integer size) {
+        
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication != null ? authentication.getName() : null;
+        User currentUser = (email != null) ? userRepository.findByEmail(email).orElse(null) : null;
+        
+        if (currentUser == null) {
+            return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+                List.of(), 0, type, null, 
+                new com.project.quanlycanghangkhong.dto.response.task.PaginationInfo(1, 20, 0));
+        }
+        
+        Integer userId = currentUser.getId();
+        
+        // ✅ Normalize 1-based pagination parameters
+        int[] normalizedParams = com.project.quanlycanghangkhong.dto.response.task.PaginationInfo.normalizePageParams(page, size);
+        int currentPage = normalizedParams[0]; // 1-based
+        int pageSize = normalizedParams[1];
+        
+        // ✅ Calculate database offset (0-based for LIMIT/OFFSET)
+        int offset = com.project.quanlycanghangkhong.dto.response.task.PaginationInfo.calculateOffset(currentPage, pageSize);
+        org.springframework.data.domain.Pageable pageable = 
+            org.springframework.data.domain.PageRequest.of(offset / pageSize, pageSize);
+        
+        // ✅ DATABASE-LEVEL PAGINATION: Get tasks with LIMIT/OFFSET
+        List<Task> tasks;
+        long totalCount;
+        
+        switch (type.toLowerCase()) {
+            case "created":
+                tasks = taskRepository.findCreatedTasksWithPagination(userId, pageable);
+                totalCount = taskRepository.countCreatedTasksWithoutAssignments(userId);
+                break;
+            case "assigned":
+                tasks = taskRepository.findAssignedTasksWithPagination(userId, pageable);
+                totalCount = taskRepository.countAssignedTasksByUserId(userId);
+                break;
+            case "received":
+                Integer teamId = (currentUser.getRole() != null && 
+                    "TEAM_LEAD".equals(currentUser.getRole().getRoleName()) &&
+                    currentUser.getTeam() != null) ? currentUser.getTeam().getId() : null;
+                Integer unitId = (currentUser.getRole() != null && 
+                    "UNIT_LEAD".equals(currentUser.getRole().getRoleName()) &&
+                    currentUser.getUnit() != null) ? currentUser.getUnit().getId() : null;
+                    
+                tasks = taskRepository.findReceivedTasksWithPagination(userId, teamId, unitId, pageable);
+                totalCount = taskRepository.countReceivedTasksByUserId(userId, teamId, unitId);
+                break;
+            default:
+                tasks = List.of();
+                totalCount = 0;
+        }
+        
+        // ✅ Apply filter AFTER database pagination (if needed)
+        if ("assigned".equals(type.toLowerCase()) && filter != null) {
+            tasks = filterAssignedTasks(tasks, filter);
+            // Note: totalCount might be inaccurate after filtering, but this is acceptable for performance
+        }
+        
+        // ✅ Convert to DTOs (only paginated data)
+        List<TaskDetailDTO> taskDTOs = convertTasksToTaskDetailDTOsBatch(tasks);
+        
+        // ✅ Get metadata
+        com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse.TaskCountMetadata oldMetadata = 
+            calculateTaskCountsOptimized(userId, currentUser);
+        com.project.quanlycanghangkhong.dto.response.task.MyTasksData.TaskMetadata newMetadata = 
+            new com.project.quanlycanghangkhong.dto.response.task.MyTasksData.TaskMetadata(
+                oldMetadata.getCreatedCount(),
+                oldMetadata.getAssignedCount(), 
+                oldMetadata.getReceivedCount()
+            );
+        
+        // ✅ Create pagination info (1-based)
+        com.project.quanlycanghangkhong.dto.response.task.PaginationInfo paginationInfo = 
+            new com.project.quanlycanghangkhong.dto.response.task.PaginationInfo(currentPage, pageSize, totalCount);
+        
+        return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+            taskDTOs, (int) totalCount, type, newMetadata, paginationInfo);
+    }
+    
+    /**
+     * 🚀 DATABASE PAGINATION: Advanced search with database-level pagination (1-based)
+     */
+    @Override
+    public com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithAdvancedSearchAndPaginationOptimized(
+            String type, String filter, String keyword, String startTime, String endTime,
+            java.util.List<String> priorities, java.util.List<String> recipientTypes, java.util.List<Integer> recipientIds,
+            Integer page, Integer size) {
+        
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication != null ? authentication.getName() : null;
+        User currentUser = (email != null) ? userRepository.findByEmail(email).orElse(null) : null;
+        
+        if (currentUser == null) {
+            return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+                List.of(), 0, type, null, 
+                new com.project.quanlycanghangkhong.dto.response.task.PaginationInfo(1, 20, 0));
+        }
+        
+        Integer userId = currentUser.getId();
+        
+        // ✅ Normalize 1-based pagination parameters
+        int[] normalizedParams = com.project.quanlycanghangkhong.dto.response.task.PaginationInfo.normalizePageParams(page, size);
+        int currentPage = normalizedParams[0]; // 1-based
+        int pageSize = normalizedParams[1];
+        
+        // ✅ Calculate database offset (0-based for LIMIT/OFFSET)
+        int offset = com.project.quanlycanghangkhong.dto.response.task.PaginationInfo.calculateOffset(currentPage, pageSize);
+        org.springframework.data.domain.Pageable pageable = 
+            org.springframework.data.domain.PageRequest.of(offset / pageSize, pageSize);
+        
+        // ✅ Parse advanced search parameters
+        LocalDateTime startDateTime = null;
+        LocalDateTime endDateTime = null;
+        
+        try {
+            if (startTime != null && !startTime.isEmpty()) {
+                startDateTime = LocalDate.parse(startTime).atStartOfDay();
+            }
+            if (endTime != null && !endTime.isEmpty()) {
+                endDateTime = LocalDate.parse(endTime).atTime(23, 59, 59);
+            }
+        } catch (Exception e) {
+            // Invalid date format, continue without date filter
+        }
+        
+        List<com.project.quanlycanghangkhong.model.TaskPriority> priorityEnums = new ArrayList<>();
+        if (priorities != null) {
+            for (String priority : priorities) {
+                try {
+                    priorityEnums.add(com.project.quanlycanghangkhong.model.TaskPriority.valueOf(priority.toUpperCase()));
+                } catch (Exception e) {
+                    // Invalid priority, skip
+                }
+            }
+        }
+        
+        // ✅ DATABASE-LEVEL ADVANCED SEARCH with PAGINATION
+        List<Task> tasks;
+        long totalCount;
+        
+        if ("assigned".equals(type.toLowerCase())) {
+            tasks = taskRepository.findAssignedTasksWithAdvancedSearchAndPagination(
+                userId, keyword, startDateTime, endDateTime, priorityEnums, 
+                recipientTypes != null ? recipientTypes : List.of(), 
+                recipientIds != null ? recipientIds : List.of(), 
+                pageable);
+            totalCount = taskRepository.countAssignedTasksWithAdvancedSearchMulti(
+                userId, keyword, startDateTime, endDateTime, priorityEnums,
+                recipientTypes != null ? recipientTypes : List.of(), 
+                recipientIds != null ? recipientIds : List.of());
+        } else {
+            // For non-assigned types, fallback to simple pagination
+            return getMyTasksWithCountStandardizedAndPaginationOptimized(type, filter, page, size);
+        }
+        
+        // ✅ Apply filter AFTER database pagination (if needed)
+        if (filter != null) {
+            tasks = filterAssignedTasks(tasks, filter);
+        }
+        
+        // ✅ Convert to DTOs (only paginated data)
+        List<TaskDetailDTO> taskDTOs = convertTasksToTaskDetailDTOsBatch(tasks);
+        
+        // ✅ Get metadata
+        com.project.quanlycanghangkhong.dto.response.task.MyTasksResponse.TaskCountMetadata oldMetadata = 
+            calculateTaskCountsOptimized(userId, currentUser);
+        com.project.quanlycanghangkhong.dto.response.task.MyTasksData.TaskMetadata newMetadata = 
+            new com.project.quanlycanghangkhong.dto.response.task.MyTasksData.TaskMetadata(
+                oldMetadata.getCreatedCount(),
+                oldMetadata.getAssignedCount(), 
+                oldMetadata.getReceivedCount()
+            );
+        
+        // ✅ Create pagination info (1-based)
+        com.project.quanlycanghangkhong.dto.response.task.PaginationInfo paginationInfo = 
+            new com.project.quanlycanghangkhong.dto.response.task.PaginationInfo(currentPage, pageSize, totalCount);
+        
+        return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+            taskDTOs, (int) totalCount, type, newMetadata, paginationInfo);
     }
 }

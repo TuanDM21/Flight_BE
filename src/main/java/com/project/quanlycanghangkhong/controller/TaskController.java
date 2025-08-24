@@ -145,7 +145,7 @@ public class TaskController {
 
     @GetMapping("/my")
     @Operation(summary = "Lấy công việc của tôi theo loại với ROOT TASKS count (sorted by latest), advanced search và pagination", 
-               description = "Lấy danh sách công việc theo loại với sort theo thời gian mới nhất và thông tin count ROOT TASKS: created (đã tạo nhưng chưa giao việc - flat list), assigned (đã giao việc bao gồm tất cả subtasks với hierarchyLevel), received (được giao việc - flat list). Count chỉ tính ROOT TASKS (parent IS NULL), data vẫn bao gồm tất cả tasks để hiển thị hierarchy. Hỗ trợ filter cho type=assigned: completed, pending, urgent, overdue. Hỗ trợ advanced search cho TẤT CẢ TYPES với keyword, priorities, time range (format: yyyy-MM-dd). Recipient search chỉ cho type=assigned. Hỗ trợ pagination với page (bắt đầu từ 0) và size (max 100, default 20)")
+               description = "Lấy danh sách công việc theo loại với sort theo thời gian mới nhất và thông tin count ROOT TASKS: created (đã tạo nhưng chưa giao việc - flat list), assigned (đã giao việc bao gồm tất cả subtasks với hierarchyLevel), received (được giao việc - flat list). Count chỉ tính ROOT TASKS (parent IS NULL), data vẫn bao gồm tất cả tasks để hiển thị hierarchy. Hỗ trợ filter cho type=assigned: completed, pending, urgent, overdue. Hỗ trợ advanced search cho TẤT CẢ TYPES với keyword, priorities, time range (format: yyyy-MM-dd). Recipient search chỉ cho type=assigned. Hỗ trợ pagination với page (bắt đầu từ 1) và size (max 100, default 20)")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiMyTasksResponse.class))),
         @ApiResponse(responseCode = "400", description = "Tham số type hoặc filter không hợp lệ", content = @Content(schema = @Schema(implementation = ApiMyTasksResponse.class)))
@@ -159,7 +159,7 @@ public class TaskController {
             @RequestParam(required = false) List<String> priorities,
             @RequestParam(required = false) List<String> recipientTypes,
             @RequestParam(required = false) List<Integer> recipientIds,
-            @RequestParam(required = false, defaultValue = "0") Integer page,
+            @RequestParam(required = false, defaultValue = "1") Integer page,
             @RequestParam(required = false, defaultValue = "20") Integer size) {
         if (!type.matches("created|assigned|received")) {
             return ResponseEntity.badRequest().body(
@@ -211,10 +211,10 @@ public class TaskController {
             }
         }
         
-        // Validate pagination parameters
-        if (page != null && page < 0) {
+        // Validate pagination parameters (1-based)
+        if (page != null && page < 1) {
             return ResponseEntity.badRequest().body(
-                ApiMyTasksResponse.error("Page phải >= 0", 400)
+                ApiMyTasksResponse.error("Page phải >= 1", 400)
             );
         }
         if (size != null && (size <= 0 || size > 100)) {
@@ -228,11 +228,11 @@ public class TaskController {
         
         if (hasAdvancedSearch) {
             // Sử dụng advanced search cho tất cả type với các feature được hỗ trợ
-            response = taskService.getMyTasksWithAdvancedSearchAndPagination(type, filter, keyword, 
+            response = taskService.getMyTasksWithAdvancedSearchAndPaginationOptimized(type, filter, keyword, 
                 startTime, endTime, priorities, recipientTypes, recipientIds, page, size);
         } else if (page != null || size != null) {
-            // Sử dụng search thông thường với pagination
-            response = taskService.getMyTasksWithCountStandardizedAndPagination(type, filter, page, size);
+            // Sử dụng search thông thường với pagination tối ưu (DATABASE-LEVEL)
+            response = taskService.getMyTasksWithCountStandardizedAndPaginationOptimized(type, filter, page, size);
         } else {
             // 🚀 ULTRA FAST: Sử dụng batch loading optimization cho simple requests
             response = taskService.getMyTasksWithCountStandardizedUltraFast(type);

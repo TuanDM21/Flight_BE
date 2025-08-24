@@ -486,12 +486,12 @@ public interface TaskRepository extends JpaRepository<Task, Integer> {
     int countCreatedTasksWithoutAssignments(@Param("userId") Integer userId);
     
     /**
-     * 🚀 COUNT OPTIMIZATION: Count assigned tasks by user ID (root tasks only)
-     * @param userId User ID
+     * 🚀 COUNT OPTIMIZATION: Count assigned tasks by user ID (tasks user has assigned to others)
+     * @param userId User ID who assigned the tasks
      * @return Count of assigned tasks
      */
-    @Query("SELECT COUNT(DISTINCT t) FROM Task t JOIN Assignment a ON t.id = a.task.id " +
-           "WHERE a.recipientType = 'user' AND a.recipientId = :userId AND t.deleted = false")
+    @Query("SELECT COUNT(DISTINCT a.task) FROM Assignment a " +
+           "WHERE a.assignedBy.id = :userId AND a.task.deleted = false")
     int countAssignedTasksByUserId(@Param("userId") Integer userId);
     
     /**
@@ -509,4 +509,90 @@ public interface TaskRepository extends JpaRepository<Task, Integer> {
     int countReceivedTasksByUserId(@Param("userId") Integer userId, 
                                    @Param("teamId") Integer teamId, 
                                    @Param("unitId") Integer unitId);
+
+    // ============== DATABASE-LEVEL PAGINATION METHODS (1-BASED) ==============
+    
+    /**
+     * 🚀 DATABASE PAGINATION: Get created tasks with database-level pagination
+     * @param userId User ID
+     * @param offset Number of records to skip (calculated from page)
+     * @param limit Number of records per page
+     * @return List of tasks with LIMIT/OFFSET
+     */
+    @Query("SELECT t FROM Task t WHERE t.createdBy.id = :userId AND t.deleted = false " +
+           "AND NOT EXISTS (SELECT a FROM Assignment a WHERE a.task = t) " +
+           "ORDER BY t.updatedAt DESC, t.createdAt DESC")
+    List<Task> findCreatedTasksWithPagination(@Param("userId") Integer userId, 
+                                             org.springframework.data.domain.Pageable pageable);
+    
+    /**
+     * 🚀 DATABASE PAGINATION: Get assigned tasks with database-level pagination
+     * @param userId User ID
+     * @param pageable Pagination parameters
+     * @return List of tasks with LIMIT/OFFSET
+     */
+    @Query("SELECT DISTINCT a.task FROM Assignment a WHERE a.assignedBy.id = :userId AND a.task.deleted = false " +
+           "ORDER BY a.task.updatedAt DESC, a.task.createdAt DESC")
+    List<Task> findAssignedTasksWithPagination(@Param("userId") Integer userId,
+                                              org.springframework.data.domain.Pageable pageable);
+    
+    /**
+     * 🚀 DATABASE PAGINATION: Get received tasks with database-level pagination - OPTIMIZED
+     * Split complex OR query into UNION for better performance
+     * @param userId User ID
+     * @param teamId Team ID (nullable)
+     * @param unitId Unit ID (nullable)
+     * @param pageable Pagination parameters
+     * @return List of tasks with LIMIT/OFFSET
+     */
+    @Query(value = "(" +
+           "SELECT DISTINCT t.* FROM task t " +
+           "INNER JOIN assignment a ON a.task_id = t.id " +
+           "WHERE a.recipient_type = 'user' AND a.recipient_id = :userId AND t.deleted = false" +
+           ") UNION (" +
+           "SELECT DISTINCT t.* FROM task t " +
+           "INNER JOIN assignment a ON a.task_id = t.id " +
+           "WHERE :teamId IS NOT NULL AND a.recipient_type = 'team' AND a.recipient_id = :teamId AND t.deleted = false" +
+           ") UNION (" +
+           "SELECT DISTINCT t.* FROM task t " +
+           "INNER JOIN assignment a ON a.task_id = t.id " +
+           "WHERE :unitId IS NOT NULL AND a.recipient_type = 'unit' AND a.recipient_id = :unitId AND t.deleted = false" +
+           ") ORDER BY updated_at DESC, created_at DESC " +
+           "LIMIT :#{#pageable.pageSize} OFFSET :#{#pageable.offset}",
+           nativeQuery = true)
+    List<Task> findReceivedTasksWithPagination(@Param("userId") Integer userId, 
+                                              @Param("teamId") Integer teamId, 
+                                              @Param("unitId") Integer unitId,
+                                              org.springframework.data.domain.Pageable pageable);
+    
+    /**
+     * 🚀 DATABASE PAGINATION: Get advanced search results with database-level pagination
+     * @param userId User ID
+     * @param keyword Search keyword (nullable)
+     * @param startTime Start time filter (nullable)
+     * @param endTime End time filter (nullable)
+     * @param priorities Priority list (can be empty)
+     * @param recipientTypes Recipient types (can be empty)
+     * @param recipientIds Recipient IDs (can be empty)
+     * @param pageable Pagination parameters
+     * @return List of tasks with LIMIT/OFFSET
+     */
+    @Query("SELECT DISTINCT a.task FROM Assignment a WHERE a.assignedBy.id = :userId AND a.task.deleted = false " +
+           "AND (:keyword IS NULL OR " +
+           "     (LOWER(a.task.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "      LOWER(a.task.content) LIKE LOWER(CONCAT('%', :keyword, '%')))) " +
+           "AND (:startTime IS NULL OR a.task.createdAt >= :startTime) " +
+           "AND (:endTime IS NULL OR a.task.createdAt <= :endTime) " +
+           "AND (:#{#priorities.isEmpty()} = true OR a.task.priority IN :priorities) " +
+           "AND (:#{#recipientTypes.isEmpty()} = true OR " +
+           "     (a.recipientType IN :recipientTypes AND a.recipientId IN :recipientIds)) " +
+           "ORDER BY a.task.updatedAt DESC, a.task.createdAt DESC")
+    List<Task> findAssignedTasksWithAdvancedSearchAndPagination(@Param("userId") Integer userId,
+                                                               @Param("keyword") String keyword,
+                                                               @Param("startTime") java.time.LocalDateTime startTime,
+                                                               @Param("endTime") java.time.LocalDateTime endTime,
+                                                               @Param("priorities") List<com.project.quanlycanghangkhong.model.TaskPriority> priorities,
+                                                               @Param("recipientTypes") List<String> recipientTypes,
+                                                               @Param("recipientIds") List<Integer> recipientIds,
+                                                               org.springframework.data.domain.Pageable pageable);
 }

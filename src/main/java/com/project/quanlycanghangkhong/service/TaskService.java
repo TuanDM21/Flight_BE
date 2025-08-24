@@ -223,4 +223,38 @@ public interface TaskService {
      * @return Danh sách task match
      */
     List<TaskDetailDTO> searchTasks(String keyword);
+    
+    // ============== DATABASE-LEVEL PAGINATION METHODS (OPTIMIZED) ==============
+    
+    /**
+     * 🚀 DATABASE PAGINATION: Get my tasks with database-level pagination (1-based)
+     * Performance: Uses LIMIT/OFFSET at database level instead of memory slicing
+     * @param type Task type (created, assigned, received)
+     * @param filter Filter (only for assigned type)
+     * @param page Page number (1-based: 1, 2, 3...)
+     * @param size Page size (max 100, default 20)
+     * @return MyTasksData with pagination info
+     */
+    com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithCountStandardizedAndPaginationOptimized(
+        String type, String filter, Integer page, Integer size);
+    
+    /**
+     * 🚀 DATABASE PAGINATION: Advanced search with database-level pagination (1-based)
+     * Performance: Uses LIMIT/OFFSET at database level for advanced search
+     * @param type Task type (only assigned supported)
+     * @param filter Filter type
+     * @param keyword Search keyword
+     * @param startTime Start time filter
+     * @param endTime End time filter
+     * @param priorities Priority list
+     * @param recipientTypes Recipient type list
+     * @param recipientIds Recipient ID list
+     * @param page Page number (1-based: 1, 2, 3...)
+     * @param size Page size (max 100, default 20)
+     * @return MyTasksData with pagination info
+     */
+    com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithAdvancedSearchAndPaginationOptimized(
+        String type, String filter, String keyword, String startTime, String endTime,
+        java.util.List<String> priorities, java.util.List<String> recipientTypes, java.util.List<Integer> recipientIds,
+        Integer page, Integer size);
 }

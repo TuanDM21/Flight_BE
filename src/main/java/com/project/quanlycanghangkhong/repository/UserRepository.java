@@ -48,4 +48,11 @@ public interface UserRepository extends JpaRepository<User, Integer> {
 
     @Query("SELECT u FROM User u WHERE u.unit.id = :unitId AND u.role.roleName = 'UNIT_LEAD'")
     Optional<User> findUnitLeadByUnitId(@Param("unitId") Integer unitId);
+    
+    // ✅ BATCH LOADING: Eliminate N+1 queries for team/unit leads
+    @Query("SELECT u FROM User u WHERE u.team.id IN :teamIds AND u.role.roleName = 'TEAM_LEAD'")
+    List<User> findTeamLeadsByTeamIds(@Param("teamIds") List<Integer> teamIds);
+
+    @Query("SELECT u FROM User u WHERE u.unit.id IN :unitIds AND u.role.roleName = 'UNIT_LEAD'")
+    List<User> findUnitLeadsByUnitIds(@Param("unitIds") List<Integer> unitIds);
 }
