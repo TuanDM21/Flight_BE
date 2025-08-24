@@ -888,7 +888,7 @@ public class TaskServiceImpl implements TaskService {
         
         if (currentUser == null) {
             return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
-                List.of(), type);
+                List.of());
         }
         
         Integer userId = currentUser.getId();
@@ -928,7 +928,7 @@ public class TaskServiceImpl implements TaskService {
         List<TaskDetailDTO> taskDTOs = convertTasksToTaskDetailDTOsBatch(tasks);
         
         return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
-            taskDTOs, type);
+            taskDTOs);
     }
 
     @Override
@@ -939,7 +939,7 @@ public class TaskServiceImpl implements TaskService {
         
         if (currentUser == null) {
             return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
-                List.of(), type);
+                List.of());
         }
         
         Integer userId = currentUser.getId();
@@ -984,7 +984,7 @@ public class TaskServiceImpl implements TaskService {
         List<TaskDetailDTO> taskDTOs = convertTasksToTaskDetailDTOsBatch(tasks);
         
         return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
-            taskDTOs, type);
+            taskDTOs);
     }
 
     @Override
@@ -995,7 +995,7 @@ public class TaskServiceImpl implements TaskService {
         
         if (currentUser == null) {
             return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
-                List.of(), type, new PaginationInfo(page != null ? page : 0, size != null ? size : 20, 0));
+                List.of(), new PaginationInfo(page != null ? page : 0, size != null ? size : 20, 0));
         }
         
         Integer userId = currentUser.getId();
@@ -1058,7 +1058,7 @@ public class TaskServiceImpl implements TaskService {
         PaginationInfo paginationInfo = new PaginationInfo(currentPage, pageSize, allTaskDTOs.size());
         
         return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
-            paginatedTaskDTOs, type, paginationInfo);
+            paginatedTaskDTOs, paginationInfo);
     }
 
     /**
@@ -1074,7 +1074,7 @@ public class TaskServiceImpl implements TaskService {
         
         if (currentUser == null) {
             return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
-                List.of(), type);
+                List.of());
         }
         
         Integer userId = currentUser.getId();
@@ -1112,7 +1112,7 @@ public class TaskServiceImpl implements TaskService {
         
         if (tasks.isEmpty()) {
             return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
-                List.of(), type);
+                List.of());
         }
         
         // ✅ Convert all tasks to DTOs using simple batch conversion
@@ -1120,7 +1120,7 @@ public class TaskServiceImpl implements TaskService {
         
         // Use actual task count
         return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
-            taskDTOs, type);
+            taskDTOs);
     }
     
     /**
@@ -1401,8 +1401,7 @@ public class TaskServiceImpl implements TaskService {
         
         if (originalData == null || originalData.getTasks() == null) {
             return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
-                List.of(), originalData != null ? originalData.getType() : "unknown", 
-                new PaginationInfo(page, size, 0));
+                List.of(), new PaginationInfo(page, size, 0));
         }
         
         List<TaskDetailDTO> allTasks = originalData.getTasks();
@@ -1423,7 +1422,7 @@ public class TaskServiceImpl implements TaskService {
         PaginationInfo paginationInfo = new PaginationInfo(page, size, totalCount);
         
         return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
-            paginatedTasks, originalData.getType(), paginationInfo);
+            paginatedTasks, paginationInfo);
     }
     
     /**
@@ -1607,7 +1606,7 @@ public class TaskServiceImpl implements TaskService {
         
         if (currentUser == null) {
             return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
-                List.of(), type);
+                List.of());
         }
         
         Integer userId = currentUser.getId();
@@ -1677,7 +1676,7 @@ public class TaskServiceImpl implements TaskService {
         
         if (currentUser == null) {
             return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
-                List.of(), searchRequest.getType() != null ? searchRequest.getType() : "assigned");
+                List.of());
         }
         
         // Get type from request (default to "assigned" for backward compatibility)
@@ -1686,7 +1685,7 @@ public class TaskServiceImpl implements TaskService {
         // Validate type
         if (!type.matches("created|assigned|received")) {
             return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
-                List.of(), type);
+                List.of());
         }
         
         // Handle different types with pagination
@@ -1695,7 +1694,7 @@ public class TaskServiceImpl implements TaskService {
             case "assigned" -> handleAssignedTasksAdvancedSearchWithPagination(currentUser, searchRequest);
             case "received" -> handleReceivedTasksAdvancedSearchWithPagination(currentUser, searchRequest);
             default -> new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
-                List.of(), type);
+                List.of());
         };
     }
     
@@ -1744,7 +1743,7 @@ public class TaskServiceImpl implements TaskService {
         List<TaskDetailDTO> taskDTOs = convertTasksToTaskDetailDTOsBatch(tasks);
         
         return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
-            taskDTOs, "assigned");
+            taskDTOs);
     }
     
     private com.project.quanlycanghangkhong.dto.response.task.MyTasksData handleCreatedTasksAdvancedSearch(
@@ -1785,7 +1784,7 @@ public class TaskServiceImpl implements TaskService {
         List<TaskDetailDTO> taskDTOs = convertTasksToTaskDetailDTOsBatch(tasks);
         
         return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
-            taskDTOs, "created");
+            taskDTOs);
     }
     
     private com.project.quanlycanghangkhong.dto.response.task.MyTasksData handleReceivedTasksAdvancedSearch(
@@ -1843,7 +1842,7 @@ public class TaskServiceImpl implements TaskService {
         List<TaskDetailDTO> taskDTOs = convertTasksToTaskDetailDTOsBatch(tasks);
         
         return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
-            taskDTOs, "received");
+            taskDTOs);
     }
     
     private com.project.quanlycanghangkhong.dto.response.task.MyTasksData handleCreatedTasksAdvancedSearchWithPagination(
@@ -1885,8 +1884,7 @@ public class TaskServiceImpl implements TaskService {
         
         if (currentUser == null) {
             return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
-                List.of(), type, 
-                new com.project.quanlycanghangkhong.dto.response.task.PaginationInfo(1, 20, 0));
+                List.of(), new com.project.quanlycanghangkhong.dto.response.task.PaginationInfo(1, 20, 0));
         }
         
         Integer userId = currentUser.getId();
@@ -1944,7 +1942,7 @@ public class TaskServiceImpl implements TaskService {
             new com.project.quanlycanghangkhong.dto.response.task.PaginationInfo(currentPage, pageSize, totalCount);
         
         return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
-            taskDTOs, type, paginationInfo);
+            taskDTOs, paginationInfo);
     }
     
     /**
@@ -1962,8 +1960,7 @@ public class TaskServiceImpl implements TaskService {
         
         if (currentUser == null) {
             return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
-                List.of(), type, 
-                new com.project.quanlycanghangkhong.dto.response.task.PaginationInfo(1, 20, 0));
+                List.of(), new com.project.quanlycanghangkhong.dto.response.task.PaginationInfo(1, 20, 0));
         }
         
         Integer userId = currentUser.getId();
@@ -2036,6 +2033,6 @@ public class TaskServiceImpl implements TaskService {
             new com.project.quanlycanghangkhong.dto.response.task.PaginationInfo(currentPage, pageSize, totalCount);
         
         return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
-            taskDTOs, type, paginationInfo);
+            taskDTOs, paginationInfo);
     }
 }

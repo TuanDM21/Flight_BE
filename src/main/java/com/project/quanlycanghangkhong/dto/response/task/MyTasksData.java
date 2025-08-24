@@ -14,23 +14,18 @@ public class MyTasksData {
     @Schema(description = "List of tasks")
     private List<TaskDetailDTO> tasks;
     
-    @Schema(description = "Task type (created, assigned, received)")
-    private String type;
-    
     @Schema(description = "Pagination information (optional)")
     private PaginationInfo pagination;
     
     // Constructor với pagination
-    public MyTasksData(List<TaskDetailDTO> tasks, String type, PaginationInfo pagination) {
+    public MyTasksData(List<TaskDetailDTO> tasks, PaginationInfo pagination) {
         this.tasks = tasks;
-        this.type = type;
         this.pagination = pagination;
     }
     
     // Constructor không có pagination (backward compatibility)
-    public MyTasksData(List<TaskDetailDTO> tasks, String type) {
+    public MyTasksData(List<TaskDetailDTO> tasks) {
         this.tasks = tasks;
-        this.type = type;
         this.pagination = null;
     }
 }
