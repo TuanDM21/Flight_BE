@@ -932,7 +932,7 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithCountStandardized(String type, String filter) {
+    public com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithCountStandardized(String type, String status) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String email = authentication != null ? authentication.getName() : null;
         User currentUser = (email != null) ? userRepository.findByEmail(email).orElse(null) : null;
@@ -975,9 +975,12 @@ public class TaskServiceImpl implements TaskService {
                 tasks = List.of();
         }
         
-        // ✅ Apply filter chỉ cho type=assigned
-        if ("assigned".equals(type.toLowerCase()) && filter != null) {
-            tasks = filterAssignedTasks(tasks, filter);
+        // ✅ Apply status filter cho type=assigned và type=received using TaskStatusMapper
+        if (type.matches("assigned|received") && status != null && !status.trim().isEmpty()) {
+            java.util.function.Predicate<Task> statusFilter = com.project.quanlycanghangkhong.util.TaskStatusMapper.getStatusFilter(status);
+            tasks = tasks.stream()
+                .filter(statusFilter)
+                .collect(java.util.stream.Collectors.toList());
         }
         
         // ✅ Convert all tasks to DTOs (no filtering)
@@ -988,7 +991,7 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithCountStandardizedAndPagination(String type, String filter, Integer page, Integer size) {
+    public com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithCountStandardizedAndPagination(String type, String status, Integer page, Integer size) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String email = authentication != null ? authentication.getName() : null;
         User currentUser = (email != null) ? userRepository.findByEmail(email).orElse(null) : null;
@@ -1035,9 +1038,12 @@ public class TaskServiceImpl implements TaskService {
                 tasks = List.of();
         }
         
-        // ✅ Apply filter chỉ cho type=assigned
-        if ("assigned".equals(type.toLowerCase()) && filter != null) {
-            tasks = filterAssignedTasks(tasks, filter);
+        // ✅ Apply status filter cho type=assigned và type=received using TaskStatusMapper
+        if (type.matches("assigned|received") && status != null && !status.trim().isEmpty()) {
+            java.util.function.Predicate<Task> statusFilter = com.project.quanlycanghangkhong.util.TaskStatusMapper.getStatusFilter(status);
+            tasks = tasks.stream()
+                .filter(statusFilter)
+                .collect(java.util.stream.Collectors.toList());
         }
         
         // Convert to DTO BEFORE pagination
@@ -1556,48 +1562,9 @@ public class TaskServiceImpl implements TaskService {
             createdCount, assignedCount, receivedCount);
     }
     
-    /**
-     * 🚀 FILTER: Apply filters to assigned tasks
-     */
-    private List<Task> filterAssignedTasks(List<Task> tasks, String filter) {
-        if (filter == null || filter.isEmpty()) {
-            return tasks;
-        }
-        
-        LocalDateTime now = LocalDateTime.now();
-        
-        return switch (filter.toLowerCase()) {
-            case "completed" -> tasks.stream()
-                .filter(task -> task.getStatus() == TaskStatus.COMPLETED)
-                .collect(Collectors.toList());
-                
-            case "pending" -> tasks.stream()
-                .filter(task -> task.getStatus() == TaskStatus.IN_PROGRESS || task.getStatus() == TaskStatus.OPEN)
-                .collect(Collectors.toList());
-                
-            case "urgent" -> tasks.stream()
-                .filter(task -> task.getPriority() == com.project.quanlycanghangkhong.model.TaskPriority.URGENT)
-                .collect(Collectors.toList());
-                
-            case "overdue" -> tasks.stream()
-                .filter(task -> {
-                    // Check if task has overdue assignments
-                    List<Assignment> assignments = assignmentRepository.findByTaskId(task.getId());
-                    return assignments.stream().anyMatch(a -> 
-                        a.getDueAt() != null && 
-                        a.getDueAt().isBefore(now) && 
-                        a.getStatus() != AssignmentStatus.DONE
-                    );
-                })
-                .collect(Collectors.toList());
-                
-            default -> tasks;
-        };
-    }
-
     @Override
     public com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithAdvancedSearch(
-            String type, String filter, String keyword, String startTime, String endTime,
+            String type, String status, String keyword, String startTime, String endTime,
             java.util.List<String> priorities, java.util.List<String> recipientTypes, java.util.List<Integer> recipientIds) {
         
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -1639,27 +1606,27 @@ public class TaskServiceImpl implements TaskService {
         
         // Handle different types
         if ("assigned".equals(type)) {
-            return handleAssignedTasksAdvancedSearch(userId, filter, keyword, startDateTime, endDateTime, 
+            return handleAssignedTasksAdvancedSearch(userId, status, keyword, startDateTime, endDateTime, 
                 priorityEnums, recipientTypes, recipientIds);
         } else if ("created".equals(type)) {
             return handleCreatedTasksAdvancedSearch(userId, keyword, startDateTime, endDateTime, priorityEnums);
         } else if ("received".equals(type)) {
-            return handleReceivedTasksAdvancedSearch(currentUser, keyword, startDateTime, endDateTime, priorityEnums);
+            return handleReceivedTasksAdvancedSearch(currentUser, status, keyword, startDateTime, endDateTime, priorityEnums);
         } else {
             // Fallback to standard method
-            return getMyTasksWithCountStandardized(type, filter);
+            return getMyTasksWithCountStandardized(type, status);
         }
     }
     
     @Override
     public com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithAdvancedSearchAndPagination(
-            String type, String filter, String keyword, String startTime, String endTime,
+            String type, String status, String keyword, String startTime, String endTime,
             java.util.List<String> priorities, java.util.List<String> recipientTypes, java.util.List<Integer> recipientIds,
             Integer page, Integer size) {
         
         // Get advanced search results first
         com.project.quanlycanghangkhong.dto.response.task.MyTasksData searchResult = 
-            getMyTasksWithAdvancedSearch(type, filter, keyword, startTime, endTime, 
+            getMyTasksWithAdvancedSearch(type, status, keyword, startTime, endTime, 
                 priorities, recipientTypes, recipientIds);
         
         // Apply pagination
@@ -1700,16 +1667,19 @@ public class TaskServiceImpl implements TaskService {
     
     // Helper methods for advanced search by type
     private com.project.quanlycanghangkhong.dto.response.task.MyTasksData handleAssignedTasksAdvancedSearch(
-            Integer userId, String filter, String keyword, LocalDateTime startDateTime, LocalDateTime endDateTime,
+            Integer userId, String status, String keyword, LocalDateTime startDateTime, LocalDateTime endDateTime,
             List<com.project.quanlycanghangkhong.model.TaskPriority> priorityEnums,
             List<String> recipientTypes, List<Integer> recipientIds) {
         
         // ✅ SIMPLIFIED: Get assigned tasks without complex native queries
         List<Task> tasks = taskRepository.findAssignedTasksByUserId(userId);
         
-        // Apply filters
-        if (filter != null) {
-            tasks = filterAssignedTasks(tasks, filter);
+        // Apply status filter using TaskStatusMapper
+        if (status != null && !status.trim().isEmpty()) {
+            java.util.function.Predicate<Task> statusFilter = com.project.quanlycanghangkhong.util.TaskStatusMapper.getStatusFilter(status);
+            tasks = tasks.stream()
+                .filter(statusFilter)
+                .collect(java.util.stream.Collectors.toList());
         }
         
         // Apply keyword search
@@ -1794,7 +1764,7 @@ public class TaskServiceImpl implements TaskService {
     }
     
     private com.project.quanlycanghangkhong.dto.response.task.MyTasksData handleReceivedTasksAdvancedSearch(
-            User currentUser, String keyword, LocalDateTime startDateTime, LocalDateTime endDateTime,
+            User currentUser, String status, String keyword, LocalDateTime startDateTime, LocalDateTime endDateTime,
             List<com.project.quanlycanghangkhong.model.TaskPriority> priorityEnums) {
         
         Integer userId = currentUser.getId();
@@ -1847,6 +1817,14 @@ public class TaskServiceImpl implements TaskService {
                 .collect(Collectors.toList());
         }
         
+        // ✅ Apply status filter using TaskStatusMapper for received tasks
+        if (status != null && !status.trim().isEmpty()) {
+            java.util.function.Predicate<Task> statusFilter = com.project.quanlycanghangkhong.util.TaskStatusMapper.getStatusFilter(status);
+            tasks = tasks.stream()
+                .filter(statusFilter)
+                .collect(Collectors.toList());
+        }
+        
         // Convert to DTOs
         List<TaskDetailDTO> taskDTOs = convertTasksToTaskDetailDTOsBatch(tasks);
         
@@ -1875,7 +1853,7 @@ public class TaskServiceImpl implements TaskService {
         // Implementation similar to handleReceivedTasksAdvancedSearch but with pagination
         // For now, delegate to the non-paginated version
         return handleReceivedTasksAdvancedSearch(currentUser, 
-            searchRequest.getKeyword(), null, null, null);
+            searchRequest.getFilter(), searchRequest.getKeyword(), null, null, null);
     }
     
     // ============== DATABASE-LEVEL PAGINATION METHODS (OPTIMIZED) ==============
@@ -1885,7 +1863,7 @@ public class TaskServiceImpl implements TaskService {
      */
     @Override
     public com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithCountStandardizedAndPaginationOptimized(
-            String type, String filter, Integer page, Integer size) {
+            String type, String status, Integer page, Integer size) {
         
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String email = authentication != null ? authentication.getName() : null;
@@ -1937,16 +1915,21 @@ public class TaskServiceImpl implements TaskService {
                 totalCount = 0;
         }
         
-        // ✅ Apply filter AFTER database pagination (if needed)
-        if ("assigned".equals(type.toLowerCase()) && filter != null) {
-            tasks = filterAssignedTasks(tasks, filter);
-            // Note: totalCount might be inaccurate after filtering, but this is acceptable for performance
+        // ✅ Apply status filter AFTER database pagination using TaskStatusMapper
+        if (type.matches("assigned|received") && status != null && !status.trim().isEmpty()) {
+            java.util.function.Predicate<Task> statusFilter = com.project.quanlycanghangkhong.util.TaskStatusMapper.getStatusFilter(status);
+            tasks = tasks.stream()
+                .filter(statusFilter)
+                .collect(java.util.stream.Collectors.toList());
+            // ⚠️ IMPORTANT: Recalculate totalCount to match filtered results for accurate pagination
+            // This sacrifices some performance for UI accuracy
+            totalCount = getFilteredTaskCount(type, status, userId, currentUser);
         }
         
         // ✅ Convert to DTOs (only paginated data)
         List<TaskDetailDTO> taskDTOs = convertTasksToTaskDetailDTOsBatch(tasks);
         
-        // ✅ Create pagination info (1-based)
+        // ✅ Create pagination info (1-based) - now accurate after status filtering
         com.project.quanlycanghangkhong.dto.response.task.PaginationInfo paginationInfo = 
             new com.project.quanlycanghangkhong.dto.response.task.PaginationInfo(currentPage, pageSize, totalCount);
         
@@ -1959,7 +1942,7 @@ public class TaskServiceImpl implements TaskService {
      */
     @Override
     public com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithAdvancedSearchAndPaginationOptimized(
-            String type, String filter, String keyword, String startTime, String endTime,
+            String type, String status, String keyword, String startTime, String endTime,
             java.util.List<String> priorities, java.util.List<String> recipientTypes, java.util.List<Integer> recipientIds,
             Integer page, Integer size) {
         
@@ -1974,6 +1957,9 @@ public class TaskServiceImpl implements TaskService {
         
         Integer userId = currentUser.getId();
         
+        // ✅ Import and use TaskStatusMapper
+        java.util.function.Predicate<Task> statusFilter = com.project.quanlycanghangkhong.util.TaskStatusMapper.getStatusFilter(status);
+        
         // ✅ Normalize 1-based pagination parameters
         int[] normalizedParams = com.project.quanlycanghangkhong.dto.response.task.PaginationInfo.normalizePageParams(page, size);
         int currentPage = normalizedParams[0]; // 1-based
@@ -1985,19 +1971,27 @@ public class TaskServiceImpl implements TaskService {
             org.springframework.data.domain.PageRequest.of(offset / pageSize, pageSize);
         
         // ✅ Parse advanced search parameters
-        LocalDateTime startDateTime = null;
-        LocalDateTime endDateTime = null;
+        LocalDateTime tempStartDateTime = null;
+        LocalDateTime tempEndDateTime = null;
         
         try {
             if (startTime != null && !startTime.isEmpty()) {
-                startDateTime = LocalDate.parse(startTime).atStartOfDay();
-            }
-            if (endTime != null && !endTime.isEmpty()) {
-                endDateTime = LocalDate.parse(endTime).atTime(23, 59, 59);
+                tempStartDateTime = LocalDate.parse(startTime).atStartOfDay();
             }
         } catch (Exception e) {
-            // Invalid date format, continue without date filter
+            // Invalid start date format, keep null
         }
+        
+        try {
+            if (endTime != null && !endTime.isEmpty()) {
+                tempEndDateTime = LocalDate.parse(endTime).atTime(23, 59, 59);
+            }
+        } catch (Exception e) {
+            // Invalid end date format, keep null
+        }
+        
+        final LocalDateTime finalStartDateTime = tempStartDateTime;
+        final LocalDateTime finalEndDateTime = tempEndDateTime;
         
         List<com.project.quanlycanghangkhong.model.TaskPriority> priorityEnums = new ArrayList<>();
         if (priorities != null) {
@@ -2010,28 +2004,116 @@ public class TaskServiceImpl implements TaskService {
             }
         }
         
+        // ✅ Create final variables for lambda expressions
+        final String finalKeyword = keyword;
+        
         // ✅ DATABASE-LEVEL ADVANCED SEARCH with PAGINATION
         List<Task> tasks;
         long totalCount;
         
         if ("assigned".equals(type.toLowerCase())) {
             tasks = taskRepository.findAssignedTasksWithAdvancedSearchAndPagination(
-                userId, keyword, startDateTime, endDateTime, priorityEnums, 
+                userId, keyword, finalStartDateTime, finalEndDateTime, priorityEnums, 
                 recipientTypes != null ? recipientTypes : List.of(), 
                 recipientIds != null ? recipientIds : List.of(), 
                 pageable);
             totalCount = taskRepository.countAssignedTasksWithAdvancedSearchMulti(
-                userId, keyword, startDateTime, endDateTime, priorityEnums,
+                userId, keyword, finalStartDateTime, finalEndDateTime, priorityEnums,
                 recipientTypes != null ? recipientTypes : List.of(), 
                 recipientIds != null ? recipientIds : List.of());
+        } else if ("received".equals(type.toLowerCase())) {
+            // ✅ IMPLEMENT ADVANCED SEARCH FOR RECEIVED TYPE
+            Integer teamId = (currentUser.getRole() != null && 
+                "TEAM_LEAD".equals(currentUser.getRole().getRoleName()) &&
+                currentUser.getTeam() != null) ? currentUser.getTeam().getId() : null;
+            Integer unitId = (currentUser.getRole() != null && 
+                "UNIT_LEAD".equals(currentUser.getRole().getRoleName()) &&
+                currentUser.getUnit() != null) ? currentUser.getUnit().getId() : null;
+                
+            // Get all received tasks first, then apply advanced filtering
+            org.springframework.data.domain.Pageable unboundedPageable = 
+                org.springframework.data.domain.PageRequest.of(0, Integer.MAX_VALUE);
+            List<Task> allReceivedTasks = taskRepository.findReceivedTasksWithPagination(userId, teamId, unitId, unboundedPageable);
+            
+            // Apply advanced search filters
+            tasks = allReceivedTasks.stream()
+                .filter(task -> {
+                    // Keyword filter (search in title, content, instructions, notes, task ID)
+                    if (finalKeyword != null && !finalKeyword.trim().isEmpty()) {
+                        String searchKeyword = finalKeyword.trim().toLowerCase();
+                        boolean matchesKeyword = task.getId().toString().contains(searchKeyword) ||
+                                               task.getTitle().toLowerCase().contains(searchKeyword) ||
+                                               (task.getContent() != null && task.getContent().toLowerCase().contains(searchKeyword)) ||
+                                               (task.getInstructions() != null && task.getInstructions().toLowerCase().contains(searchKeyword)) ||
+                                               (task.getNotes() != null && task.getNotes().toLowerCase().contains(searchKeyword));
+                        if (!matchesKeyword) return false;
+                    }
+                    
+                    // Time range filter
+                    if (finalStartDateTime != null && task.getCreatedAt().isBefore(finalStartDateTime)) return false;
+                    if (finalEndDateTime != null && task.getCreatedAt().isAfter(finalEndDateTime)) return false;
+                    
+                    // Priority filter
+                    if (!priorityEnums.isEmpty() && !priorityEnums.contains(task.getPriority())) return false;
+                    
+                    return true;
+                })
+                .collect(java.util.stream.Collectors.toList());
+                
+            totalCount = tasks.size();
+            
+            // Apply pagination manually
+            int startIndex = offset;
+            int endIndex = Math.min(startIndex + pageSize, tasks.size());
+            tasks = startIndex < tasks.size() ? tasks.subList(startIndex, endIndex) : List.of();
+            
+        } else if ("created".equals(type.toLowerCase())) {
+            // Get all created tasks first, then apply advanced filtering  
+            List<Task> allCreatedTasks = taskRepository.findCreatedTasksWithoutAssignments(userId);
+            
+            // Apply advanced search filters
+            tasks = allCreatedTasks.stream()
+                .filter(task -> {
+                    // Keyword filter
+                    if (finalKeyword != null && !finalKeyword.trim().isEmpty()) {
+                        String searchKeyword = finalKeyword.trim().toLowerCase();
+                        boolean matchesKeyword = task.getId().toString().contains(searchKeyword) ||
+                                               task.getTitle().toLowerCase().contains(searchKeyword) ||
+                                               (task.getContent() != null && task.getContent().toLowerCase().contains(searchKeyword)) ||
+                                               (task.getInstructions() != null && task.getInstructions().toLowerCase().contains(searchKeyword)) ||
+                                               (task.getNotes() != null && task.getNotes().toLowerCase().contains(searchKeyword));
+                        if (!matchesKeyword) return false;
+                    }
+                    
+                    // Time range filter
+                    if (finalStartDateTime != null && task.getCreatedAt().isBefore(finalStartDateTime)) return false;
+                    if (finalEndDateTime != null && task.getCreatedAt().isAfter(finalEndDateTime)) return false;
+                    
+                    // Priority filter
+                    if (!priorityEnums.isEmpty() && !priorityEnums.contains(task.getPriority())) return false;
+                    
+                    return true;
+                })
+                .collect(java.util.stream.Collectors.toList());
+                
+            totalCount = tasks.size();
+            
+            // Apply pagination manually
+            int startIndex = offset;
+            int endIndex = Math.min(startIndex + pageSize, tasks.size());
+            tasks = startIndex < tasks.size() ? tasks.subList(startIndex, endIndex) : List.of();
+            
         } else {
-            // For non-assigned types, fallback to simple pagination
-            return getMyTasksWithCountStandardizedAndPaginationOptimized(type, filter, page, size);
+            // Unknown type
+            tasks = List.of();
+            totalCount = 0;
         }
         
-        // ✅ Apply filter AFTER database pagination (if needed)
-        if (filter != null) {
-            tasks = filterAssignedTasks(tasks, filter);
+        // ✅ Apply status filter using TaskStatusMapper
+        if (status != null && !status.trim().isEmpty()) {
+            tasks = tasks.stream()
+                .filter(statusFilter)
+                .collect(java.util.stream.Collectors.toList());
         }
         
         // ✅ Convert to DTOs (only paginated data)
@@ -2043,5 +2125,59 @@ public class TaskServiceImpl implements TaskService {
         
         return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
             taskDTOs, paginationInfo);
+    }
+    
+    /**
+     * 🎯 Helper method: Calculate accurate total count after status filtering
+     * Used to fix pagination totalElements mismatch when status filter is applied
+     */
+    private long getFilteredTaskCount(String type, String status, Integer userId, User currentUser) {
+        if (status == null || status.trim().isEmpty()) {
+            // No status filter, return original database count
+            switch (type.toLowerCase()) {
+                case "assigned":
+                    return taskRepository.countAssignedTasksByUserId(userId);
+                case "received":
+                    Integer teamId = (currentUser.getRole() != null && 
+                        "TEAM_LEAD".equals(currentUser.getRole().getRoleName()) &&
+                        currentUser.getTeam() != null) ? currentUser.getTeam().getId() : null;
+                    Integer unitId = (currentUser.getRole() != null && 
+                        "UNIT_LEAD".equals(currentUser.getRole().getRoleName()) &&
+                        currentUser.getUnit() != null) ? currentUser.getUnit().getId() : null;
+                    return taskRepository.countReceivedTasksByUserId(userId, teamId, unitId);
+                default:
+                    return 0;
+            }
+        }
+        
+        // Get ALL tasks of this type (without pagination) and apply status filter
+        List<Task> allTasks;
+        switch (type.toLowerCase()) {
+            case "assigned":
+                allTasks = taskRepository.findAssignedTasksByUserId(userId);
+                break;
+            case "received":
+                // Use the same logic as the paginated method for consistency
+                Integer teamId = (currentUser.getRole() != null && 
+                    "TEAM_LEAD".equals(currentUser.getRole().getRoleName()) &&
+                    currentUser.getTeam() != null) ? currentUser.getTeam().getId() : null;
+                Integer unitId = (currentUser.getRole() != null && 
+                    "UNIT_LEAD".equals(currentUser.getRole().getRoleName()) &&
+                    currentUser.getUnit() != null) ? currentUser.getUnit().getId() : null;
+                
+                // Use a non-paginated version that uses the same query logic
+                org.springframework.data.domain.Pageable unboundedPageable = 
+                    org.springframework.data.domain.PageRequest.of(0, Integer.MAX_VALUE);
+                allTasks = taskRepository.findReceivedTasksWithPagination(userId, teamId, unitId, unboundedPageable);
+                break;
+            default:
+                return 0;
+        }
+        
+        // Apply status filter and count
+        java.util.function.Predicate<Task> statusFilter = com.project.quanlycanghangkhong.util.TaskStatusMapper.getStatusFilter(status);
+        return allTasks.stream()
+            .filter(statusFilter)
+            .count();
     }
 }

@@ -145,14 +145,14 @@ public class TaskController {
 
     @GetMapping("/my")
     @Operation(summary = "Lấy công việc của tôi theo loại với ROOT TASKS count (sorted by latest), advanced search và pagination", 
-               description = "Lấy danh sách công việc theo loại với sort theo thời gian mới nhất và thông tin count ROOT TASKS: created (đã tạo nhưng chưa giao việc - flat list), assigned (đã giao việc bao gồm tất cả subtasks với hierarchyLevel), received (được giao việc - flat list). Count chỉ tính ROOT TASKS (parent IS NULL), data vẫn bao gồm tất cả tasks để hiển thị hierarchy. Hỗ trợ filter cho type=assigned: completed, pending, urgent, overdue. Hỗ trợ advanced search cho TẤT CẢ TYPES với keyword, priorities, time range (format: yyyy-MM-dd). Recipient search chỉ cho type=assigned. Hỗ trợ pagination với page (bắt đầu từ 1) và size (max 100, default 20)")
+               description = "Lấy danh sách công việc theo loại với sort theo thời gian mới nhất và thông tin count ROOT TASKS: created (đã tạo nhưng chưa giao việc - flat list), assigned (đã giao việc bao gồm tất cả subtasks với hierarchyLevel), received (được giao việc - flat list). Count chỉ tính ROOT TASKS (parent IS NULL), data vẫn bao gồm tất cả tasks để hiển thị hierarchy. Hỗ trợ status cho type=assigned và type=received: completed, pending, urgent, overdue. Hỗ trợ advanced search cho TẤT CẢ TYPES với keyword, priorities, time range (format: yyyy-MM-dd). Recipient search chỉ cho type=assigned. Hỗ trợ pagination với page (bắt đầu từ 1) và size (max 100, default 20)")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiMyTasksResponse.class))),
-        @ApiResponse(responseCode = "400", description = "Tham số type hoặc filter không hợp lệ", content = @Content(schema = @Schema(implementation = ApiMyTasksResponse.class)))
+        @ApiResponse(responseCode = "400", description = "Tham số type hoặc status không hợp lệ", content = @Content(schema = @Schema(implementation = ApiMyTasksResponse.class)))
     })
     public ResponseEntity<ApiMyTasksResponse> getMyTasks(
             @RequestParam String type,
-            @RequestParam(required = false) String filter,
+            @RequestParam(required = false) String status,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String startTime,
             @RequestParam(required = false) String endTime,
@@ -167,10 +167,10 @@ public class TaskController {
             );
         }
         
-        // Validate filter chỉ áp dụng cho type=assigned
-        if (filter != null && !"assigned".equals(type)) {
+        // Validate status áp dụng cho type=assigned và type=received
+        if (status != null && !type.matches("assigned|received")) {
             return ResponseEntity.badRequest().body(
-                ApiMyTasksResponse.error("Filter chỉ hỗ trợ cho type=assigned", 400)
+                ApiMyTasksResponse.error("Status chỉ hỗ trợ cho type=assigned và type=received", 400)
             );
         }
         
@@ -186,10 +186,10 @@ public class TaskController {
             );
         }
         
-        // Validate filter values
-        if (filter != null && !filter.matches("completed|pending|urgent|overdue")) {
+        // Validate status values
+        if (status != null && !status.matches("completed|pending|urgent|overdue")) {
             return ResponseEntity.badRequest().body(
-                ApiMyTasksResponse.error("Filter phải là: completed, pending, urgent, hoặc overdue", 400)
+                ApiMyTasksResponse.error("Status phải là: completed, pending, urgent, hoặc overdue", 400)
             );
         }
         
@@ -228,19 +228,19 @@ public class TaskController {
         
         if (hasAdvancedSearch) {
             // Sử dụng advanced search cho tất cả type với các feature được hỗ trợ
-            response = taskService.getMyTasksWithAdvancedSearchAndPaginationOptimized(type, filter, keyword, 
+            response = taskService.getMyTasksWithAdvancedSearchAndPaginationOptimized(type, status, keyword, 
                 startTime, endTime, priorities, recipientTypes, recipientIds, page, size);
         } else if (page != null || size != null) {
             // Sử dụng search thông thường với pagination tối ưu (DATABASE-LEVEL)
-            response = taskService.getMyTasksWithCountStandardizedAndPaginationOptimized(type, filter, page, size);
+            response = taskService.getMyTasksWithCountStandardizedAndPaginationOptimized(type, status, page, size);
         } else {
             // 🚀 ULTRA FAST: Sử dụng batch loading optimization cho simple requests
             response = taskService.getMyTasksWithCountStandardizedUltraFast(type);
             
-            // Apply filter if specified (for assigned type only)
-            if ("assigned".equals(type.toLowerCase()) && filter != null && !filter.isEmpty()) {
-                // Fall back to standard method with filter if ultra-fast doesn't support filtering yet
-                response = taskService.getMyTasksWithCountStandardized(type, filter);
+            // Apply status if specified (for assigned and received types)
+            if (type.matches("assigned|received") && status != null && !status.isEmpty()) {
+                // Fall back to standard method with status if ultra-fast doesn't support filtering yet
+                response = taskService.getMyTasksWithCountStandardized(type, status);
             }
         }
         

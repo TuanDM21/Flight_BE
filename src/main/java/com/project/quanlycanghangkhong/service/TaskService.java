@@ -58,7 +58,7 @@ public interface TaskService {
      * @param filter Filter áp dụng (chỉ cho type=assigned): completed, pending, urgent, overdue
      * @return MyTasksData với cấu trúc chuẩn hóa đã được filter
      */
-    com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithCountStandardized(String type, String filter);
+    com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithCountStandardized(String type, String status);
     
     /**
      * Lấy tasks với count information và PAGINATION - STANDARDIZED VERSION WITH PAGINATION
@@ -69,7 +69,7 @@ public interface TaskService {
      * @param size Số lượng items per page (max 100)
      * @return MyTasksData với cấu trúc chuẩn hóa đã được phân trang
      */
-    com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithCountStandardizedAndPagination(String type, String filter, Integer page, Integer size);
+    com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithCountStandardizedAndPagination(String type, String status, Integer page, Integer size);
     
     /**
      * 🚀 ULTRA OPTIMIZED: Get my tasks with batch loading - Performance target <500ms
@@ -93,7 +93,7 @@ public interface TaskService {
      * @return MyTasksData với kết quả tìm kiếm
      */
     com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithAdvancedSearch(
-        String type, String filter, String keyword, String startTime, String endTime,
+        String type, String status, String keyword, String startTime, String endTime,
         java.util.List<String> priorities, java.util.List<String> recipientTypes, java.util.List<Integer> recipientIds);
     
     /**
@@ -112,7 +112,7 @@ public interface TaskService {
      * @return MyTasksData với kết quả tìm kiếm đã được phân trang
      */
     com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithAdvancedSearchAndPagination(
-        String type, String filter, String keyword, String startTime, String endTime,
+        String type, String status, String keyword, String startTime, String endTime,
         java.util.List<String> priorities, java.util.List<String> recipientTypes, java.util.List<Integer> recipientIds,
         Integer page, Integer size);
     
@@ -236,7 +236,7 @@ public interface TaskService {
      * @return MyTasksData with pagination info
      */
     com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithCountStandardizedAndPaginationOptimized(
-        String type, String filter, Integer page, Integer size);
+        String type, String status, Integer page, Integer size);
     
     /**
      * 🚀 DATABASE PAGINATION: Advanced search with database-level pagination (1-based)
@@ -254,7 +254,7 @@ public interface TaskService {
      * @return MyTasksData with pagination info
      */
     com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithAdvancedSearchAndPaginationOptimized(
-        String type, String filter, String keyword, String startTime, String endTime,
+        String type, String status, String keyword, String startTime, String endTime,
         java.util.List<String> priorities, java.util.List<String> recipientTypes, java.util.List<Integer> recipientIds,
         Integer page, Integer size);
 }
