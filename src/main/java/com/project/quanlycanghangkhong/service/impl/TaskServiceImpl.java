@@ -1716,8 +1716,11 @@ public class TaskServiceImpl implements TaskService {
         if (keyword != null && !keyword.trim().isEmpty()) {
             String searchKeyword = keyword.trim().toLowerCase();
             tasks = tasks.stream()
-                .filter(task -> task.getTitle().toLowerCase().contains(searchKeyword) ||
-                               (task.getContent() != null && task.getContent().toLowerCase().contains(searchKeyword)))
+                .filter(task -> task.getId().toString().contains(searchKeyword) ||
+                               task.getTitle().toLowerCase().contains(searchKeyword) ||
+                               (task.getContent() != null && task.getContent().toLowerCase().contains(searchKeyword)) ||
+                               (task.getInstructions() != null && task.getInstructions().toLowerCase().contains(searchKeyword)) ||
+                               (task.getNotes() != null && task.getNotes().toLowerCase().contains(searchKeyword)))
                 .collect(Collectors.toList());
         }
         
@@ -1757,8 +1760,11 @@ public class TaskServiceImpl implements TaskService {
         if (keyword != null && !keyword.trim().isEmpty()) {
             String searchKeyword = keyword.trim().toLowerCase();
             tasks = tasks.stream()
-                .filter(task -> task.getTitle().toLowerCase().contains(searchKeyword) ||
-                               (task.getContent() != null && task.getContent().toLowerCase().contains(searchKeyword)))
+                .filter(task -> task.getId().toString().contains(searchKeyword) ||
+                               task.getTitle().toLowerCase().contains(searchKeyword) ||
+                               (task.getContent() != null && task.getContent().toLowerCase().contains(searchKeyword)) ||
+                               (task.getInstructions() != null && task.getInstructions().toLowerCase().contains(searchKeyword)) ||
+                               (task.getNotes() != null && task.getNotes().toLowerCase().contains(searchKeyword)))
                 .collect(Collectors.toList());
         }
         
@@ -1815,8 +1821,11 @@ public class TaskServiceImpl implements TaskService {
         if (keyword != null && !keyword.trim().isEmpty()) {
             String searchKeyword = keyword.trim().toLowerCase();
             tasks = tasks.stream()
-                .filter(task -> task.getTitle().toLowerCase().contains(searchKeyword) ||
-                               (task.getContent() != null && task.getContent().toLowerCase().contains(searchKeyword)))
+                .filter(task -> task.getId().toString().contains(searchKeyword) ||
+                               task.getTitle().toLowerCase().contains(searchKeyword) ||
+                               (task.getContent() != null && task.getContent().toLowerCase().contains(searchKeyword)) ||
+                               (task.getInstructions() != null && task.getInstructions().toLowerCase().contains(searchKeyword)) ||
+                               (task.getNotes() != null && task.getNotes().toLowerCase().contains(searchKeyword)))
                 .collect(Collectors.toList());
         }
         

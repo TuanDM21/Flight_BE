@@ -353,8 +353,11 @@ public interface TaskRepository extends JpaRepository<Task, Integer> {
      */
     @Query("SELECT DISTINCT a.task FROM Assignment a WHERE a.assignedBy.id = :userId AND a.task.deleted = false " +
            "AND (:keyword IS NULL OR " +
-           "     (LOWER(a.task.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-           "      LOWER(a.task.content) LIKE LOWER(CONCAT('%', :keyword, '%')))) " +
+           "     (CAST(a.task.id AS STRING) LIKE CONCAT('%', :keyword, '%') OR " +
+           "      LOWER(a.task.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "      LOWER(a.task.content) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "      LOWER(a.task.instructions) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "      LOWER(a.task.notes) LIKE LOWER(CONCAT('%', :keyword, '%')))) " +
            "AND (:startTime IS NULL OR a.task.createdAt >= :startTime) " +
            "AND (:endTime IS NULL OR a.task.createdAt <= :endTime) " +
            "AND (:#{#priorities.isEmpty()} = true OR a.task.priority IN :priorities) " +
@@ -382,8 +385,11 @@ public interface TaskRepository extends JpaRepository<Task, Integer> {
      */
     @Query("SELECT COUNT(DISTINCT a.task) FROM Assignment a WHERE a.assignedBy.id = :userId AND a.task.deleted = false " +
            "AND (:keyword IS NULL OR " +
-           "     (LOWER(a.task.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-           "      LOWER(a.task.content) LIKE LOWER(CONCAT('%', :keyword, '%')))) " +
+           "     (CAST(a.task.id AS STRING) LIKE CONCAT('%', :keyword, '%') OR " +
+           "      LOWER(a.task.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "      LOWER(a.task.content) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "      LOWER(a.task.instructions) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "      LOWER(a.task.notes) LIKE LOWER(CONCAT('%', :keyword, '%')))) " +
            "AND (:startTime IS NULL OR a.task.createdAt >= :startTime) " +
            "AND (:endTime IS NULL OR a.task.createdAt <= :endTime) " +
            "AND (:#{#priorities.isEmpty()} = true OR a.task.priority IN :priorities) " +
@@ -404,16 +410,23 @@ public interface TaskRepository extends JpaRepository<Task, Integer> {
      * Uses FULLTEXT search instead of slow LIKE queries
      * Performance: <1000ms for large datasets
      * @param keyword Search keyword
-     * @return List of tasks matching keyword in title or content
+     * @return List of tasks matching keyword in id, title, content, instructions, or notes
      */
     @Query(value = 
         "SELECT DISTINCT t.* FROM task t " +
         "WHERE t.deleted = false " +
         "AND (:keyword IS NULL OR :keyword = '' OR " +
-        "     (t.title LIKE CONCAT('%', :keyword, '%') OR " +
-        "      t.content LIKE CONCAT('%', :keyword, '%'))) " +
+        "     (CAST(t.id AS CHAR) LIKE CONCAT('%', :keyword, '%') OR " +
+        "      t.title LIKE CONCAT('%', :keyword, '%') OR " +
+        "      t.content LIKE CONCAT('%', :keyword, '%') OR " +
+        "      t.instructions LIKE CONCAT('%', :keyword, '%') OR " +
+        "      t.notes LIKE CONCAT('%', :keyword, '%'))) " +
         "ORDER BY " +
-        "  CASE WHEN t.title LIKE CONCAT('%', :keyword, '%') THEN 1 ELSE 2 END, " +
+        "  CASE WHEN CAST(t.id AS CHAR) LIKE CONCAT('%', :keyword, '%') THEN 0 " +
+        "       WHEN t.title LIKE CONCAT('%', :keyword, '%') THEN 1 " +
+        "       WHEN t.content LIKE CONCAT('%', :keyword, '%') THEN 2 " +
+        "       WHEN t.instructions LIKE CONCAT('%', :keyword, '%') THEN 3 " +
+        "       ELSE 4 END, " +
         "  t.updated_at DESC " +
         "LIMIT 100",
         nativeQuery = true)
@@ -579,8 +592,11 @@ public interface TaskRepository extends JpaRepository<Task, Integer> {
      */
     @Query("SELECT DISTINCT a.task FROM Assignment a WHERE a.assignedBy.id = :userId AND a.task.deleted = false " +
            "AND (:keyword IS NULL OR " +
-           "     (LOWER(a.task.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-           "      LOWER(a.task.content) LIKE LOWER(CONCAT('%', :keyword, '%')))) " +
+           "     (CAST(a.task.id AS STRING) LIKE CONCAT('%', :keyword, '%') OR " +
+           "      LOWER(a.task.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "      LOWER(a.task.content) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "      LOWER(a.task.instructions) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "      LOWER(a.task.notes) LIKE LOWER(CONCAT('%', :keyword, '%')))) " +
            "AND (:startTime IS NULL OR a.task.createdAt >= :startTime) " +
            "AND (:endTime IS NULL OR a.task.createdAt <= :endTime) " +
            "AND (:#{#priorities.isEmpty()} = true OR a.task.priority IN :priorities) " +
