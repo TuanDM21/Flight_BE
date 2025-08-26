@@ -2,7 +2,6 @@ package com.project.quanlycanghangkhong.util;
 
 import com.project.quanlycanghangkhong.model.Task;
 import com.project.quanlycanghangkhong.model.TaskStatus;
-import com.project.quanlycanghangkhong.model.TaskPriority;
 
 import java.util.function.Predicate;
 
@@ -13,7 +12,7 @@ public class TaskStatusMapper {
     
     /**
      * ✅ Map business status string to task filtering logic
-     * @param status Business status: "completed", "pending", "urgent", "overdue"
+     * @param status TaskStatus enum values: "IN_PROGRESS", "COMPLETED", "OVERDUE" (case-insensitive)
      * @return Predicate để filter tasks
      */
     public static Predicate<Task> getStatusFilter(String status) {
@@ -21,22 +20,16 @@ public class TaskStatusMapper {
             return task -> true; // No filter
         }
         
-        switch (status.toLowerCase().trim()) {
-            case "completed":
+        switch (status.toUpperCase().trim()) {
+            case "IN_PROGRESS":
+                // ✅ IN_PROGRESS: Task có status = IN_PROGRESS
+                return task -> TaskStatus.IN_PROGRESS.equals(task.getStatus());
+                
+            case "COMPLETED":
                 // ✅ COMPLETED: Task có status = COMPLETED
                 return task -> TaskStatus.COMPLETED.equals(task.getStatus());
                 
-            case "pending":
-                // ✅ PENDING: Task có status = OPEN hoặc IN_PROGRESS (chưa hoàn thành)
-                return task -> TaskStatus.OPEN.equals(task.getStatus()) || 
-                              TaskStatus.IN_PROGRESS.equals(task.getStatus());
-                
-            case "urgent":
-                // ✅ URGENT: Task có priority = HIGH hoặc URGENT (bất kể status)
-                return task -> TaskPriority.HIGH.equals(task.getPriority()) || 
-                              TaskPriority.URGENT.equals(task.getPriority());
-                
-            case "overdue":
+            case "OVERDUE":
                 // ✅ OVERDUE: Task có status = OVERDUE
                 return task -> TaskStatus.OVERDUE.equals(task.getStatus());
                 
@@ -55,43 +48,27 @@ public class TaskStatusMapper {
             return null;
         }
         
-        switch (status.toLowerCase().trim()) {
-            case "completed":
+        switch (status.toUpperCase().trim()) {
+            case "IN_PROGRESS":
+                return TaskStatus.IN_PROGRESS;
+            case "COMPLETED":
                 return TaskStatus.COMPLETED;
-            case "overdue":
+            case "OVERDUE":
                 return TaskStatus.OVERDUE;
-            case "pending":
-            case "urgent":
-                // Không map trực tiếp được vì cần logic phức tạp hơn
-                return null;
             default:
-                return null;
+                return null; // Invalid status
         }
     }
     
     /**
-     * ✅ Check if status requires complex filtering (không thể dùng simple TaskStatus query)
-     * @param status Business status string
-     * @return true nếu cần filter phức tạp ở application level
+     * ✅ Check if status requires complex filtering (luôn false vì tất cả status đều map trực tiếp)
+     * @param status TaskStatus enum string
+     * @return false vì tất cả status đều có thể dùng simple TaskStatus query
      */
     public static boolean requiresComplexFiltering(String status) {
-        if (status == null || status.trim().isEmpty()) {
-            return false;
-        }
-        
-        switch (status.toLowerCase().trim()) {
-            case "pending":  // Cần check multiple TaskStatus values
-            case "urgent":   // Cần check TaskPriority thay vì TaskStatus
-                return true;
-            case "completed":
-            case "overdue":
-                return false; // Có thể dùng direct TaskStatus query
-            default:
-                return false;
-        }
-    }
-    
-    /**
+        // Tất cả status hiện tại (IN_PROGRESS, COMPLETED, OVERDUE) đều map trực tiếp với TaskStatus enum
+        return false;
+    }    /**
      * ✅ Get description for status category
      * @param status Business status string
      * @return Mô tả về logic filtering

@@ -145,7 +145,7 @@ public class TaskController {
 
     @GetMapping("/my")
     @Operation(summary = "Lấy công việc của tôi theo loại với ROOT TASKS count (sorted by latest), advanced search và pagination", 
-               description = "Lấy danh sách công việc theo loại với sort theo thời gian mới nhất và thông tin count ROOT TASKS: created (đã tạo nhưng chưa giao việc - flat list), assigned (đã giao việc bao gồm tất cả subtasks với hierarchyLevel), received (được giao việc - flat list). Count chỉ tính ROOT TASKS (parent IS NULL), data vẫn bao gồm tất cả tasks để hiển thị hierarchy. Hỗ trợ status cho type=assigned và type=received: completed, pending, urgent, overdue. Hỗ trợ advanced search cho TẤT CẢ TYPES với keyword, priorities, time range (format: yyyy-MM-dd). Recipient search chỉ cho type=assigned. Hỗ trợ pagination với page (bắt đầu từ 1) và size (max 100, default 20)")
+               description = "Lấy danh sách công việc theo loại với sort theo thời gian mới nhất và thông tin count ROOT TASKS: created (đã tạo nhưng chưa giao việc - flat list), assigned (đã giao việc bao gồm tất cả subtasks với hierarchyLevel), received (được giao việc - flat list). Count chỉ tính ROOT TASKS (parent IS NULL), data vẫn bao gồm tất cả tasks để hiển thị hierarchy. Hỗ trợ status cho type=assigned và type=received: IN_PROGRESS, COMPLETED, OVERDUE (theo TaskStatus enum). Hỗ trợ advanced search cho TẤT CẢ TYPES với keyword, priorities (LOW, NORMAL, HIGH, URGENT), time range (format: yyyy-MM-dd). Recipient search chỉ cho type=assigned với recipientTypes (USER, TEAM, UNIT). Hỗ trợ pagination với page (bắt đầu từ 1) và size (max 100, default 20)")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiMyTasksResponse.class))),
         @ApiResponse(responseCode = "400", description = "Tham số type hoặc status không hợp lệ", content = @Content(schema = @Schema(implementation = ApiMyTasksResponse.class)))
@@ -187,9 +187,9 @@ public class TaskController {
         }
         
         // Validate status values
-        if (status != null && !status.matches("completed|pending|urgent|overdue")) {
+        if (status != null && !status.matches("IN_PROGRESS|COMPLETED|OVERDUE")) {
             return ResponseEntity.badRequest().body(
-                ApiMyTasksResponse.error("Status phải là: completed, pending, urgent, hoặc overdue", 400)
+                ApiMyTasksResponse.error("Status phải là: IN_PROGRESS, COMPLETED, hoặc OVERDUE", 400)
             );
         }
         
@@ -203,9 +203,9 @@ public class TaskController {
         // Validate recipient types
         if (recipientTypes != null) {
             for (String recipientType : recipientTypes) {
-                if (!recipientType.matches("user|team|unit")) {
+                if (!recipientType.matches("USER|TEAM|UNIT")) {
                     return ResponseEntity.badRequest().body(
-                        ApiMyTasksResponse.error("recipientType phải là: user, team, hoặc unit", 400)
+                        ApiMyTasksResponse.error("recipientType phải là: USER, TEAM, hoặc UNIT", 400)
                     );
                 }
             }
