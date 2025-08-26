@@ -17,7 +17,7 @@ import com.project.quanlycanghangkhong.dto.response.task.ApiTaskAttachmentsSimpl
 import com.project.quanlycanghangkhong.dto.response.task.ApiTaskAttachmentUploadResponse;
 import com.project.quanlycanghangkhong.dto.response.task.TaskTreeDTO;
 import com.project.quanlycanghangkhong.dto.request.TaskAttachmentUploadRequest;
-import com.project.quanlycanghangkhong.dto.request.AdvancedSearchRequest;
+
 
 // ✅ PRIORITY 3: Simplified DTOs imports
 import com.project.quanlycanghangkhong.dto.simplified.TaskDetailSimplifiedDTO;
@@ -30,6 +30,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -144,22 +145,58 @@ public class TaskController {
     }
 
     @GetMapping("/my")
-    @Operation(summary = "Lấy công việc của tôi theo loại với ROOT TASKS count (sorted by latest), advanced search và pagination", 
-               description = "Lấy danh sách công việc theo loại với sort theo thời gian mới nhất và thông tin count ROOT TASKS: created (đã tạo nhưng chưa giao việc - flat list), assigned (đã giao việc bao gồm tất cả subtasks với hierarchyLevel), received (được giao việc - flat list). Count chỉ tính ROOT TASKS (parent IS NULL), data vẫn bao gồm tất cả tasks để hiển thị hierarchy. Hỗ trợ status cho type=assigned và type=received: IN_PROGRESS, COMPLETED, OVERDUE (theo TaskStatus enum). Hỗ trợ advanced search cho TẤT CẢ TYPES với keyword, priorities (LOW, NORMAL, HIGH, URGENT), time range (format: yyyy-MM-dd). Recipient search chỉ cho type=assigned với recipientTypes (USER, TEAM, UNIT). Hỗ trợ pagination với page (bắt đầu từ 1) và size (max 100, default 20)")
+    @Operation(summary = "API tổng hợp: Lấy công việc của tôi với advanced search, filter status, pagination", 
+               description = "🔥 UNIFIED API cho tất cả task types với advanced search và pagination. " +
+                           "📋 TASK TYPES: " +
+                           "• created: Tasks đã tạo nhưng chưa giao việc (flat list) " +
+                           "• assigned: Tasks đã giao việc (bao gồm subtasks với hierarchy) " +
+                           "• received: Tasks được giao (flat list) " +
+                           "🎯 STATUS FILTER (chỉ cho assigned/received): IN_PROGRESS, COMPLETED, OVERDUE " +
+                           "🔍 KEYWORD SEARCH (cho tất cả types): Tìm kiếm trong 5 fields - ID, title, content, instructions, notes " +
+                           "⚡ ADVANCED FILTERS: priorities (LOW/NORMAL/HIGH/URGENT), time range (yyyy-MM-dd) " +
+                           "👥 RECIPIENT SEARCH (chỉ cho assigned): recipientTypes + recipientIds " +
+                           "📄 PAGINATION: page (1-based), size (max 100, default 20)")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiMyTasksResponse.class))),
-        @ApiResponse(responseCode = "400", description = "Tham số type hoặc status không hợp lệ", content = @Content(schema = @Schema(implementation = ApiMyTasksResponse.class)))
+        @ApiResponse(responseCode = "400", description = "Tham số không hợp lệ", content = @Content(schema = @Schema(implementation = ApiMyTasksResponse.class)))
     })
     public ResponseEntity<ApiMyTasksResponse> getMyTasks(
+            @Parameter(description = "Loại task", required = true, schema = @Schema(allowableValues = {"created", "assigned", "received"}))
             @RequestParam String type,
+            
+            @Parameter(description = "Filter theo status (chỉ cho assigned/received)", schema = @Schema(allowableValues = {"IN_PROGRESS", "COMPLETED", "OVERDUE"}))
             @RequestParam(required = false) String status,
+            
+            @Parameter(description = "Từ khóa tìm kiếm (search trong 5 fields): ID, title, content, instructions, notes", example = "urgent task")
             @RequestParam(required = false) String keyword,
+            
+            @Parameter(description = "Ngày bắt đầu (format: yyyy-MM-dd)", example = "2025-08-01")
             @RequestParam(required = false) String startTime,
+            
+            @Parameter(description = "Ngày kết thúc (format: yyyy-MM-dd)", example = "2025-08-31")
             @RequestParam(required = false) String endTime,
+            
+            @Parameter(description = "Danh sách priority để filter", 
+                      schema = @Schema(type = "array", 
+                                     allowableValues = {
+                                         "LOW",      // 🟢 Không khẩn cấp - có thể hoãn
+                                         "NORMAL",   // 🔵 Bình thường - công việc thường ngày  
+                                         "HIGH",     // 🟡 Quan trọng - ảnh hưởng đến chuyến bay
+                                         "URGENT"    // 🔴 Khẩn cấp - cần xử lý ngay lập tức
+                                     },
+                                     description = "LOW: Không khẩn cấp, NORMAL: Bình thường, HIGH: Quan trọng, URGENT: Khẩn cấp"))
             @RequestParam(required = false) List<String> priorities,
+            
+            @Parameter(description = "Loại recipient (chỉ cho assigned)", schema = @Schema(type = "array", allowableValues = {"USER", "TEAM", "UNIT"}))
             @RequestParam(required = false) List<String> recipientTypes,
+            
+            @Parameter(description = "ID của recipients tương ứng với recipientTypes")
             @RequestParam(required = false) List<Integer> recipientIds,
+            
+            @Parameter(description = "Số trang (bắt đầu từ 1)", example = "1")
             @RequestParam(required = false, defaultValue = "1") Integer page,
+            
+            @Parameter(description = "Số items per page (max 100)", example = "20")
             @RequestParam(required = false, defaultValue = "20") Integer size) {
         if (!type.matches("created|assigned|received")) {
             return ResponseEntity.badRequest().body(
@@ -532,34 +569,6 @@ public class TaskController {
         }
     }
     
-    // ============== ADVANCED SEARCH ENDPOINTS ==============
-    
-    @PostMapping("/my/search")
-    @Operation(summary = "Tìm kiếm nâng cao tasks đã giao việc", 
-               description = "Tìm kiếm tasks với nhiều tiêu chí: keyword, time range (format: yyyy-MM-dd), priority, recipient. Chỉ áp dụng cho type=assigned")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Tìm kiếm thành công", 
-                    content = @Content(schema = @Schema(implementation = ApiMyTasksResponse.class))),
-        @ApiResponse(responseCode = "400", description = "Dữ liệu đầu vào không hợp lệ",
-                    content = @Content(schema = @Schema(implementation = ApiMyTasksResponse.class)))
-    })
-    public ResponseEntity<ApiMyTasksResponse> searchMyTasksAdvanced(@RequestBody AdvancedSearchRequest searchRequest) {
-        // Validate input
-        if (searchRequest == null || !searchRequest.isValid()) {
-            return ResponseEntity.badRequest().body(
-                ApiMyTasksResponse.error("Dữ liệu tìm kiếm không hợp lệ", 400)
-            );
-        }
-        
-        // Check có tiêu chí tìm kiếm không
-        if (!searchRequest.hasSearchCriteria()) {
-            return ResponseEntity.badRequest().body(
-                ApiMyTasksResponse.error("Cần ít nhất một tiêu chí tìm kiếm", 400)
-            );
-        }
-        
-        MyTasksData response = taskService.searchMyTasksAdvanced(searchRequest);
-        return ResponseEntity.ok(ApiMyTasksResponse.success(response));
-    }
+
     
 }

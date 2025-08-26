@@ -87,44 +87,6 @@ public interface TaskService {
      * @param keyword Từ khóa tìm kiếm trong title/content
      * @param startTime Thời gian bắt đầu (ISO format)
      * @param endTime Thời gian kết thúc (ISO format) 
-     * @param priorities Danh sách priority (LOW, NORMAL, HIGH, URGENT)
-     * @param recipientTypes Danh sách recipient types (user, team, unit)
-     * @param recipientIds Danh sách recipient IDs tương ứng
-     * @return MyTasksData với kết quả tìm kiếm
-     */
-    com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithAdvancedSearch(
-        String type, String status, String keyword, String startTime, String endTime,
-        java.util.List<String> priorities, java.util.List<String> recipientTypes, java.util.List<Integer> recipientIds);
-    
-    /**
-     * Tìm kiếm nâng cao tasks với nhiều tiêu chí và PAGINATION - ADVANCED SEARCH WITH PAGINATION (query parameters)
-     * Tương tự getMyTasksWithAdvancedSearch nhưng có thêm pagination support
-     * @param type Loại task (chỉ "assigned" được hỗ trợ)
-     * @param filter Filter type: completed, pending, urgent, overdue
-     * @param keyword Từ khóa tìm kiếm trong title/content
-     * @param startTime Thời gian bắt đầu (ISO format)
-     * @param endTime Thời gian kết thúc (ISO format) 
-     * @param priorities Danh sách priority (LOW, NORMAL, HIGH, URGENT)
-     * @param recipientTypes Danh sách recipient types (user, team, unit)
-     * @param recipientIds Danh sách recipient IDs tương ứng
-     * @param page Số trang (bắt đầu từ 0)
-     * @param size Số lượng items per page (max 100)
-     * @return MyTasksData với kết quả tìm kiếm đã được phân trang
-     */
-    com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithAdvancedSearchAndPagination(
-        String type, String status, String keyword, String startTime, String endTime,
-        java.util.List<String> priorities, java.util.List<String> recipientTypes, java.util.List<Integer> recipientIds,
-        Integer page, Integer size);
-    
-    /**
-     * Tìm kiếm nâng cao tasks với nhiều tiêu chí - ADVANCED SEARCH (POST body)
-     * Chỉ áp dụng cho type=assigned với các tiêu chí tìm kiếm nâng cao từ request body
-     * @param searchRequest Request chứa các tiêu chí tìm kiếm
-     * @return MyTasksData với kết quả tìm kiếm
-     */
-    com.project.quanlycanghangkhong.dto.response.task.MyTasksData searchMyTasksAdvanced(
-        com.project.quanlycanghangkhong.dto.request.AdvancedSearchRequest searchRequest);
-    
     // MÔ HÌNH ADJACENCY LIST: Các method subtask cho cấu trúc phân cấp
     
     /**
