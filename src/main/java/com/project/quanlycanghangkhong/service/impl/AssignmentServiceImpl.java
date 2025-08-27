@@ -122,15 +122,12 @@ public class AssignmentServiceImpl implements AssignmentService {
         Assignment assignment = assignmentRepository.findById(assignmentId).orElse(null);
         if (assignment == null) return null;
 
-        boolean recipientChanged = false;
-        if (request.getRecipientType() != null && !request.getRecipientType().equals(assignment.getRecipientType())) {
+        // Cập nhật theo đúng data được gửi lên, không có logic tự động nào khác
+        if (request.getRecipientType() != null) {
             assignment.setRecipientType(request.getRecipientType());
-            recipientChanged = true;
         }
-        // Xử lý recipientId - chỉ set recipientChanged = true nếu thực sự thay đổi
-        if (request.getRecipientId() != null && !request.getRecipientId().equals(assignment.getRecipientId())) {
+        if (request.getRecipientId() != null) {
             assignment.setRecipientId(request.getRecipientId());
-            recipientChanged = true;
         }
         if (request.getDueAt() != null) {
             assignment.setDueAt(request.getDueAt().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime());
@@ -140,21 +137,17 @@ public class AssignmentServiceImpl implements AssignmentService {
         }
         if (request.getStatus() != null) {
             assignment.setStatus(request.getStatus());
-            // Nếu chuyển sang DONE thì set completedAt, completedBy
+            // Chỉ tự động set completedAt khi status = DONE
             if (request.getStatus() == com.project.quanlycanghangkhong.model.AssignmentStatus.DONE) {
                 assignment.setCompletedAt(java.time.LocalDateTime.now());
                 // assignment.setCompletedBy(currentUser); // Lấy user hiện tại nếu cần
-            } else {
+            } else if (request.getStatus() != com.project.quanlycanghangkhong.model.AssignmentStatus.DONE) {
+                // Clear completedAt nếu status không phải DONE
                 assignment.setCompletedAt(null);
                 assignment.setCompletedBy(null);
             }
         }
-        // Nếu thay đổi recipient thì reset completedAt, completedBy, status
-        if (recipientChanged) {
-            assignment.setCompletedAt(null);
-            assignment.setCompletedBy(null);
-            assignment.setStatus(com.project.quanlycanghangkhong.model.AssignmentStatus.WORKING);
-        }
+        
         Assignment saved = assignmentRepository.save(assignment);
         if (saved.getTask() != null) {
             taskService.updateTaskStatus(saved.getTask());
