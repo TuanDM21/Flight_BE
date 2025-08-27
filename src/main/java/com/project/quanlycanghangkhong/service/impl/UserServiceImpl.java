@@ -118,55 +118,60 @@ public class UserServiceImpl implements UserService {
                     .collect(Collectors.toList());
                 break;
             case "TEAM_VICE_LEAD":
-                // Không giao cho TEAM_LEAD, chỉ giao cho VICE_TEAM_LEAD và các user khác cùng team
+                // Không giao cho TEAM_LEAD, chỉ giao cho TEAM_VICE_LEAD và các user khác cùng team
                 if (currentUser.getTeam() == null) return List.of();
                 Integer teamIdVice = currentUser.getTeam().getId();
-                System.out.println("[DEBUG] VICE_TEAM_LEAD: teamId=" + teamIdVice);
+                System.out.println("[DEBUG] TEAM_VICE_LEAD: teamId=" + teamIdVice);
                 result = userRepository.findAll().stream()
                     .filter(u -> !u.getId().equals(currentUser.getId()))
                     .filter(u -> u.getTeam() != null && u.getTeam().getId().equals(teamIdVice))
                     .filter(u -> {
                         String r = u.getRole() != null ? u.getRole().getRoleName() : "";
                         boolean ok = !"TEAM_LEAD".equals(r);
-                        if (ok) System.out.println("[DEBUG] VICE_TEAM_LEAD có thể giao cho: " + u.getName() + " (role=" + r + ", team=" + (u.getTeam()!=null?u.getTeam().getId():"-") + ", unit=" + (u.getUnit()!=null?u.getUnit().getId():"-") + ")");
+                        if (ok) System.out.println("[DEBUG] TEAM_VICE_LEAD có thể giao cho: " + u.getName() + " (role=" + r + ", team=" + (u.getTeam()!=null?u.getTeam().getId():"-") + ", unit=" + (u.getUnit()!=null?u.getUnit().getId():"-") + ")");
                         return ok;
                     })
                     .collect(Collectors.toList());
-                System.out.println("[DEBUG] VICE_TEAM_LEAD tổng số user có thể giao: " + result.size());
+                System.out.println("[DEBUG] TEAM_VICE_LEAD tổng số user có thể giao: " + result.size());
                 break;
             case "UNIT_LEAD":
-                // Giao cho user cùng team và cùng unit, bao gồm cả VICE_UNIT_LEAD
+                // Giao cho user cùng team và cùng unit, bao gồm cả UNIT_VICE_LEAD
                 if (currentUser.getTeam() == null || currentUser.getUnit() == null) return List.of();
                 Integer tId = currentUser.getTeam().getId();
                 Integer uId = currentUser.getUnit().getId();
+                System.out.println("[DEBUG] UNIT_LEAD: teamId=" + tId + ", unitId=" + uId);
                 result = userRepository.findAll().stream()
                     .filter(u -> !u.getId().equals(currentUser.getId()))
                     .filter(u -> u.getTeam() != null && u.getTeam().getId().equals(tId))
                     .filter(u -> u.getUnit() != null && u.getUnit().getId().equals(uId))
                     .filter(u -> {
                         String r = u.getRole() != null ? u.getRole().getRoleName() : "";
-                        return "VICE_UNIT_LEAD".equals(r) || "UNIT_LEAD".equals(r) || "MEMBER".equals(r) || "OFFICE".equals(r);
+                        boolean ok = "UNIT_VICE_LEAD".equals(r) || "UNIT_LEAD".equals(r) || "MEMBER".equals(r) || "OFFICE".equals(r);
+                        if (ok) System.out.println("[DEBUG] UNIT_LEAD có thể giao cho: " + u.getName() + " (role=" + r + ", team=" + (u.getTeam()!=null?u.getTeam().getId():"-") + ", unit=" + (u.getUnit()!=null?u.getUnit().getId():"-") + ")");
+                        return ok;
                     })
                     .collect(Collectors.toList());
+                System.out.println("[DEBUG] UNIT_LEAD tổng số user có thể giao: " + result.size());
                 break;
             case "UNIT_VICE_LEAD":
-                // Giao cho user cùng team và cùng unit, chỉ cho VICE_UNIT_LEAD, MEMBER, OFFICE (không cho UNIT_LEAD)
+                // Giao cho user cùng team và cùng unit, chỉ cho UNIT_VICE_LEAD, MEMBER, OFFICE (KHÔNG cho UNIT_LEAD)
                 if (currentUser.getTeam() == null || currentUser.getUnit() == null) return List.of();
                 Integer tIdV = currentUser.getTeam().getId();
                 Integer uIdV = currentUser.getUnit().getId();
-                System.out.println("[DEBUG] VICE_UNIT_LEAD: teamId=" + tIdV + ", unitId=" + uIdV);
+                System.out.println("[DEBUG] UNIT_VICE_LEAD: teamId=" + tIdV + ", unitId=" + uIdV);
                 result = userRepository.findAll().stream()
                     .filter(u -> !u.getId().equals(currentUser.getId()))
                     .filter(u -> u.getTeam() != null && u.getTeam().getId().equals(tIdV))
                     .filter(u -> u.getUnit() != null && u.getUnit().getId().equals(uIdV))
                     .filter(u -> {
                         String r = u.getRole() != null ? u.getRole().getRoleName() : "";
-                        boolean ok = "VICE_UNIT_LEAD".equals(r) || "MEMBER".equals(r) || "OFFICE".equals(r);
-                        if (ok) System.out.println("[DEBUG] VICE_UNIT_LEAD có thể giao cho: " + u.getName() + " (role=" + r + ", team=" + (u.getTeam()!=null?u.getTeam().getId():"-") + ", unit=" + (u.getUnit()!=null?u.getUnit().getId():"-") + ")");
+                        // Chỉ cho phép: UNIT_VICE_LEAD, MEMBER, OFFICE - KHÔNG cho UNIT_LEAD
+                        boolean ok = "UNIT_VICE_LEAD".equals(r) || "MEMBER".equals(r) || "OFFICE".equals(r);
+                        if (ok) System.out.println("[DEBUG] UNIT_VICE_LEAD có thể giao cho: " + u.getName() + " (role=" + r + ", team=" + (u.getTeam()!=null?u.getTeam().getId():"-") + ", unit=" + (u.getUnit()!=null?u.getUnit().getId():"-") + ")");
                         return ok;
                     })
                     .collect(Collectors.toList());
-                System.out.println("[DEBUG] VICE_UNIT_LEAD tổng số user có thể giao: " + result.size());
+                System.out.println("[DEBUG] UNIT_VICE_LEAD tổng số user có thể giao: " + result.size());
                 break;
             case "MEMBER":
             case "OFFICE":

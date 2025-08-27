@@ -82,7 +82,17 @@ public class UnitServiceImpl implements UnitService {
                 }
                 break;
             case "UNIT_LEAD":
+                // Chỉ có thể giao cho unit của mình
+                if (currentUser.getUnit() != null) {
+                    assignableUnits = List.of(currentUser.getUnit());
+                } else {
+                    assignableUnits = List.of();
+                }
+                break;
             case "UNIT_VICE_LEAD":
+                // UNIT_VICE_LEAD không thể giao việc cho unit, chỉ có thể giao cho users
+                assignableUnits = List.of();
+                break;
             case "MEMBER":
             case "OFFICE":
                 // Chỉ có thể giao cho unit của mình

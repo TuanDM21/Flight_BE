@@ -77,9 +77,9 @@ public class TeamServiceImpl implements TeamService {
                 
             case "UNIT_LEAD":
             case "UNIT_VICE_LEAD":
-                // Chỉ có thể giao việc cho team mà unit của mình thuộc về
-                if (currentUser.getTeam() == null) return List.of();
-                result = List.of(currentUser.getTeam());
+                // UNIT_LEAD không nên giao việc ở cấp độ team, chỉ nên giao ở cấp độ unit và user
+                // Vì logic trong UserServiceImpl chỉ cho phép giao cho users trong cùng unit
+                result = List.of();
                 break;
                 
             case "MEMBER":
