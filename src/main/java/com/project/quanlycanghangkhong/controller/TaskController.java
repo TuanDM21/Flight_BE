@@ -16,6 +16,8 @@ import com.project.quanlycanghangkhong.dto.response.task.MyTasksData;
 import com.project.quanlycanghangkhong.dto.response.task.ApiTaskAttachmentsSimplifiedResponse;
 import com.project.quanlycanghangkhong.dto.response.task.ApiTaskAttachmentUploadResponse;
 import com.project.quanlycanghangkhong.dto.response.task.TaskTreeDTO;
+import com.project.quanlycanghangkhong.dto.response.task.ApiTaskSubtreeResponse;
+import com.project.quanlycanghangkhong.dto.response.task.ApiTaskTreeResponse;
 import com.project.quanlycanghangkhong.dto.request.TaskAttachmentUploadRequest;
 
 
@@ -318,38 +320,43 @@ public class TaskController {
         return ResponseEntity.ok(new ApiAllTasksResponse("Thành công", 200, rootTasks, true));
     }
 
-        @GetMapping("/{id}/subtree")
+    @GetMapping("/{id}/subtree")
     @Operation(summary = "Lấy toàn bộ cây con của task (flat list)", 
                description = "Lấy task cùng với tất cả subtask dưới dạng flat list")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Thành công"),
-        @ApiResponse(responseCode = "404", description = "Không tìm thấy task")
+        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiTaskSubtreeResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy task", content = @Content(schema = @Schema(implementation = ApiTaskSubtreeResponse.class)))
     })
-    public ResponseEntity<List<TaskDetailDTO>> getTaskSubtree(@PathVariable Integer id) {
+    public ResponseEntity<ApiTaskSubtreeResponse> getTaskSubtree(@PathVariable Integer id) {
         List<TaskDetailDTO> subtree = taskService.getTaskSubtree(id);
         
         if (subtree.isEmpty()) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(404).body(
+                new ApiTaskSubtreeResponse("Không tìm thấy task với ID: " + id, 404, null, false)
+            );
         }
         
-        return ResponseEntity.ok(subtree);
+        String message = String.format("Lấy subtree thành công - %d task(s) (bao gồm task gốc)", subtree.size());
+        return ResponseEntity.ok(new ApiTaskSubtreeResponse(message, 200, subtree, true));
     }
 
     @GetMapping("/{id}/tree")
     @Operation(summary = "Lấy toàn bộ cây con của task (hierarchical structure)", 
                description = "Lấy task cùng với tất cả subtask theo cấu trúc phân cấp nested - dễ dàng cho frontend hiển thị tree view")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Thành công"),
-        @ApiResponse(responseCode = "404", description = "Không tìm thấy task")
+        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiTaskTreeResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy task", content = @Content(schema = @Schema(implementation = ApiTaskTreeResponse.class)))
     })
-    public ResponseEntity<TaskTreeDTO> getTaskTree(@PathVariable Integer id) {
+    public ResponseEntity<ApiTaskTreeResponse> getTaskTree(@PathVariable Integer id) {
         TaskTreeDTO taskTree = taskService.getTaskSubtreeHierarchical(id);
         
         if (taskTree == null) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(404).body(
+                new ApiTaskTreeResponse("Không tìm thấy task với ID: " + id, 404, null, false)
+            );
         }
         
-        return ResponseEntity.ok(taskTree);
+        return ResponseEntity.ok(new ApiTaskTreeResponse("Lấy task tree thành công", 200, taskTree, true));
     }
     
     // Existing endpoints...
