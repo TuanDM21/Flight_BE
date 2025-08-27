@@ -127,8 +127,8 @@ public class AssignmentServiceImpl implements AssignmentService {
             assignment.setRecipientType(request.getRecipientType());
             recipientChanged = true;
         }
-        // Xử lý recipientId
-        if (request.getRecipientId() != null) {
+        // Xử lý recipientId - chỉ set recipientChanged = true nếu thực sự thay đổi
+        if (request.getRecipientId() != null && !request.getRecipientId().equals(assignment.getRecipientId())) {
             assignment.setRecipientId(request.getRecipientId());
             recipientChanged = true;
         }
