@@ -15,7 +15,7 @@
 //import org.springframework.web.bind.annotation.RequestParam;
 //import org.springframework.web.bind.annotation.RestController;
 //
-//import com.project.quanlycanghangkhong.dto.ApplyFlightShiftRequest;
+//import com.project.quanlycanghangkhong.request.ApplyFlightShiftRequest;
 //import com.project.quanlycanghangkhong.dto.FlightAssignmentDTO;
 //import com.project.quanlycanghangkhong.service.FlightAssignmentService;
 //

@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.project.quanlycanghangkhong.dto.ApplyShiftMultiDTO;
-import com.project.quanlycanghangkhong.dto.AssignShiftRequest;
+import com.project.quanlycanghangkhong.request.AssignShiftRequest;
 import com.project.quanlycanghangkhong.dto.DTOConverter;
 import com.project.quanlycanghangkhong.dto.ScheduleDTO;
 import com.project.quanlycanghangkhong.dto.UserShiftDTO;

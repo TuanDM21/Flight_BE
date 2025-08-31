@@ -10,7 +10,7 @@ import com.project.quanlycanghangkhong.dto.TeamDTO;
 import com.project.quanlycanghangkhong.model.Team;
 import com.project.quanlycanghangkhong.service.TeamService;
 import com.project.quanlycanghangkhong.dto.ApiResponse;
-import com.project.quanlycanghangkhong.dto.response.teams.ApiAllTeamsResponse;
+import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -33,17 +33,12 @@ public class TeamController {
 	    @io.swagger.v3.oas.annotations.responses.ApiResponse(
 	        responseCode = "200",
 	        description = "Successfully retrieved all teams",
-	        content = @Content(schema = @Schema(implementation = ApiAllTeamsResponse.class))
+	        content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))
 	    )
 	})
-	public ResponseEntity<ApiAllTeamsResponse> getAllTeams() {
+	public ResponseEntity<ApiResponseCustom<List<TeamDTO>>> getAllTeams() {
 		List<TeamDTO> dtos = teamService.getAllTeams();
-		ApiAllTeamsResponse response = new ApiAllTeamsResponse();
-		response.setMessage("Thành công");
-		response.setStatusCode(200);
-		response.setData(dtos);
-		response.setSuccess(true);
-		return ResponseEntity.ok(response);
+		return ResponseEntity.ok(ApiResponseCustom.success("Thành công", dtos));
 	}
 
 	@PostMapping
@@ -62,13 +57,8 @@ public class TeamController {
 
 	@GetMapping("/assignable")
 	@Operation(summary = "Get assignable teams", description = "Lấy danh sách team mà user hiện tại có thể giao việc cho theo phân quyền")
-	public ResponseEntity<ApiAllTeamsResponse> getAssignableTeams() {
+	public ResponseEntity<ApiResponseCustom<List<TeamDTO>>> getAssignableTeams() {
 		List<TeamDTO> dtos = teamService.getAssignableTeamsForCurrentUser();
-		ApiAllTeamsResponse response = new ApiAllTeamsResponse();
-		response.setMessage("Thành công");
-		response.setStatusCode(200);
-		response.setData(dtos);
-		response.setSuccess(true);
-		return ResponseEntity.ok(response);
+		return ResponseEntity.ok(ApiResponseCustom.success("Thành công", dtos));
 	}
 }

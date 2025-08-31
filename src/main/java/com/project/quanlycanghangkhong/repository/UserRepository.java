@@ -55,4 +55,13 @@ public interface UserRepository extends JpaRepository<User, Integer> {
 
     @Query("SELECT u FROM User u WHERE u.unit.id IN :unitIds AND u.role.roleName = 'UNIT_LEAD'")
     List<User> findUnitLeadsByUnitIds(@Param("unitIds") List<Integer> unitIds);
+    
+    // ✅ REPLACEMENT FOR UserDAO: Find users by criteria
+    @Query("SELECT u FROM User u WHERE " +
+           "(:teamId IS NULL OR u.team.id = :teamId) AND " +
+           "(:unitId IS NULL OR u.unit.id = :unitId) AND " +
+           "(:searchText IS NULL OR :searchText = '' OR LOWER(u.name) LIKE LOWER(CONCAT('%', :searchText, '%')))")
+    List<User> findUsersByCriteria(@Param("teamId") Integer teamId, 
+                                   @Param("unitId") Integer unitId, 
+                                   @Param("searchText") String searchText);
 }

@@ -7,10 +7,10 @@ import com.project.quanlycanghangkhong.repository.AssignmentRepository;
 import com.project.quanlycanghangkhong.repository.TaskRepository;
 import com.project.quanlycanghangkhong.repository.UserRepository;
 import com.project.quanlycanghangkhong.service.AssignmentService;
-import com.project.quanlycanghangkhong.dto.request.UpdateAssignmentRequest;
+import com.project.quanlycanghangkhong.request.UpdateAssignmentRequest;
 import com.project.quanlycanghangkhong.service.TaskService;
-import com.project.quanlycanghangkhong.dto.CreateAssignmentRequest;
-import com.project.quanlycanghangkhong.dto.request.CreateAssignmentsRequest;
+import com.project.quanlycanghangkhong.request.CreateAssignmentRequest;
+import com.project.quanlycanghangkhong.request.CreateAssignmentsRequest;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

@@ -1,14 +1,14 @@
 package com.project.quanlycanghangkhong.service;
 
-import com.project.quanlycanghangkhong.dto.CreateTaskRequest;
-import com.project.quanlycanghangkhong.dto.CreateSubtaskRequest;
+import com.project.quanlycanghangkhong.request.CreateTaskRequest;
+import com.project.quanlycanghangkhong.request.CreateSubtaskRequest;
 import com.project.quanlycanghangkhong.dto.TaskDTO;
 import com.project.quanlycanghangkhong.dto.TaskDetailDTO;
 import com.project.quanlycanghangkhong.dto.UpdateTaskDTO;
 import com.project.quanlycanghangkhong.dto.AttachmentDTO;
 
 // ✅ PRIORITY 3: Simplified DTOs imports
-import com.project.quanlycanghangkhong.dto.simplified.TaskDetailSimplifiedDTO;
+import com.project.quanlycanghangkhong.dto.TaskDetailSimplifiedDTO;
 
 import java.util.List;
 
@@ -49,7 +49,7 @@ public interface TaskService {
      * @param type Loại task (created, assigned, received)
      * @return MyTasksData với cấu trúc chuẩn hóa
      */
-    com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithCountStandardized(String type);
+    com.project.quanlycanghangkhong.dto.MyTasksData getMyTasksWithCountStandardized(String type);
     
     /**
      * Lấy tasks với count information và filter - STANDARDIZED VERSION WITH FILTER
@@ -58,7 +58,7 @@ public interface TaskService {
      * @param filter Filter áp dụng (chỉ cho type=assigned): completed, pending, urgent, overdue
      * @return MyTasksData với cấu trúc chuẩn hóa đã được filter
      */
-    com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithCountStandardized(String type, String status);
+    com.project.quanlycanghangkhong.dto.MyTasksData getMyTasksWithCountStandardized(String type, String status);
     
     /**
      * Lấy tasks với count information và PAGINATION - STANDARDIZED VERSION WITH PAGINATION
@@ -69,7 +69,7 @@ public interface TaskService {
      * @param size Số lượng items per page (max 100)
      * @return MyTasksData với cấu trúc chuẩn hóa đã được phân trang
      */
-    com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithCountStandardizedAndPagination(String type, String status, Integer page, Integer size);
+    com.project.quanlycanghangkhong.dto.MyTasksData getMyTasksWithCountStandardizedAndPagination(String type, String status, Integer page, Integer size);
     
     /**
      * 🚀 ULTRA OPTIMIZED: Get my tasks with batch loading - Performance target <500ms
@@ -77,7 +77,7 @@ public interface TaskService {
      * @param type Task type (created, assigned, received)
      * @return MyTasksData with ultra-fast performance
      */
-    com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithCountStandardizedUltraFast(String type);
+    com.project.quanlycanghangkhong.dto.MyTasksData getMyTasksWithCountStandardizedUltraFast(String type);
     
     /**
      * Tìm kiếm nâng cao tasks với nhiều tiêu chí - ADVANCED SEARCH (query parameters)
@@ -126,7 +126,7 @@ public interface TaskService {
      * @param taskId ID task gốc để lấy cây con
      * @return TaskTreeDTO với cấu trúc nested hierarchy
      */
-    com.project.quanlycanghangkhong.dto.response.task.TaskTreeDTO getTaskSubtreeHierarchical(Integer taskId);
+    com.project.quanlycanghangkhong.dto.TaskTreeDTO getTaskSubtreeHierarchical(Integer taskId);
     
     // === ATTACHMENT MANAGEMENT ===
     // Attachment chỉ được quản lý thông qua createTask và updateTask
@@ -145,7 +145,7 @@ public interface TaskService {
      * @param taskId ID Task
      * @return Danh sách SimpleAttachmentDTO (flattened structure)
      */
-    List<com.project.quanlycanghangkhong.dto.simplified.SimpleAttachmentDTO> getTaskAttachmentsSimplified(Integer taskId);
+    List<com.project.quanlycanghangkhong.dto.SimpleAttachmentDTO> getTaskAttachmentsSimplified(Integer taskId);
     
     /**
      * Thêm attachments vào task cụ thể
@@ -197,7 +197,7 @@ public interface TaskService {
      * @param size Page size (max 100, default 20)
      * @return MyTasksData with pagination info
      */
-    com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithCountStandardizedAndPaginationOptimized(
+    com.project.quanlycanghangkhong.dto.MyTasksData getMyTasksWithCountStandardizedAndPaginationOptimized(
         String type, String status, Integer page, Integer size);
     
     /**
@@ -215,7 +215,7 @@ public interface TaskService {
      * @param size Page size (max 100, default 20)
      * @return MyTasksData with pagination info
      */
-    com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithAdvancedSearchAndPaginationOptimized(
+    com.project.quanlycanghangkhong.dto.MyTasksData getMyTasksWithAdvancedSearchAndPaginationOptimized(
         String type, String status, String keyword, String startTime, String endTime,
         java.util.List<String> priorities, java.util.List<String> recipientTypes, java.util.List<Integer> recipientIds,
         Integer page, Integer size);

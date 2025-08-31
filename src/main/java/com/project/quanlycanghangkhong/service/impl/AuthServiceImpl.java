@@ -1,9 +1,9 @@
 package com.project.quanlycanghangkhong.service.impl;
 
-import com.project.quanlycanghangkhong.dto.request.LoginRequest;
-import com.project.quanlycanghangkhong.dto.request.RegisterRequest;
-import com.project.quanlycanghangkhong.dto.response.auth.LoginResponse;
-import com.project.quanlycanghangkhong.dto.response.auth.RegisterResponse;
+import com.project.quanlycanghangkhong.request.LoginRequest;
+import com.project.quanlycanghangkhong.request.RegisterRequest;
+import com.project.quanlycanghangkhong.dto.LoginDTO;
+import com.project.quanlycanghangkhong.dto.RegisterDTO;
 import com.project.quanlycanghangkhong.model.Role;
 import com.project.quanlycanghangkhong.model.Team;
 import com.project.quanlycanghangkhong.model.Unit;
@@ -42,7 +42,7 @@ public class AuthServiceImpl implements AuthService {
 	private final PasswordEncoder passwordEncoder;
 
 	@Override
-	public ApiResponseCustom<LoginResponse> login(LoginRequest loginRequest) {
+	public ApiResponseCustom<LoginDTO> login(LoginRequest loginRequest) {
 		try {
 			Authentication authentication = authenticationManager.authenticate(
 					new UsernamePasswordAuthenticationToken(
@@ -51,7 +51,7 @@ public class AuthServiceImpl implements AuthService {
 
 			String token = jwtTokenProvider.generateToken(authentication);
 
-			LoginResponse loginResponse = LoginResponse.builder()
+			LoginDTO loginResponse = LoginDTO.builder()
 					.accessToken(token)
 					.tokenType("Bearer")
 					.expiresIn(3600L)
@@ -69,7 +69,7 @@ public class AuthServiceImpl implements AuthService {
 
 	@Override
 	@Transactional
-	public ApiResponseCustom<RegisterResponse> register(RegisterRequest registerRequest) {
+	public ApiResponseCustom<RegisterDTO> register(RegisterRequest registerRequest) {
 		// Kiểm tra email đã tồn tại chưa
 		if (userRepository.existsByEmail(registerRequest.getEmail())) {
 			return ApiResponseCustom.error(HttpStatus.BAD_REQUEST, "Email đã tồn tại");
@@ -105,8 +105,8 @@ public class AuthServiceImpl implements AuthService {
 		// Lưu user
 		userRepository.save(user);
 
-		// Create and return RegisterResponse with user details
-		RegisterResponse response = new RegisterResponse();
+		// Create and return RegisterDTO with user details
+		RegisterDTO response = new RegisterDTO();
 		response.setId(user.getId());
 		response.setName(user.getName());
 		response.setEmail(user.getEmail());

@@ -8,7 +8,7 @@
 //import org.springframework.stereotype.Service;
 //import org.springframework.transaction.annotation.Transactional;
 //
-//import com.project.quanlycanghangkhong.dto.ApplyFlightShiftRequest;
+//import com.project.quanlycanghangkhong.request.ApplyFlightShiftRequest;
 //import com.project.quanlycanghangkhong.dto.FlightAssignmentDTO;
 //import com.project.quanlycanghangkhong.model.Flight;
 //import com.project.quanlycanghangkhong.model.FlightAssignment;

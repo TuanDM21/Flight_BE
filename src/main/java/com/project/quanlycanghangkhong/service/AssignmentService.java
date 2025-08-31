@@ -1,9 +1,9 @@
 package com.project.quanlycanghangkhong.service;
 
 import com.project.quanlycanghangkhong.dto.AssignmentDTO;
-import com.project.quanlycanghangkhong.dto.request.UpdateAssignmentRequest;
-import com.project.quanlycanghangkhong.dto.CreateAssignmentRequest;
-import com.project.quanlycanghangkhong.dto.request.CreateAssignmentsRequest;
+import com.project.quanlycanghangkhong.request.UpdateAssignmentRequest;
+import com.project.quanlycanghangkhong.request.CreateAssignmentRequest;
+import com.project.quanlycanghangkhong.request.CreateAssignmentsRequest;
 import java.util.List;
 
 public interface AssignmentService {

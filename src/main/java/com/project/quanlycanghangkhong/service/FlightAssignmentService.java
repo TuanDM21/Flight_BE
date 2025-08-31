@@ -2,7 +2,7 @@
 //
 //import java.util.List;
 //
-//import com.project.quanlycanghangkhong.dto.ApplyFlightShiftRequest;
+//import com.project.quanlycanghangkhong.request.ApplyFlightShiftRequest;
 //import com.project.quanlycanghangkhong.dto.FlightAssignmentDTO;
 //
 //public interface FlightAssignmentService {

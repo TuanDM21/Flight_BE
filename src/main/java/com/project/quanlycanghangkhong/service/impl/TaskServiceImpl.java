@@ -7,12 +7,12 @@ import com.project.quanlycanghangkhong.repository.UserRepository;
 import com.project.quanlycanghangkhong.service.TaskService;
 
 // ✅ PRIORITY 3: Simplified DTOs imports
-import com.project.quanlycanghangkhong.dto.simplified.TaskDetailSimplifiedDTO;
-import com.project.quanlycanghangkhong.dto.simplified.SimpleAssignmentDTO;
-import com.project.quanlycanghangkhong.dto.simplified.SimpleAttachmentDTO;
+import com.project.quanlycanghangkhong.dto.TaskDetailSimplifiedDTO;
+import com.project.quanlycanghangkhong.dto.SimpleAssignmentDTO;
+import com.project.quanlycanghangkhong.dto.SimpleAttachmentDTO;
 
 // ✅ Pagination imports
-import com.project.quanlycanghangkhong.dto.response.task.PaginationInfo;
+import com.project.quanlycanghangkhong.dto.PaginationInfo;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -30,6 +30,9 @@ import java.util.stream.Collectors;
 import com.project.quanlycanghangkhong.dto.*;
 import com.project.quanlycanghangkhong.model.*;
 import com.project.quanlycanghangkhong.repository.*;
+import com.project.quanlycanghangkhong.request.CreateTaskRequest;
+import com.project.quanlycanghangkhong.request.CreateSubtaskRequest;
+import com.project.quanlycanghangkhong.request.AssignmentRequest;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.springframework.security.core.Authentication;
@@ -322,7 +325,6 @@ public class TaskServiceImpl implements TaskService {
         attDto.setFileName(att.getFileName());
         attDto.setFileSize(att.getFileSize());
         attDto.setCreatedAt(att.getCreatedAt());
-        attDto.setSharedCount(0); // Set default value for sharedCount
         
         if (att.getUploadedBy() != null) {
             attDto.setUploadedBy(new UserDTO(att.getUploadedBy()));
@@ -588,7 +590,7 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public com.project.quanlycanghangkhong.dto.response.task.TaskTreeDTO getTaskSubtreeHierarchical(Integer taskId) {
+    public com.project.quanlycanghangkhong.dto.TaskTreeDTO getTaskSubtreeHierarchical(Integer taskId) {
         // Lấy task gốc
         TaskDetailDTO rootTask = getTaskDetailById(taskId);
         if (rootTask == null) {
@@ -596,8 +598,8 @@ public class TaskServiceImpl implements TaskService {
         }
         
         // Tạo TaskTreeDTO từ task gốc
-        com.project.quanlycanghangkhong.dto.response.task.TaskTreeDTO rootTreeTask = 
-            new com.project.quanlycanghangkhong.dto.response.task.TaskTreeDTO(rootTask, 0);
+        com.project.quanlycanghangkhong.dto.TaskTreeDTO rootTreeTask = 
+            new com.project.quanlycanghangkhong.dto.TaskTreeDTO(rootTask, 0);
         
         // Recursively build subtree
         buildTaskTree(rootTreeTask, taskId, 1);
@@ -611,7 +613,7 @@ public class TaskServiceImpl implements TaskService {
      * @param parentId ID của task cha trong database
      * @param level Level hiện tại trong tree
      */
-    private void buildTaskTree(com.project.quanlycanghangkhong.dto.response.task.TaskTreeDTO parentTreeTask, 
+    private void buildTaskTree(com.project.quanlycanghangkhong.dto.TaskTreeDTO parentTreeTask, 
                               Integer parentId, Integer level) {
         List<Task> subtasks = taskRepository.findByParentIdAndDeletedFalse(parentId);
         
@@ -619,8 +621,8 @@ public class TaskServiceImpl implements TaskService {
             TaskDetailDTO subtaskDetail = getTaskDetailById(subtask.getId());
             if (subtaskDetail != null) {
                 // Tạo TaskTreeDTO cho subtask
-                com.project.quanlycanghangkhong.dto.response.task.TaskTreeDTO subtaskTreeDTO = 
-                    new com.project.quanlycanghangkhong.dto.response.task.TaskTreeDTO(subtaskDetail, level);
+                com.project.quanlycanghangkhong.dto.TaskTreeDTO subtaskTreeDTO = 
+                    new com.project.quanlycanghangkhong.dto.TaskTreeDTO(subtaskDetail, level);
                 
                 // Thêm vào parent
                 parentTreeTask.addSubtask(subtaskTreeDTO);
@@ -687,11 +689,11 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public List<com.project.quanlycanghangkhong.dto.simplified.SimpleAttachmentDTO> getTaskAttachmentsSimplified(Integer taskId) {
+    public List<com.project.quanlycanghangkhong.dto.SimpleAttachmentDTO> getTaskAttachmentsSimplified(Integer taskId) {
         List<Attachment> attachments = attachmentRepository.findByTask_IdAndIsDeletedFalse(taskId);
         return attachments.stream()
             .map(att -> {
-                com.project.quanlycanghangkhong.dto.simplified.SimpleAttachmentDTO dto = new com.project.quanlycanghangkhong.dto.simplified.SimpleAttachmentDTO();
+                com.project.quanlycanghangkhong.dto.SimpleAttachmentDTO dto = new com.project.quanlycanghangkhong.dto.SimpleAttachmentDTO();
                 dto.setId(att.getId());
                 dto.setFilePath(att.getFilePath());
                 dto.setFileName(att.getFileName());
@@ -881,13 +883,13 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithCountStandardized(String type) {
+    public com.project.quanlycanghangkhong.dto.MyTasksData getMyTasksWithCountStandardized(String type) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String email = authentication != null ? authentication.getName() : null;
         User currentUser = (email != null) ? userRepository.findByEmail(email).orElse(null) : null;
         
         if (currentUser == null) {
-            return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+            return new com.project.quanlycanghangkhong.dto.MyTasksData(
                 List.of());
         }
         
@@ -927,18 +929,18 @@ public class TaskServiceImpl implements TaskService {
         // ✅ Convert all tasks to DTOs (no filtering)
         List<TaskDetailDTO> taskDTOs = convertTasksToTaskDetailDTOsBatch(tasks);
         
-        return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+        return new com.project.quanlycanghangkhong.dto.MyTasksData(
             taskDTOs);
     }
 
     @Override
-    public com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithCountStandardized(String type, String status) {
+    public com.project.quanlycanghangkhong.dto.MyTasksData getMyTasksWithCountStandardized(String type, String status) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String email = authentication != null ? authentication.getName() : null;
         User currentUser = (email != null) ? userRepository.findByEmail(email).orElse(null) : null;
         
         if (currentUser == null) {
-            return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+            return new com.project.quanlycanghangkhong.dto.MyTasksData(
                 List.of());
         }
         
@@ -986,18 +988,18 @@ public class TaskServiceImpl implements TaskService {
         // ✅ Convert all tasks to DTOs (no filtering)
         List<TaskDetailDTO> taskDTOs = convertTasksToTaskDetailDTOsBatch(tasks);
         
-        return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+        return new com.project.quanlycanghangkhong.dto.MyTasksData(
             taskDTOs);
     }
 
     @Override
-    public com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithCountStandardizedAndPagination(String type, String status, Integer page, Integer size) {
+    public com.project.quanlycanghangkhong.dto.MyTasksData getMyTasksWithCountStandardizedAndPagination(String type, String status, Integer page, Integer size) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String email = authentication != null ? authentication.getName() : null;
         User currentUser = (email != null) ? userRepository.findByEmail(email).orElse(null) : null;
         
         if (currentUser == null) {
-            return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+            return new com.project.quanlycanghangkhong.dto.MyTasksData(
                 List.of(), new PaginationInfo(page != null ? page : 0, size != null ? size : 20, 0));
         }
         
@@ -1063,7 +1065,7 @@ public class TaskServiceImpl implements TaskService {
         // Create pagination info  
         PaginationInfo paginationInfo = new PaginationInfo(currentPage, pageSize, allTaskDTOs.size());
         
-        return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+        return new com.project.quanlycanghangkhong.dto.MyTasksData(
             paginatedTaskDTOs, paginationInfo);
     }
 
@@ -1073,13 +1075,13 @@ public class TaskServiceImpl implements TaskService {
      * @return MyTasksData with batch-loaded relationships
      */
     @Override
-    public com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithCountStandardizedUltraFast(String type) {
+    public com.project.quanlycanghangkhong.dto.MyTasksData getMyTasksWithCountStandardizedUltraFast(String type) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String email = authentication != null ? authentication.getName() : null;
         User currentUser = (email != null) ? userRepository.findByEmail(email).orElse(null) : null;
         
         if (currentUser == null) {
-            return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+            return new com.project.quanlycanghangkhong.dto.MyTasksData(
                 List.of());
         }
         
@@ -1117,7 +1119,7 @@ public class TaskServiceImpl implements TaskService {
         }
         
         if (tasks.isEmpty()) {
-            return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+            return new com.project.quanlycanghangkhong.dto.MyTasksData(
                 List.of());
         }
         
@@ -1125,7 +1127,7 @@ public class TaskServiceImpl implements TaskService {
         List<TaskDetailDTO> taskDTOs = convertTasksToTaskDetailDTOsBatch(tasks);
         
         // Use actual task count
-        return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+        return new com.project.quanlycanghangkhong.dto.MyTasksData(
             taskDTOs);
     }
     
@@ -1378,8 +1380,6 @@ public class TaskServiceImpl implements TaskService {
         dto.setFileSize(attachment.getFileSize());
         // dto.setFileType(attachment.getContentType()); // Field không tồn tại, bỏ qua
         dto.setCreatedAt(attachment.getCreatedAt());
-        // dto.setSharedCount(attachment.getSharedCount()); // Field không tồn tại, set default
-        dto.setSharedCount(0);
         // dto.setIsShared(attachment.getIsShared()); // Field không tồn tại, set default  
         dto.setIsShared(false);
         // dto.setIsDeleted(attachment.getIsDeleted()); // Field không tồn tại, set default
@@ -1533,7 +1533,7 @@ public class TaskServiceImpl implements TaskService {
      * 🚀 DATABASE PAGINATION: Get my tasks with database-level pagination (1-based)
      */
     @Override
-    public com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithCountStandardizedAndPaginationOptimized(
+    public com.project.quanlycanghangkhong.dto.MyTasksData getMyTasksWithCountStandardizedAndPaginationOptimized(
             String type, String status, Integer page, Integer size) {
         
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -1541,19 +1541,19 @@ public class TaskServiceImpl implements TaskService {
         User currentUser = (email != null) ? userRepository.findByEmail(email).orElse(null) : null;
         
         if (currentUser == null) {
-            return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
-                List.of(), new com.project.quanlycanghangkhong.dto.response.task.PaginationInfo(1, 20, 0));
+            return new com.project.quanlycanghangkhong.dto.MyTasksData(
+                List.of(), new com.project.quanlycanghangkhong.dto.PaginationInfo(1, 20, 0));
         }
         
         Integer userId = currentUser.getId();
         
         // ✅ Normalize 1-based pagination parameters
-        int[] normalizedParams = com.project.quanlycanghangkhong.dto.response.task.PaginationInfo.normalizePageParams(page, size);
+        int[] normalizedParams = com.project.quanlycanghangkhong.dto.PaginationInfo.normalizePageParams(page, size);
         int currentPage = normalizedParams[0]; // 1-based
         int pageSize = normalizedParams[1];
         
         // ✅ Calculate database offset (0-based for LIMIT/OFFSET)
-        int offset = com.project.quanlycanghangkhong.dto.response.task.PaginationInfo.calculateOffset(currentPage, pageSize);
+        int offset = com.project.quanlycanghangkhong.dto.PaginationInfo.calculateOffset(currentPage, pageSize);
         org.springframework.data.domain.Pageable pageable = 
             org.springframework.data.domain.PageRequest.of(offset / pageSize, pageSize);
         
@@ -1601,10 +1601,10 @@ public class TaskServiceImpl implements TaskService {
         List<TaskDetailDTO> taskDTOs = convertTasksToTaskDetailDTOsBatch(tasks);
         
         // ✅ Create pagination info (1-based) - now accurate after status filtering
-        com.project.quanlycanghangkhong.dto.response.task.PaginationInfo paginationInfo = 
-            new com.project.quanlycanghangkhong.dto.response.task.PaginationInfo(currentPage, pageSize, totalCount);
+        com.project.quanlycanghangkhong.dto.PaginationInfo paginationInfo = 
+            new com.project.quanlycanghangkhong.dto.PaginationInfo(currentPage, pageSize, totalCount);
         
-        return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+        return new com.project.quanlycanghangkhong.dto.MyTasksData(
             taskDTOs, paginationInfo);
     }
     
@@ -1612,7 +1612,7 @@ public class TaskServiceImpl implements TaskService {
      * 🚀 DATABASE PAGINATION: Advanced search with database-level pagination (1-based)
      */
     @Override
-    public com.project.quanlycanghangkhong.dto.response.task.MyTasksData getMyTasksWithAdvancedSearchAndPaginationOptimized(
+    public com.project.quanlycanghangkhong.dto.MyTasksData getMyTasksWithAdvancedSearchAndPaginationOptimized(
             String type, String status, String keyword, String startTime, String endTime,
             java.util.List<String> priorities, java.util.List<String> recipientTypes, java.util.List<Integer> recipientIds,
             Integer page, Integer size) {
@@ -1622,8 +1622,8 @@ public class TaskServiceImpl implements TaskService {
         User currentUser = (email != null) ? userRepository.findByEmail(email).orElse(null) : null;
         
         if (currentUser == null) {
-            return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
-                List.of(), new com.project.quanlycanghangkhong.dto.response.task.PaginationInfo(1, 20, 0));
+            return new com.project.quanlycanghangkhong.dto.MyTasksData(
+                List.of(), new com.project.quanlycanghangkhong.dto.PaginationInfo(1, 20, 0));
         }
         
         Integer userId = currentUser.getId();
@@ -1632,12 +1632,12 @@ public class TaskServiceImpl implements TaskService {
         java.util.function.Predicate<Task> statusFilter = com.project.quanlycanghangkhong.util.TaskStatusMapper.getStatusFilter(status);
         
         // ✅ Normalize 1-based pagination parameters
-        int[] normalizedParams = com.project.quanlycanghangkhong.dto.response.task.PaginationInfo.normalizePageParams(page, size);
+        int[] normalizedParams = com.project.quanlycanghangkhong.dto.PaginationInfo.normalizePageParams(page, size);
         int currentPage = normalizedParams[0]; // 1-based
         int pageSize = normalizedParams[1];
         
         // ✅ Calculate database offset (0-based for LIMIT/OFFSET)
-        int offset = com.project.quanlycanghangkhong.dto.response.task.PaginationInfo.calculateOffset(currentPage, pageSize);
+        int offset = com.project.quanlycanghangkhong.dto.PaginationInfo.calculateOffset(currentPage, pageSize);
         org.springframework.data.domain.Pageable pageable = 
             org.springframework.data.domain.PageRequest.of(offset / pageSize, pageSize);
         
@@ -1791,10 +1791,10 @@ public class TaskServiceImpl implements TaskService {
         List<TaskDetailDTO> taskDTOs = convertTasksToTaskDetailDTOsBatch(tasks);
         
         // ✅ Create pagination info (1-based)
-        com.project.quanlycanghangkhong.dto.response.task.PaginationInfo paginationInfo = 
-            new com.project.quanlycanghangkhong.dto.response.task.PaginationInfo(currentPage, pageSize, totalCount);
+        com.project.quanlycanghangkhong.dto.PaginationInfo paginationInfo = 
+            new com.project.quanlycanghangkhong.dto.PaginationInfo(currentPage, pageSize, totalCount);
         
-        return new com.project.quanlycanghangkhong.dto.response.task.MyTasksData(
+        return new com.project.quanlycanghangkhong.dto.MyTasksData(
             taskDTOs, paginationInfo);
     }
     

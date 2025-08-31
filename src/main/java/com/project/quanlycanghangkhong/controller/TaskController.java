@@ -1,34 +1,35 @@
 package com.project.quanlycanghangkhong.controller;
 
-import com.project.quanlycanghangkhong.dto.CreateTaskRequest;
-import com.project.quanlycanghangkhong.dto.CreateSubtaskRequest;
+import com.project.quanlycanghangkhong.request.CreateTaskRequest;
+import com.project.quanlycanghangkhong.request.CreateSubtaskRequest;
 import com.project.quanlycanghangkhong.dto.TaskDTO;
 import com.project.quanlycanghangkhong.dto.TaskDetailDTO;
 import com.project.quanlycanghangkhong.dto.UpdateTaskDTO;
 import com.project.quanlycanghangkhong.dto.AttachmentDTO;
-import com.project.quanlycanghangkhong.dto.request.BulkDeleteTasksRequest;
-import com.project.quanlycanghangkhong.dto.response.task.ApiAllTasksResponse;
-import com.project.quanlycanghangkhong.dto.response.task.ApiTaskResponse;
-import com.project.quanlycanghangkhong.dto.response.task.ApiTaskDetailResponse;
-import com.project.quanlycanghangkhong.dto.response.task.ApiBulkDeleteTasksResponse;
-import com.project.quanlycanghangkhong.dto.response.task.ApiMyTasksResponse;
-import com.project.quanlycanghangkhong.dto.response.task.MyTasksData;
-import com.project.quanlycanghangkhong.dto.response.task.ApiTaskAttachmentsSimplifiedResponse;
-import com.project.quanlycanghangkhong.dto.response.task.ApiTaskAttachmentUploadResponse;
-import com.project.quanlycanghangkhong.dto.response.task.TaskTreeDTO;
-import com.project.quanlycanghangkhong.dto.response.task.ApiTaskSubtreeResponse;
-import com.project.quanlycanghangkhong.dto.response.task.ApiTaskTreeResponse;
-import com.project.quanlycanghangkhong.dto.request.TaskAttachmentUploadRequest;
+import com.project.quanlycanghangkhong.request.BulkDeleteTasksRequest;
+import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
+import com.project.quanlycanghangkhong.dto.MyTasksData;
+import com.project.quanlycanghangkhong.dto.TaskTreeDTO;
+import com.project.quanlycanghangkhong.request.TaskAttachmentUploadRequest;
 
 
 // ✅ PRIORITY 3: Simplified DTOs imports
-import com.project.quanlycanghangkhong.dto.simplified.TaskDetailSimplifiedDTO;
+import com.project.quanlycanghangkhong.dto.TaskDetailSimplifiedDTO;
 
 import com.project.quanlycanghangkhong.service.TaskService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.Map;
 import io.swagger.v3.oas.annotations.Operation;
@@ -48,22 +49,22 @@ public class TaskController {
 
     @PostMapping("/test")
     @Operation(summary = "Test request body mapping", description = "Test endpoint để debug JSON mapping")
-    public ResponseEntity<ApiTaskResponse> testCreateTask(@RequestBody CreateTaskRequest request) {
+    public ResponseEntity<ApiResponseCustom<Void>> testCreateTask(@RequestBody CreateTaskRequest request) {
         System.out.println("[TEST] Test endpoint called with: " + request);
-        return ResponseEntity.ok(new ApiTaskResponse("Test thành công", 200, null, true));
+        return ResponseEntity.ok(ApiResponseCustom.success("Test thành công", null));
     }
 
     @PostMapping
     @Operation(summary = "Tạo task", description = "Tạo mới một công việc")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Tạo thành công", content = @Content(schema = @Schema(implementation = ApiTaskResponse.class)))
+        @ApiResponse(responseCode = "201", description = "Tạo thành công", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
-    public ResponseEntity<ApiTaskResponse> createTask(@RequestBody CreateTaskRequest request) {
+    public ResponseEntity<ApiResponseCustom<TaskDTO>> createTask(@RequestBody CreateTaskRequest request) {
         System.out.println("[DEBUG] Received CreateTaskRequest: " + request);
         System.out.println("[DEBUG] Request class: " + (request != null ? request.getClass().getName() : "null"));
         if (request == null) {
             System.out.println("[DEBUG] Request is null!");
-            return ResponseEntity.status(400).body(new ApiTaskResponse("Request body is null", 400, null, false));
+            return ResponseEntity.status(400).body(ApiResponseCustom.error("Request body is null"));
         } else {
             System.out.println("[DEBUG] Request title: " + request.getTitle());
             System.out.println("[DEBUG] Request content: " + request.getContent());
@@ -72,54 +73,53 @@ public class TaskController {
             System.out.println("[DEBUG] Request attachmentIds: " + request.getAttachmentIds());
         }
         TaskDTO created = taskService.createTaskWithAssignmentsAndAttachments(request);
-        ApiTaskResponse res = new ApiTaskResponse("Tạo công việc thành công", 201, created, true);
-        return ResponseEntity.status(HttpStatus.CREATED).body(res);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponseCustom.created(created));
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Cập nhật task", description = "Cập nhật một công việc theo id")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Cập nhật thành công", content = @Content(schema = @Schema(implementation = ApiTaskResponse.class))),
-        @ApiResponse(responseCode = "404", description = "Không tìm thấy công việc", content = @Content(schema = @Schema(implementation = ApiTaskResponse.class)))
+        @ApiResponse(responseCode = "200", description = "Cập nhật thành công", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy công việc", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
-    public ResponseEntity<ApiTaskResponse> updateTask(@PathVariable Integer id, @RequestBody UpdateTaskDTO updateTaskDTO) {
+    public ResponseEntity<ApiResponseCustom<TaskDTO>> updateTask(@PathVariable Integer id, @RequestBody UpdateTaskDTO updateTaskDTO) {
         TaskDTO updated = taskService.updateTask(id, updateTaskDTO);
-        if (updated == null) return ResponseEntity.status(404).body(new ApiTaskResponse("Không tìm thấy công việc", 404, null, false));
-        return ResponseEntity.ok(new ApiTaskResponse("Cập nhật thành công", 200, updated, true));
+        if (updated == null) return ResponseEntity.status(404).body(ApiResponseCustom.notFound("Không tìm thấy công việc"));
+        return ResponseEntity.ok(ApiResponseCustom.updated(updated));
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Xoá task", description = "Xoá một công việc theo id")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Xoá thành công", content = @Content(schema = @Schema(implementation = ApiTaskResponse.class)))
+        @ApiResponse(responseCode = "200", description = "Xoá thành công", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
-    public ResponseEntity<ApiTaskResponse> deleteTask(@PathVariable Integer id) {
+    public ResponseEntity<ApiResponseCustom<Void>> deleteTask(@PathVariable Integer id) {
         taskService.deleteTask(id);
-        return ResponseEntity.ok(new ApiTaskResponse("Xoá thành công", 200, null, true));
+        return ResponseEntity.ok(ApiResponseCustom.deleted());
     }
 
     @DeleteMapping("/bulk-delete")
     @Operation(summary = "Xoá nhiều task", description = "Xoá nhiều công việc cùng lúc")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Xoá thành công", content = @Content(schema = @Schema(implementation = ApiBulkDeleteTasksResponse.class))),
-        @ApiResponse(responseCode = "400", description = "Dữ liệu không hợp lệ", content = @Content(schema = @Schema(implementation = ApiBulkDeleteTasksResponse.class)))
+        @ApiResponse(responseCode = "200", description = "Xoá thành công", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+        @ApiResponse(responseCode = "400", description = "Dữ liệu không hợp lệ", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
-    public ResponseEntity<ApiBulkDeleteTasksResponse> bulkDeleteTasks(@Valid @RequestBody BulkDeleteTasksRequest request) {
+    public ResponseEntity<ApiResponseCustom<String>> bulkDeleteTasks(@Valid @RequestBody BulkDeleteTasksRequest request) {
         try {
             if (request.getTaskIds() == null || request.getTaskIds().isEmpty()) {
                 return ResponseEntity.badRequest().body(
-                    new ApiBulkDeleteTasksResponse("Danh sách task ID không được để trống", 400, null, false)
+                    ApiResponseCustom.error("Danh sách task ID không được để trống")
                 );
             }
 
             taskService.bulkDeleteTasks(request.getTaskIds());
             
             String message = "Đã xoá thành công " + request.getTaskIds().size() + " task";
-            return ResponseEntity.ok(new ApiBulkDeleteTasksResponse(message, 200, message, true));
+            return ResponseEntity.ok(ApiResponseCustom.success(message));
             
         } catch (Exception e) {
             return ResponseEntity.status(500).body(
-                new ApiBulkDeleteTasksResponse("Lỗi khi xoá task: " + e.getMessage(), 500, null, false)
+                ApiResponseCustom.internalError("Lỗi khi xoá task: " + e.getMessage())
             );
         }
     }
@@ -127,23 +127,23 @@ public class TaskController {
     @GetMapping("/{id}")
     @Operation(summary = "Lấy chi tiết task", description = "Lấy chi tiết một công việc theo id")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiTaskDetailResponse.class))),
-        @ApiResponse(responseCode = "404", description = "Không tìm thấy công việc", content = @Content(schema = @Schema(implementation = ApiTaskDetailResponse.class)))
+        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy công việc", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
-    public ResponseEntity<ApiTaskDetailResponse> getTaskDetailById(@PathVariable Integer id) {
+    public ResponseEntity<ApiResponseCustom<TaskDetailDTO>> getTaskDetailById(@PathVariable Integer id) {
         TaskDetailDTO task = taskService.getTaskDetailById(id);
-        if (task == null) return ResponseEntity.status(404).body(new ApiTaskDetailResponse("Không tìm thấy công việc", 404, null, false));
-        return ResponseEntity.ok(new ApiTaskDetailResponse("Thành công", 200, task, true));
+        if (task == null) return ResponseEntity.status(404).body(ApiResponseCustom.notFound("Không tìm thấy công việc"));
+        return ResponseEntity.ok(ApiResponseCustom.success(task));
     }
 
     @GetMapping
     @Operation(summary = "Lấy danh sách task", description = "Lấy danh sách tất cả công việc")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiAllTasksResponse.class)))
+        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
-    public ResponseEntity<ApiAllTasksResponse> getAllTaskDetails() {
+    public ResponseEntity<ApiResponseCustom<List<TaskDetailDTO>>> getAllTaskDetails() {
         List<TaskDetailDTO> tasks = taskService.getAllTaskDetails();
-        return ResponseEntity.ok(new ApiAllTasksResponse("Thành công", 200, tasks, true));
+        return ResponseEntity.ok(ApiResponseCustom.success(tasks));
     }
 
     @GetMapping("/my")
@@ -159,10 +159,10 @@ public class TaskController {
                            "👥 RECIPIENT SEARCH (chỉ cho assigned): recipientTypes + recipientIds " +
                            "📄 PAGINATION: page (1-based), size (max 100, default 20)")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiMyTasksResponse.class))),
-        @ApiResponse(responseCode = "400", description = "Tham số không hợp lệ", content = @Content(schema = @Schema(implementation = ApiMyTasksResponse.class)))
+        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+        @ApiResponse(responseCode = "400", description = "Tham số không hợp lệ", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
-    public ResponseEntity<ApiMyTasksResponse> getMyTasks(
+    public ResponseEntity<ApiResponseCustom<MyTasksData>> getMyTasks(
             @Parameter(description = "Loại task", required = true, schema = @Schema(allowableValues = {"created", "assigned", "received"}))
             @RequestParam String type,
             
@@ -202,14 +202,14 @@ public class TaskController {
             @RequestParam(required = false, defaultValue = "20") Integer size) {
         if (!type.matches("created|assigned|received")) {
             return ResponseEntity.badRequest().body(
-                ApiMyTasksResponse.error("Tham số type phải là: created, assigned, hoặc received", 400)
+                ApiResponseCustom.error("Tham số type phải là: created, assigned, hoặc received")
             );
         }
         
         // Validate status áp dụng cho type=assigned và type=received
         if (status != null && !type.matches("assigned|received")) {
             return ResponseEntity.badRequest().body(
-                ApiMyTasksResponse.error("Status chỉ hỗ trợ cho type=assigned và type=received", 400)
+                ApiResponseCustom.error("Status chỉ hỗ trợ cho type=assigned và type=received")
             );
         }
         
@@ -221,21 +221,21 @@ public class TaskController {
         // Validate recipient search chỉ áp dụng cho type=assigned
         if (hasRecipientSearch && !"assigned".equals(type)) {
             return ResponseEntity.badRequest().body(
-                ApiMyTasksResponse.error("Recipient search chỉ hỗ trợ cho type=assigned", 400)
+                ApiResponseCustom.error("Recipient search chỉ hỗ trợ cho type=assigned")
             );
         }
         
         // Validate status values
         if (status != null && !status.matches("IN_PROGRESS|COMPLETED|OVERDUE")) {
             return ResponseEntity.badRequest().body(
-                ApiMyTasksResponse.error("Status phải là: IN_PROGRESS, COMPLETED, hoặc OVERDUE", 400)
+                ApiResponseCustom.error("Status phải là: IN_PROGRESS, COMPLETED, hoặc OVERDUE")
             );
         }
         
         // Validate recipients matching
         if (recipientTypes != null && recipientIds != null && recipientTypes.size() != recipientIds.size()) {
             return ResponseEntity.badRequest().body(
-                ApiMyTasksResponse.error("Số lượng recipientTypes và recipientIds phải bằng nhau", 400)
+                ApiResponseCustom.error("Số lượng recipientTypes và recipientIds phải bằng nhau")
             );
         }
         
@@ -244,7 +244,7 @@ public class TaskController {
             for (String recipientType : recipientTypes) {
                 if (!recipientType.matches("USER|TEAM|UNIT")) {
                     return ResponseEntity.badRequest().body(
-                        ApiMyTasksResponse.error("recipientType phải là: USER, TEAM, hoặc UNIT", 400)
+                        ApiResponseCustom.error("recipientType phải là: USER, TEAM, hoặc UNIT")
                     );
                 }
             }
@@ -253,12 +253,12 @@ public class TaskController {
         // Validate pagination parameters (1-based)
         if (page != null && page < 1) {
             return ResponseEntity.badRequest().body(
-                ApiMyTasksResponse.error("Page phải >= 1", 400)
+                ApiResponseCustom.error("Page phải >= 1")
             );
         }
         if (size != null && (size <= 0 || size > 100)) {
             return ResponseEntity.badRequest().body(
-                ApiMyTasksResponse.error("Size phải từ 1 đến 100", 400)
+                ApiResponseCustom.error("Size phải từ 1 đến 100")
             );
         }
         
@@ -283,80 +283,78 @@ public class TaskController {
             }
         }
         
-        return ResponseEntity.ok(ApiMyTasksResponse.success(response));
+        return ResponseEntity.ok(ApiResponseCustom.success(response));
     }
 
     // MÔ HÌNH ADJACENCY LIST: API Subtask
     @PostMapping("/{parentId}/subtasks")
     @Operation(summary = "Tạo subtask", description = "Tạo subtask con cho một task cha")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Tạo subtask thành công", content = @Content(schema = @Schema(implementation = ApiTaskResponse.class))),
-        @ApiResponse(responseCode = "404", description = "Không tìm thấy task cha", content = @Content(schema = @Schema(implementation = ApiTaskResponse.class)))
+        @ApiResponse(responseCode = "201", description = "Tạo subtask thành công", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy task cha", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
-    public ResponseEntity<ApiTaskResponse> createSubtask(@PathVariable Integer parentId, @RequestBody CreateSubtaskRequest request) {
+    public ResponseEntity<ApiResponseCustom<TaskDTO>> createSubtask(@PathVariable Integer parentId, @RequestBody CreateSubtaskRequest request) {
         // parentId được truyền qua path parameter, truyền trực tiếp vào service
         TaskDTO created = taskService.createSubtask(parentId, request);
-        ApiTaskResponse res = new ApiTaskResponse("Tạo subtask thành công", 201, created, true);
-        return ResponseEntity.status(HttpStatus.CREATED).body(res);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponseCustom.created(created));
     }
 
     @GetMapping("/{id}/subtasks")
     @Operation(summary = "Lấy danh sách subtask", description = "Lấy tất cả subtask con của một task")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiAllTasksResponse.class)))
+        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
-    public ResponseEntity<ApiAllTasksResponse> getSubtasks(@PathVariable Integer id) {
+    public ResponseEntity<ApiResponseCustom<List<TaskDetailDTO>>> getSubtasks(@PathVariable Integer id) {
         List<TaskDetailDTO> subtasks = taskService.getSubtasks(id);
-        return ResponseEntity.ok(new ApiAllTasksResponse("Thành công", 200, subtasks, true));
+        return ResponseEntity.ok(ApiResponseCustom.success(subtasks));
     }
 
     @GetMapping("/root")
     @Operation(summary = "Lấy danh sách task gốc", description = "Lấy tất cả task không có parent (task gốc)")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiAllTasksResponse.class)))
+        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
-    public ResponseEntity<ApiAllTasksResponse> getRootTasks() {
+    public ResponseEntity<ApiResponseCustom<List<TaskDetailDTO>>> getRootTasks() {
         List<TaskDetailDTO> rootTasks = taskService.getRootTasks();
-        return ResponseEntity.ok(new ApiAllTasksResponse("Thành công", 200, rootTasks, true));
+        return ResponseEntity.ok(ApiResponseCustom.success(rootTasks));
     }
 
     @GetMapping("/{id}/subtree")
     @Operation(summary = "Lấy toàn bộ cây con của task (flat list)", 
                description = "Lấy task cùng với tất cả subtask dưới dạng flat list")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiTaskSubtreeResponse.class))),
-        @ApiResponse(responseCode = "404", description = "Không tìm thấy task", content = @Content(schema = @Schema(implementation = ApiTaskSubtreeResponse.class)))
+        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy task", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
-    public ResponseEntity<ApiTaskSubtreeResponse> getTaskSubtree(@PathVariable Integer id) {
+    public ResponseEntity<ApiResponseCustom<List<TaskDetailDTO>>> getTaskSubtree(@PathVariable Integer id) {
         List<TaskDetailDTO> subtree = taskService.getTaskSubtree(id);
         
         if (subtree.isEmpty()) {
             return ResponseEntity.status(404).body(
-                new ApiTaskSubtreeResponse("Không tìm thấy task với ID: " + id, 404, null, false)
+                ApiResponseCustom.notFound("Không tìm thấy task với ID: " + id)
             );
         }
         
-        String message = String.format("Lấy subtree thành công - %d task(s) (bao gồm task gốc)", subtree.size());
-        return ResponseEntity.ok(new ApiTaskSubtreeResponse(message, 200, subtree, true));
+        return ResponseEntity.ok(ApiResponseCustom.success(subtree));
     }
 
     @GetMapping("/{id}/tree")
     @Operation(summary = "Lấy toàn bộ cây con của task (hierarchical structure)", 
                description = "Lấy task cùng với tất cả subtask theo cấu trúc phân cấp nested - dễ dàng cho frontend hiển thị tree view")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiTaskTreeResponse.class))),
-        @ApiResponse(responseCode = "404", description = "Không tìm thấy task", content = @Content(schema = @Schema(implementation = ApiTaskTreeResponse.class)))
+        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy task", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
-    public ResponseEntity<ApiTaskTreeResponse> getTaskTree(@PathVariable Integer id) {
+    public ResponseEntity<ApiResponseCustom<TaskTreeDTO>> getTaskTree(@PathVariable Integer id) {
         TaskTreeDTO taskTree = taskService.getTaskSubtreeHierarchical(id);
         
         if (taskTree == null) {
             return ResponseEntity.status(404).body(
-                new ApiTaskTreeResponse("Không tìm thấy task với ID: " + id, 404, null, false)
+                ApiResponseCustom.notFound("Không tìm thấy task với ID: " + id)
             );
         }
         
-        return ResponseEntity.ok(new ApiTaskTreeResponse("Lấy task tree thành công", 200, taskTree, true));
+        return ResponseEntity.ok(ApiResponseCustom.success(taskTree));
     }
     
     // Existing endpoints...
@@ -368,12 +366,12 @@ public class TaskController {
     @GetMapping("/{id}/attachments")
     @Operation(summary = "Lấy danh sách file đính kèm của task (Simplified)", description = "Lấy tất cả file đính kèm trực tiếp của task với cấu trúc simplified, không có nested data")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiTaskAttachmentsSimplifiedResponse.class))),
-        @ApiResponse(responseCode = "404", description = "Không tìm thấy task", content = @Content(schema = @Schema(implementation = ApiTaskAttachmentsSimplifiedResponse.class)))
+        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy task", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
-    public ResponseEntity<ApiTaskAttachmentsSimplifiedResponse> getTaskAttachments(@PathVariable Integer id) {
-        List<com.project.quanlycanghangkhong.dto.simplified.SimpleAttachmentDTO> attachments = taskService.getTaskAttachmentsSimplified(id);
-        return ResponseEntity.ok(new ApiTaskAttachmentsSimplifiedResponse("Thành công", 200, attachments, true));
+    public ResponseEntity<ApiResponseCustom<List<com.project.quanlycanghangkhong.dto.SimpleAttachmentDTO>>> getTaskAttachments(@PathVariable Integer id) {
+        List<com.project.quanlycanghangkhong.dto.SimpleAttachmentDTO> attachments = taskService.getTaskAttachmentsSimplified(id);
+        return ResponseEntity.ok(ApiResponseCustom.success(attachments));
     }
 
     @GetMapping("/{id}/attachments/legacy")
@@ -398,30 +396,29 @@ public class TaskController {
                description = "Thêm các file đính kèm đã upload vào task cụ thể. File đính kèm phải được upload trước thông qua /api/attachments/generate-upload-urls và confirm-upload")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Thêm file đính kèm thành công", 
-                    content = @Content(schema = @Schema(implementation = ApiTaskAttachmentUploadResponse.class))),
+                    content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
         @ApiResponse(responseCode = "400", description = "Dữ liệu đầu vào không hợp lệ"),
         @ApiResponse(responseCode = "404", description = "Không tìm thấy task hoặc attachment"),
         @ApiResponse(responseCode = "409", description = "Attachment đã được gán vào task khác")
     })
-    public ApiTaskAttachmentUploadResponse addAttachmentsToTask(
+    public ResponseEntity<ApiResponseCustom<List<AttachmentDTO>>> addAttachmentsToTask(
             @PathVariable Integer id, 
             @Valid @RequestBody TaskAttachmentUploadRequest request) {
         try {
             List<AttachmentDTO> addedAttachments = taskService.addAttachmentsToTask(id, request.getAttachmentIds());
             
-            String message = String.format("Đã thêm %d file đính kèm vào task thành công", addedAttachments.size());
-            return new ApiTaskAttachmentUploadResponse(message, 200, addedAttachments, true);
+            return ResponseEntity.ok(ApiResponseCustom.success(addedAttachments));
             
         } catch (RuntimeException e) {
             if (e.getMessage().contains("Không tìm thấy")) {
-                return new ApiTaskAttachmentUploadResponse(e.getMessage(), 404, null, false);
+                return ResponseEntity.status(404).body(ApiResponseCustom.notFound(e.getMessage()));
             } else if (e.getMessage().contains("đã được gán vào task khác")) {
-                return new ApiTaskAttachmentUploadResponse(e.getMessage(), 409, null, false);
+                return ResponseEntity.status(409).body(ApiResponseCustom.error(e.getMessage()));
             } else {
-                return new ApiTaskAttachmentUploadResponse(e.getMessage(), 400, null, false);
+                return ResponseEntity.status(400).body(ApiResponseCustom.error(e.getMessage()));
             }
         } catch (Exception e) {
-            return new ApiTaskAttachmentUploadResponse("Lỗi server khi thêm file đính kèm: " + e.getMessage(), 500, null, false);
+            return ResponseEntity.status(500).body(ApiResponseCustom.internalError("Lỗi server khi thêm file đính kèm: " + e.getMessage()));
         }
     }
 
@@ -482,34 +479,34 @@ public class TaskController {
     @GetMapping("/search")
     @Operation(summary = "Tìm kiếm task theo title", description = "Tìm kiếm task theo title (case-insensitive)")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiAllTasksResponse.class))),
-        @ApiResponse(responseCode = "400", description = "Thiếu từ khóa tìm kiếm", content = @Content(schema = @Schema(implementation = ApiAllTasksResponse.class)))
+        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+        @ApiResponse(responseCode = "400", description = "Thiếu từ khóa tìm kiếm", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
-    public ResponseEntity<ApiAllTasksResponse> searchTasksByTitle(@RequestParam String title) {
+    public ResponseEntity<ApiResponseCustom<List<TaskDetailDTO>>> searchTasksByTitle(@RequestParam String title) {
         if (title == null || title.trim().isEmpty()) {
             return ResponseEntity.badRequest().body(
-                new ApiAllTasksResponse("Từ khóa tìm kiếm không được để trống", 400, null, false)
+                ApiResponseCustom.error("Từ khóa tìm kiếm không được để trống")
             );
         }
         List<TaskDetailDTO> tasks = taskService.searchTasksByTitle(title.trim());
-        return ResponseEntity.ok(new ApiAllTasksResponse("Tìm thấy " + tasks.size() + " task", 200, tasks, true));
+        return ResponseEntity.ok(ApiResponseCustom.success(tasks));
     }
 
     @GetMapping("/priority/{priority}")
     @Operation(summary = "Lọc task theo priority", description = "Lấy danh sách task theo mức độ ưu tiên")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiAllTasksResponse.class))),
-        @ApiResponse(responseCode = "400", description = "Priority không hợp lệ", content = @Content(schema = @Schema(implementation = ApiAllTasksResponse.class)))
+        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+        @ApiResponse(responseCode = "400", description = "Priority không hợp lệ", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
-    public ResponseEntity<ApiAllTasksResponse> getTasksByPriority(@PathVariable String priority) {
+    public ResponseEntity<ApiResponseCustom<List<TaskDetailDTO>>> getTasksByPriority(@PathVariable String priority) {
         try {
             com.project.quanlycanghangkhong.model.TaskPriority taskPriority = 
                 com.project.quanlycanghangkhong.model.TaskPriority.valueOf(priority.toUpperCase());
             List<TaskDetailDTO> tasks = taskService.getTasksByPriority(taskPriority);
-            return ResponseEntity.ok(new ApiAllTasksResponse("Tìm thấy " + tasks.size() + " task với priority " + priority, 200, tasks, true));
+            return ResponseEntity.ok(ApiResponseCustom.success(tasks));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(
-                new ApiAllTasksResponse("Priority phải là: LOW, NORMAL, HIGH, hoặc URGENT", 400, null, false)
+                ApiResponseCustom.error("Priority phải là: LOW, NORMAL, HIGH, hoặc URGENT")
             );
         }
     }
@@ -517,17 +514,17 @@ public class TaskController {
     @GetMapping("/search/all")
     @Operation(summary = "Tìm kiếm task theo title hoặc content", description = "Tìm kiếm task trong title hoặc content")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiAllTasksResponse.class))),
-        @ApiResponse(responseCode = "400", description = "Thiếu từ khóa tìm kiếm", content = @Content(schema = @Schema(implementation = ApiAllTasksResponse.class)))
+        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+        @ApiResponse(responseCode = "400", description = "Thiếu từ khóa tìm kiếm", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
-    public ResponseEntity<ApiAllTasksResponse> searchAllTasks(@RequestParam String keyword) {
+    public ResponseEntity<ApiResponseCustom<List<TaskDetailDTO>>> searchAllTasks(@RequestParam String keyword) {
         if (keyword == null || keyword.trim().isEmpty()) {
             return ResponseEntity.badRequest().body(
-                new ApiAllTasksResponse("Từ khóa tìm kiếm không được để trống", 400, null, false)
+                ApiResponseCustom.error("Từ khóa tìm kiếm không được để trống")
             );
         }
         List<TaskDetailDTO> tasks = taskService.searchTasks(keyword.trim());
-        return ResponseEntity.ok(new ApiAllTasksResponse("Tìm thấy " + tasks.size() + " task", 200, tasks, true));
+        return ResponseEntity.ok(ApiResponseCustom.success(tasks));
     }
     
     // ===================================================================

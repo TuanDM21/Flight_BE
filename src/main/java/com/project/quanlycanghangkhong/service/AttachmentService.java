@@ -1,7 +1,7 @@
 package com.project.quanlycanghangkhong.service;
 
 import com.project.quanlycanghangkhong.dto.AttachmentDTO;
-// import com.project.quanlycanghangkhong.dto.request.AttachmentAssignRequest; // Không cần nữa vì đã chuyển sang task-attachment
+// import com.project.quanlycanghangkhong.request.AttachmentAssignRequest; // Không cần nữa vì đã chuyển sang task-attachment
 import java.util.List;
 
 public interface AttachmentService {

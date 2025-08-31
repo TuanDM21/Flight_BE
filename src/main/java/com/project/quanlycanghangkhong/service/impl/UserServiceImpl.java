@@ -1,6 +1,5 @@
 package com.project.quanlycanghangkhong.service.impl;
 
-import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -9,7 +8,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-import com.project.quanlycanghangkhong.dao.UserDAO;
 import com.project.quanlycanghangkhong.dto.DTOConverter;
 import com.project.quanlycanghangkhong.dto.UserDTO;
 import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
@@ -21,9 +19,6 @@ import com.project.quanlycanghangkhong.service.UserService;
 public class UserServiceImpl implements UserService {
     @Autowired
     private UserRepository userRepository;
-
-    @Autowired
-    private UserDAO userDAO;
 
     @Override
     public List<UserDTO> getAllUsers() {
@@ -60,14 +55,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<UserDTO> filterUsers(Integer teamId, Integer unitId, String searchText) {
-        try {
-            List<User> users = userDAO.findUsersByCriteria(teamId, unitId, searchText);
-            return users.stream()
-                    .map(DTOConverter::convertUser)
-                    .collect(Collectors.toList());
-        } catch (SQLException e) {
-            throw new RuntimeException("Error fetching users", e);
-        }
+        List<User> users = userRepository.findUsersByCriteria(teamId, unitId, searchText);
+        return users.stream()
+                .map(DTOConverter::convertUser)
+                .collect(Collectors.toList());
     }
 
     @Override

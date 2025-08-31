@@ -11,21 +11,6 @@ import java.util.List;
 @Repository
 public interface AttachmentRepository extends JpaRepository<Attachment, Integer> {
     
-    // ============== LEGACY DOCUMENT OPERATIONS (CÂN NHẮC XÓA) ==============
-    
-    /**
-     * 🟡 CÂN NHẮC XÓA: Lấy attachment theo document ID (logic cũ)
-     * THAY ĐỔI NGHIỆP VỤ: Đã chuyển sang task-attachment trực tiếp
-     * Có thể cần giữ lại cho backward compatibility với document system
-     */
-    List<Attachment> findByDocument_Id(Integer documentId);
-    
-    /**
-     * 🟡 CÂN NHẮC XÓA: Lấy attachment theo documentId và chưa bị xoá mềm (logic cũ)
-     * THAY ĐỔI NGHIỆP VỤ: Đã chuyển sang task-attachment trực tiếp  
-     */
-    List<Attachment> findByDocument_IdAndIsDeletedFalse(Integer documentId);
-
     // ============== CORE ATTACHMENT OPERATIONS (ĐANG SỬ DỤNG) ==============
     
     /**

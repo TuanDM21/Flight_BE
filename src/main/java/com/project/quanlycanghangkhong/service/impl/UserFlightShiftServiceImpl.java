@@ -9,7 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.project.quanlycanghangkhong.dto.ApplyFlightShiftRequest;
+import com.project.quanlycanghangkhong.request.ApplyFlightShiftRequest;
 import com.project.quanlycanghangkhong.dto.UserFlightShiftResponseDTO;
 import com.project.quanlycanghangkhong.dto.UserFlightShiftResponseSearchDTO;
 import com.project.quanlycanghangkhong.model.Flight;

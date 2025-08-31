@@ -1,8 +1,8 @@
 package com.project.quanlycanghangkhong.service;
 
 import com.project.quanlycanghangkhong.dto.AttachmentDTO;
-import com.project.quanlycanghangkhong.dto.response.presigned.FlexiblePreSignedUrlResponse;
-import com.project.quanlycanghangkhong.dto.request.FlexibleUploadRequest;
+import com.project.quanlycanghangkhong.dto.FlexiblePreSignedUrlDTO;
+import com.project.quanlycanghangkhong.request.FlexibleUploadRequest;
 import java.util.List;
 
 public interface AzurePreSignedUrlService {
@@ -10,9 +10,9 @@ public interface AzurePreSignedUrlService {
     /**
      * Tạo pre-signed URL linh hoạt cho việc upload file (single hoặc multiple)
      * @param request FlexibleUploadRequest chứa thông tin file(s) cần upload
-     * @return FlexiblePreSignedUrlResponse chứa URL(s) để upload và thông tin file(s)
+     * @return FlexiblePreSignedUrlDTO chứa URL(s) để upload và thông tin file(s)
      */
-    FlexiblePreSignedUrlResponse generateFlexibleUploadUrls(FlexibleUploadRequest request);
+    FlexiblePreSignedUrlDTO generateFlexibleUploadUrls(FlexibleUploadRequest request);
     
     /**
      * Tạo pre-signed URL cho việc download file

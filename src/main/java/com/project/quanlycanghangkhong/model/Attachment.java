@@ -13,10 +13,6 @@ public class Attachment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "document_id", nullable = true) // Cho phép null để upload file rời
-    private Document document;
-
     // THAY ĐỔI LOGIC NGHIỆP VỤ: Quan hệ task trực tiếp cho quy trình làm việc dựa trên attachment mới
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "task_id", nullable = true) // Liên kết task-attachment trực tiếp
@@ -55,14 +51,6 @@ public class Attachment {
 
     public void setId(Integer id) {
         this.id = id;
-    }
-
-    public Document getDocument() {
-        return document;
-    }
-
-    public void setDocument(Document document) {
-        this.document = document;
     }
 
     public User getUploadedBy() {

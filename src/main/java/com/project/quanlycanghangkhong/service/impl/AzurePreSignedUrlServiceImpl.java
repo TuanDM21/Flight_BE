@@ -8,15 +8,13 @@ import com.azure.storage.blob.models.BlobProperties;
 import com.azure.storage.blob.sas.BlobSasPermission;
 import com.azure.storage.blob.sas.BlobServiceSasSignatureValues;
 import com.project.quanlycanghangkhong.dto.AttachmentDTO;
-import com.project.quanlycanghangkhong.dto.response.presigned.PreSignedUrlResponse;
-import com.project.quanlycanghangkhong.dto.response.presigned.FlexiblePreSignedUrlResponse;
-import com.project.quanlycanghangkhong.dto.request.FlexibleUploadRequest;
+import com.project.quanlycanghangkhong.dto.PreSignedUrlDTO;
+import com.project.quanlycanghangkhong.dto.FlexiblePreSignedUrlDTO;
+import com.project.quanlycanghangkhong.request.FlexibleUploadRequest;
 import com.project.quanlycanghangkhong.model.Attachment;
 import com.project.quanlycanghangkhong.model.User;
 import com.project.quanlycanghangkhong.repository.AttachmentRepository;
 import com.project.quanlycanghangkhong.repository.UserRepository;
-import com.project.quanlycanghangkhong.repository.FileShareRepository;
-import com.project.quanlycanghangkhong.model.FileShare;
 import com.project.quanlycanghangkhong.service.AzurePreSignedUrlService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -49,9 +47,6 @@ public class AzurePreSignedUrlServiceImpl implements AzurePreSignedUrlService {
     
     @Autowired
     private UserRepository userRepository;
-
-    @Autowired
-    private FileShareRepository fileShareRepository;
 
     /**
      * Lấy thông tin user hiện tại từ SecurityContext
@@ -145,15 +140,7 @@ public class AzurePreSignedUrlServiceImpl implements AzurePreSignedUrlService {
             logger.info("User {} (ID: {}) deleting attachment {} - File: {}", 
                 currentUser.getEmail(), currentUser.getId(), attachmentId, attachment.getFileName());
             
-            // 🔥 BƯỚC 1: XÓA TẤT CẢ FILE SHARES (CẢ ACTIVE VÀ INACTIVE) LIÊN QUAN TRƯỚC
-            List<FileShare> allFileShares = fileShareRepository.findByAttachment(attachment);
-            if (!allFileShares.isEmpty()) {
-                logger.info("Deleting {} file shares (active and inactive) for attachment {}", allFileShares.size(), attachmentId);
-                fileShareRepository.deleteAll(allFileShares);
-                logger.info("Successfully deleted all file shares for attachment {}", attachmentId);
-            }
-            
-            // 🔥 BƯỚC 2: XÓA FILE TRÊN AZURE BLOB STORAGE
+            // Xóa file trên Azure Blob Storage
             // Tạo BlobServiceClient
             BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
                     .connectionString(connectionString)
@@ -182,10 +169,10 @@ public class AzurePreSignedUrlServiceImpl implements AzurePreSignedUrlService {
     /**
      * Tạo pre-signed URL linh hoạt cho việc upload file (single hoặc multiple)
      * @param request FlexibleUploadRequest chứa thông tin file(s) cần upload
-     * @return FlexiblePreSignedUrlResponse chứa URL(s) để upload và thông tin file(s)
+     * @return FlexiblePreSignedUrlDTO chứa URL(s) để upload và thông tin file(s)
      */
     @Override
-    public FlexiblePreSignedUrlResponse generateFlexibleUploadUrls(FlexibleUploadRequest request) {
+    public FlexiblePreSignedUrlDTO generateFlexibleUploadUrls(FlexibleUploadRequest request) {
         // Validate files before processing
         try {
             request.validateFiles();
@@ -197,23 +184,23 @@ public class AzurePreSignedUrlServiceImpl implements AzurePreSignedUrlService {
             // Optimized path for single file
             FlexibleUploadRequest.FileUploadInfo fileInfo = request.getSingleFile();
             try {
-                PreSignedUrlResponse response = createPreSignedUrlForFile(
+                PreSignedUrlDTO response = createPreSignedUrlForFile(
                     fileInfo.getFileName(),
                     fileInfo.getFileSize(),
                     fileInfo.getContentType()
                 );
-                return new FlexiblePreSignedUrlResponse(response);
+                return new FlexiblePreSignedUrlDTO(response);
             } catch (Exception e) {
                 logger.error("Error generating upload URL for single file: " + fileInfo.getFileName(), e);
                 throw new RuntimeException("Lỗi tạo URL cho file: " + e.getMessage());
             }
         } else {
             // Batch processing for multiple files
-            List<PreSignedUrlResponse> results = new ArrayList<>();
+            List<PreSignedUrlDTO> results = new ArrayList<>();
             
             for (FlexibleUploadRequest.FileUploadInfo fileInfo : request.getFiles()) {
                 try {
-                    PreSignedUrlResponse response = createPreSignedUrlForFile(
+                    PreSignedUrlDTO response = createPreSignedUrlForFile(
                         fileInfo.getFileName(),
                         fileInfo.getFileSize(),
                         fileInfo.getContentType()
@@ -223,14 +210,15 @@ public class AzurePreSignedUrlServiceImpl implements AzurePreSignedUrlService {
                     logger.error("Error generating upload URL for file: " + fileInfo.getFileName(), e);
                     
                     // Create error response for this file
-                    PreSignedUrlResponse errorResponse = new PreSignedUrlResponse();
+                    PreSignedUrlDTO errorResponse = new PreSignedUrlDTO();
                     errorResponse.setFileName(fileInfo.getFileName());
-                    errorResponse.setError("Lỗi tạo URL: " + e.getMessage());
+                    errorResponse.setMessage("Lỗi tạo URL: " + e.getMessage());
+                    errorResponse.setHasError(true);
                     results.add(errorResponse);
                 }
             }
             
-            return new FlexiblePreSignedUrlResponse(results);
+            return new FlexiblePreSignedUrlDTO(results);
         }
     }
 
@@ -239,9 +227,9 @@ public class AzurePreSignedUrlServiceImpl implements AzurePreSignedUrlService {
      * @param fileName Tên file gốc
      * @param fileSize Kích thước file
      * @param contentType Loại content của file
-     * @return PreSignedUrlResponse chứa URL để upload và thông tin file
+     * @return PreSignedUrlDTO chứa URL để upload và thông tin file
      */
-    private PreSignedUrlResponse createPreSignedUrlForFile(String fileName, Long fileSize, String contentType) {
+    private PreSignedUrlDTO createPreSignedUrlForFile(String fileName, Long fileSize, String contentType) {
         try {
             // Lấy thông tin user hiện tại
             User currentUser = getCurrentUser();
@@ -291,13 +279,16 @@ public class AzurePreSignedUrlServiceImpl implements AzurePreSignedUrlService {
             Attachment savedAttachment = attachmentRepository.save(attachment);
             
             // Tạo response
-            PreSignedUrlResponse response = new PreSignedUrlResponse();
+            PreSignedUrlDTO response = new PreSignedUrlDTO();
             response.setUploadUrl(sasUrl);
             response.setAttachmentId(savedAttachment.getId());
             response.setFileName(fileName);
             response.setUniqueFileName(uniqueFileName);
-            response.setExpiryTime(expiryTime.toLocalDateTime());
-            response.setFileUrl(blobClient.getBlobUrl());
+            response.setExpiresAt(expiryTime.toLocalDateTime());
+            response.setFileSize(fileSize);
+            response.setContentType(contentType);
+            response.setMessage("Tạo pre-signed URL thành công");
+            response.setHasError(false);
             
             return response;
             

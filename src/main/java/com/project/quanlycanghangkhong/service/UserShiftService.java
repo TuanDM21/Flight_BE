@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.project.quanlycanghangkhong.dto.ApplyShiftMultiDTO;
-import com.project.quanlycanghangkhong.dto.AssignShiftRequest;
+import com.project.quanlycanghangkhong.request.AssignShiftRequest;
 import com.project.quanlycanghangkhong.dto.ScheduleDTO;
 import com.project.quanlycanghangkhong.dto.UserShiftDTO;
 

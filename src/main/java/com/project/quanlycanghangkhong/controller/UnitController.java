@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.project.quanlycanghangkhong.dto.UnitDTO;
 import com.project.quanlycanghangkhong.service.UnitService;
-import com.project.quanlycanghangkhong.dto.response.units.ApiAllUnitsResponse;
+import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -34,33 +34,23 @@ public class UnitController {
 	        @io.swagger.v3.oas.annotations.responses.ApiResponse(
 	            responseCode = "200",
 	            description = "Successfully retrieved all units",
-	            content = @Content(schema = @Schema(implementation = ApiAllUnitsResponse.class))
+	            content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))
 	        )
 	    })
-	    public ResponseEntity<ApiAllUnitsResponse> getUnits(@RequestParam(value = "teamId", required = false) Integer teamId) {
+	    public ResponseEntity<ApiResponseCustom<List<UnitDTO>>> getUnits(@RequestParam(value = "teamId", required = false) Integer teamId) {
 	        List<UnitDTO> dtos;
 	        if (teamId != null) {
 	            dtos = unitService.getUnitsByTeam(teamId);
 	        } else {
 	            dtos = unitService.getAllUnits();
 	        }
-	        ApiAllUnitsResponse response = new ApiAllUnitsResponse();
-	        response.setMessage("Thành công");
-	        response.setStatusCode(200);
-	        response.setData(dtos);
-	        response.setSuccess(true);
-	        return ResponseEntity.ok(response);
+	        return ResponseEntity.ok(ApiResponseCustom.success("Thành công", dtos));
 	    }
 
 	    @GetMapping("/assignable")
 	    @Operation(summary = "Get assignable units", description = "Lấy danh sách unit mà user hiện tại có thể giao việc cho theo phân quyền")
-	    public ResponseEntity<ApiAllUnitsResponse> getAssignableUnits() {
+	    public ResponseEntity<ApiResponseCustom<List<UnitDTO>>> getAssignableUnits() {
 	        List<UnitDTO> dtos = unitService.getAssignableUnitsForCurrentUser();
-	        ApiAllUnitsResponse response = new ApiAllUnitsResponse();
-	        response.setMessage("Thành công");
-	        response.setStatusCode(200);
-	        response.setData(dtos);
-	        response.setSuccess(true);
-	        return ResponseEntity.ok(response);
+	        return ResponseEntity.ok(ApiResponseCustom.success("Thành công", dtos));
 	    }
 }

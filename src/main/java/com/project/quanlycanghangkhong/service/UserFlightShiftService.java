@@ -3,7 +3,7 @@ package com.project.quanlycanghangkhong.service;
 import java.time.LocalDate;
 import java.util.List;
 
-import com.project.quanlycanghangkhong.dto.ApplyFlightShiftRequest;
+import com.project.quanlycanghangkhong.request.ApplyFlightShiftRequest;
 import com.project.quanlycanghangkhong.dto.UserFlightShiftResponseDTO;
 import com.project.quanlycanghangkhong.dto.UserFlightShiftResponseSearchDTO;
 import com.project.quanlycanghangkhong.model.UserFlightShift;

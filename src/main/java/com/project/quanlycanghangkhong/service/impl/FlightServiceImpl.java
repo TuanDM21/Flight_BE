@@ -12,9 +12,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.project.quanlycanghangkhong.dto.FlightDTO;
-import com.project.quanlycanghangkhong.dto.FlightTimeUpdateRequest;
-import com.project.quanlycanghangkhong.dto.CreateFlightRequest;
-import com.project.quanlycanghangkhong.dto.UpdateFlightRequest;
+import com.project.quanlycanghangkhong.request.FlightTimeUpdateRequest;
+import com.project.quanlycanghangkhong.request.CreateFlightRequest;
+import com.project.quanlycanghangkhong.request.UpdateFlightRequest;
 import com.project.quanlycanghangkhong.model.Flight;
 import com.project.quanlycanghangkhong.model.Airport;
 import com.project.quanlycanghangkhong.repository.FlightRepository;

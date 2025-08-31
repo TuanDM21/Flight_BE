@@ -19,12 +19,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.PutMapping;
 
-import com.project.quanlycanghangkhong.dto.ApplyFlightShiftRequest;
+import com.project.quanlycanghangkhong.request.ApplyFlightShiftRequest;
 import com.project.quanlycanghangkhong.dto.UserFlightShiftResponseDTO;
 import com.project.quanlycanghangkhong.dto.UserFlightShiftResponseSearchDTO;
-import com.project.quanlycanghangkhong.dto.UpdateUserFlightShiftRequest;
+import com.project.quanlycanghangkhong.request.UpdateUserFlightShiftRequest;
 import com.project.quanlycanghangkhong.service.UserFlightShiftService;
-import com.project.quanlycanghangkhong.dto.response.userflightshift.*;
+import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -45,29 +45,27 @@ public class UserFlightShiftController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "200",
             description = "Successfully retrieved all user flight shifts",
-            content = @Content(schema = @Schema(implementation = ApiAllUserFlightShiftsResponse.class))
+            content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))
         )
     })
-    public ResponseEntity<ApiAllUserFlightShiftsResponse> getAllUserFlightShifts() {
+    public ResponseEntity<ApiResponseCustom<List<UserFlightShiftResponseDTO>>> getAllUserFlightShifts() {
         List<UserFlightShiftResponseDTO> dtos = userFlightShiftService.getAllUserFlightShifts();
-        ApiAllUserFlightShiftsResponse response = new ApiAllUserFlightShiftsResponse("Thành công", 200, dtos, true);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponseCustom.success(dtos));
     }
 
-    @GetMapping("/by-date")
-    @Operation(summary = "Get user flight shifts by date", description = "Retrieve user flight shifts by date (DTO only)")
+        @GetMapping("/date/{date}")
+    @Operation(summary = "Get shifts by date", description = "Get all user flight shifts for a specific date")
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "200",
-            description = "Successfully retrieved user flight shifts by date",
-            content = @Content(schema = @Schema(implementation = ApiUserFlightShiftsByDateResponse.class))
+            description = "Successfully retrieved shifts for the given date",
+            content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))
         )
     })
-    public ResponseEntity<ApiUserFlightShiftsByDateResponse> getShiftsByDate(
-            @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+    public ResponseEntity<ApiResponseCustom<List<UserFlightShiftResponseDTO>>> getShiftsByDate(
+            @PathVariable @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date) {
         List<UserFlightShiftResponseDTO> dtos = userFlightShiftService.getShiftsByDateDTO(date);
-        ApiUserFlightShiftsByDateResponse response = new ApiUserFlightShiftsByDateResponse("Thành công", 200, dtos, true);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponseCustom.success(dtos));
     }
 
     @GetMapping("/by-user/{userId}")
@@ -76,13 +74,12 @@ public class UserFlightShiftController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "200",
             description = "Successfully retrieved user flight shifts by user",
-            content = @Content(schema = @Schema(implementation = ApiUserFlightShiftsByUserResponse.class))
+            content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))
         )
     })
-    public ResponseEntity<ApiUserFlightShiftsByUserResponse> getShiftsByUser(@PathVariable Integer userId) {
+    public ResponseEntity<ApiResponseCustom<List<UserFlightShiftResponseDTO>>> getShiftsByUser(@PathVariable Integer userId) {
         List<UserFlightShiftResponseDTO> dtos = userFlightShiftService.getShiftsByUserDTO(userId);
-        ApiUserFlightShiftsByUserResponse response = new ApiUserFlightShiftsByUserResponse("Thành công", 200, dtos, true);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponseCustom.success(dtos));
     }
 
     @PostMapping("/apply")
@@ -91,13 +88,12 @@ public class UserFlightShiftController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "200",
             description = "User flight shift applied successfully",
-            content = @Content(schema = @Schema(implementation = ApiCreateUserFlightShiftResponse.class))
+            content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))
         )
     })
-    public ResponseEntity<ApiCreateUserFlightShiftResponse> applyFlightShift(@RequestBody ApplyFlightShiftRequest request) {
+    public ResponseEntity<ApiResponseCustom<Object>> applyFlightShift(@RequestBody ApplyFlightShiftRequest request) {
         userFlightShiftService.applyFlightShift(request);
-        ApiCreateUserFlightShiftResponse response = new ApiCreateUserFlightShiftResponse("Thành công", 200, null, true);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponseCustom.success(null));
     }
 
     @PutMapping("/{id}")
@@ -106,20 +102,16 @@ public class UserFlightShiftController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "200",
             description = "Successfully updated user flight shift",
-            content = @Content(schema = @Schema(implementation = ApiUpdateUserFlightShiftResponse.class))
+            content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))
         )
     })
-    public ResponseEntity<ApiUpdateUserFlightShiftResponse> updateUserFlightShift(
+    public ResponseEntity<ApiResponseCustom<UserFlightShiftResponseDTO>> updateUserFlightShift(
             @PathVariable Integer id,
             @RequestBody UpdateUserFlightShiftRequest request) {
         userFlightShiftService.updateUserFlightShift(id, request.getShiftDate(), request.getFlightId());
-        // Lấy lại thông tin sau cập nhật để trả về
         UserFlightShiftResponseDTO data = userFlightShiftService.getAllUserFlightShifts()
             .stream().filter(dto -> dto.getId().equals(id)).findFirst().orElse(null);
-        ApiUpdateUserFlightShiftResponse response = new ApiUpdateUserFlightShiftResponse(
-            "Cập nhật thành công", 200, data, true
-        );
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponseCustom.updated(data));
     }
 
     @GetMapping("/shifts")
@@ -128,101 +120,96 @@ public class UserFlightShiftController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "200",
             description = "Successfully retrieved user flight shifts by flight and date",
-            content = @Content(schema = @Schema(implementation = ApiUserFlightShiftsByFlightAndDateResponse.class))
+            content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))
         )
     })
-    public ResponseEntity<ApiUserFlightShiftsByFlightAndDateResponse> getShiftsByFlightAndDate(
-            @RequestParam("flightId") Long flightId,
+    public ResponseEntity<ApiResponseCustom<List<UserFlightShiftResponseDTO>>> getShiftsByFlightAndDate(
+            @RequestParam("flightId") Integer flightId,
             @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        List<UserFlightShiftResponseDTO> dtos = userFlightShiftService.getShiftsByFlightAndDate(flightId, date);
-        ApiUserFlightShiftsByFlightAndDateResponse response = new ApiUserFlightShiftsByFlightAndDateResponse("Thành công", 200, dtos, true);
-        return ResponseEntity.ok(response);
+        List<UserFlightShiftResponseDTO> dtos = userFlightShiftService.getShiftsByFlightAndDate(flightId.longValue(), date);
+        return ResponseEntity.ok(ApiResponseCustom.success(dtos));
     }
 
-    @GetMapping("/shifts/available")
+        @GetMapping("/available")
     @Operation(summary = "Get available user flight shifts", description = "Retrieve available user flight shifts")
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "200",
             description = "Successfully retrieved available user flight shifts",
-            content = @Content(schema = @Schema(implementation = ApiAvailableUserFlightShiftsResponse.class))
+            content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))
         )
     })
-    public ResponseEntity<ApiAvailableUserFlightShiftsResponse> getAvailableShifts(
-            @RequestParam("flightId") Long flightId,
+    public ResponseEntity<ApiResponseCustom<List<UserFlightShiftResponseDTO>>> getAvailableShifts(
+            @RequestParam("userId") Integer userId,
             @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        List<UserFlightShiftResponseDTO> dtos = userFlightShiftService.getAvailableShifts(flightId, date);
-        ApiAvailableUserFlightShiftsResponse response = new ApiAvailableUserFlightShiftsResponse("Thành công", 200, dtos, true);
-        return ResponseEntity.ok(response);
+        List<UserFlightShiftResponseDTO> dtos = userFlightShiftService.getAvailableShifts(userId.longValue(), date);
+        return ResponseEntity.ok(ApiResponseCustom.success(dtos));
     }
 
-    @GetMapping("/shifts/assigned")
+    @GetMapping("/assigned")
     @Operation(summary = "Get assigned user flight shifts", description = "Retrieve assigned user flight shifts")
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "200",
             description = "Successfully retrieved assigned user flight shifts",
-            content = @Content(schema = @Schema(implementation = ApiAssignedUserFlightShiftsResponse.class))
+            content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))
         )
     })
-    public ResponseEntity<ApiAssignedUserFlightShiftsResponse> getAssignedShifts(
-            @RequestParam(value = "flightId", required = false) Long flightId,
+    public ResponseEntity<ApiResponseCustom<List<UserFlightShiftResponseDTO>>> getAssignedShifts(
+            @RequestParam("userId") Integer userId,
             @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        List<UserFlightShiftResponseDTO> dtos = userFlightShiftService.getAssignedShifts(flightId, date);
-        ApiAssignedUserFlightShiftsResponse response = new ApiAssignedUserFlightShiftsResponse("Thành công", 200, dtos, true);
-        return ResponseEntity.ok(response);
+        List<UserFlightShiftResponseDTO> dtos = userFlightShiftService.getAssignedShifts(userId.longValue(), date);
+        return ResponseEntity.ok(ApiResponseCustom.success(dtos));
     }
 
-    @DeleteMapping
-    @Operation(summary = "Remove user flight assignment", description = "Remove a user flight assignment")
+    @DeleteMapping("/remove")
+    @Operation(summary = "Remove flight assignment", description = "Remove flight assignment for user")
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "200",
-            description = "User flight assignment removed successfully",
-            content = @Content(schema = @Schema(implementation = ApiDeleteUserFlightShiftResponse.class))
+            description = "Flight assignment removed successfully",
+            content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))
         )
     })
-    public ResponseEntity<ApiDeleteUserFlightShiftResponse> removeFlightAssignment(
-            @RequestParam("flightId") Long flightId,
-            @RequestParam("shiftDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate shiftDate,
-            @RequestParam("userId") Integer userId) {
-        userFlightShiftService.removeFlightAssignment(flightId, shiftDate, userId);
-        ApiDeleteUserFlightShiftResponse response = new ApiDeleteUserFlightShiftResponse("Thành công", 200, null, true);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<ApiResponseCustom<Object>> removeFlightAssignment(
+            @RequestParam("userId") Integer userId,
+            @RequestParam("flightId") Integer flightId,
+            @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        userFlightShiftService.removeFlightAssignment(userId.longValue(), date, flightId);
+        return ResponseEntity.ok(ApiResponseCustom.deleted());
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete user flight shift by id", description = "Delete user flight shift by id")
+    @Operation(summary = "Delete user flight shift", description = "Delete a user flight shift by ID")
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "200",
-            description = "Successfully deleted user flight shift",
-            content = @Content(schema = @Schema(implementation = ApiDeleteUserFlightShiftResponse.class))
+            description = "User flight shift deleted successfully",
+            content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))
         )
     })
-    public ResponseEntity<ApiDeleteUserFlightShiftResponse> deleteUserFlightShift(@PathVariable Integer id) {
+    public ResponseEntity<ApiResponseCustom<Object>> deleteUserFlightShift(@PathVariable Integer id) {
         userFlightShiftService.deleteUserFlightShiftById(id);
-        ApiDeleteUserFlightShiftResponse response = new ApiDeleteUserFlightShiftResponse("Xóa thành công", 200, null, true);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponseCustom.deleted());
     }
 
-    @GetMapping("/isAssigned")
-    @Operation(summary = "Check if user is assigned to flight", description = "Check if a user is assigned to a flight on a specific date")
+    @GetMapping("/check-assigned")
+    @Operation(summary = "Check if user is assigned to flight", description = "Check if user is assigned to a specific flight")
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "200",
-            description = "Successfully checked assignment",
-            content = @Content(schema = @Schema(implementation = ApiCheckUserAssignedFlightResponse.class))
+            description = "Check result retrieved successfully",
+            content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))
         )
     })
-    public ResponseEntity<ApiCheckUserAssignedFlightResponse> isUserAssigned(
-            @RequestParam("shiftDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate shiftDate,
-            @RequestParam("userId") Integer userId) {
-        boolean assigned = userFlightShiftService.isUserAssignedToFlight(shiftDate, userId);
+    public ResponseEntity<ApiResponseCustom<Map<String, Boolean>>> isUserAssigned(
+            @RequestParam("userId") Integer userId,
+            @RequestParam("flightId") Integer flightId,
+            @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        boolean isAssigned = userFlightShiftService.isUserAssignedToFlight(date, userId);
         Map<String, Boolean> result = new HashMap<>();
-        result.put("assigned", assigned);
-        ApiCheckUserAssignedFlightResponse response = new ApiCheckUserAssignedFlightResponse("Thành công", 200, result, true);
-        return ResponseEntity.ok(response);
+        result.put("isAssigned", isAssigned);
+        return ResponseEntity.ok(ApiResponseCustom.success(result));
     }
 
     @GetMapping("/filter")
@@ -231,17 +218,16 @@ public class UserFlightShiftController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "200",
             description = "Successfully filtered user flight shifts",
-            content = @Content(schema = @Schema(implementation = ApiFilterUserFlightShiftsResponse.class))
+            content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))
         )
     })
-    public ResponseEntity<ApiFilterUserFlightShiftsResponse> getFlightSchedules(
+    public ResponseEntity<ApiResponseCustom<List<UserFlightShiftResponseSearchDTO>>> getFlightSchedules(
             @RequestParam("shiftDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate shiftDate,
             @RequestParam(value = "teamId", required = false) Integer teamId,
             @RequestParam(value = "unitId", required = false) Integer unitId,
             @RequestParam(value = "flightId", required = false) Long flightId) {
         List<UserFlightShiftResponseSearchDTO> dtos = userFlightShiftService.getFlightSchedulesByCriteria(shiftDate, teamId, unitId, flightId);
-        ApiFilterUserFlightShiftsResponse response = new ApiFilterUserFlightShiftsResponse("Thành công", 200, dtos, true);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponseCustom.success(dtos));
     }
 
     @GetMapping("/filter-schedules")
@@ -250,16 +236,15 @@ public class UserFlightShiftController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "200",
             description = "Successfully filtered user flight shifts",
-            content = @Content(schema = @Schema(implementation = ApiFilterUserFlightShiftsResponse.class))
+            content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))
         )
     })
-    public ResponseEntity<ApiFilterUserFlightShiftsResponse> filterUserFlightShifts(
+    public ResponseEntity<ApiResponseCustom<List<UserFlightShiftResponseSearchDTO>>> filterUserFlightShifts(
             @RequestParam("shiftDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate shiftDate,
             @RequestParam(value = "teamId", required = false) Integer teamId,
             @RequestParam(value = "unitId", required = false) Integer unitId
     ) {
         List<UserFlightShiftResponseSearchDTO> dtos = userFlightShiftService.getFlightSchedulesByCriteria(shiftDate, teamId, unitId, null);
-        ApiFilterUserFlightShiftsResponse response = new ApiFilterUserFlightShiftsResponse("Thành công", 200, dtos, true);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponseCustom.success(dtos));
     }
 }
