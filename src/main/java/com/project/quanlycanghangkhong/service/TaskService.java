@@ -122,6 +122,13 @@ public interface TaskService {
     List<TaskDetailDTO> getTaskSubtree(Integer taskId);
     
     /**
+     * Lấy toàn bộ cây con (subtree) của một task với TaskSubtreeDTO
+     * @param taskId ID task gốc để lấy cây con
+     * @return Danh sách TaskSubtreeDTO theo thứ tự depth-first (task cha trước, subtask sau)
+     */
+    List<com.project.quanlycanghangkhong.dto.TaskSubtreeDTO> getTaskSubtreeAsSubtreeDTO(Integer taskId);
+    
+    /**
      * Lấy toàn bộ cây con (subtree) với cấu trúc phân cấp nested - dễ dàng cho frontend hiển thị
      * @param taskId ID task gốc để lấy cây con
      * @return TaskTreeDTO với cấu trúc nested hierarchy

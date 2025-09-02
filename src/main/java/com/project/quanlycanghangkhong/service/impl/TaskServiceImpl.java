@@ -22,6 +22,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.Optional;
 import java.util.Set;
 import java.util.HashSet;
@@ -261,6 +262,10 @@ public class TaskServiceImpl implements TaskService {
         if (task.getParent() != null) {
             dto.setParentId(task.getParent().getId());
         }
+        
+        // ✅ Check if this task has subtasks
+        boolean hasSubtasks = taskRepository.findByParentIdAndDeletedFalse(task.getId()).size() > 0;
+        dto.setHasSubtask(hasSubtasks);
         
         // ✅ FLAT LIST: No need to set hierarchy fields as they are @JsonIgnore
         // These fields won't appear in JSON response anymore
@@ -587,6 +592,74 @@ public class TaskServiceImpl implements TaskService {
                 collectSubtasks(subtask.getId(), result);
             }
         }
+    }
+
+    @Override
+    public List<TaskSubtreeDTO> getTaskSubtreeAsSubtreeDTO(Integer taskId) {
+        List<TaskSubtreeDTO> result = new ArrayList<>();
+        
+        // Lấy task gốc trước
+        TaskSubtreeDTO rootTask = convertTaskDetailToSubtreeDTO(getTaskDetailById(taskId));
+        if (rootTask == null) {
+            return result; // Trả về list rỗng nếu không tìm thấy task
+        }
+        
+        // Thêm task gốc vào kết quả
+        result.add(rootTask);
+        
+        // Recursively lấy tất cả subtask
+        collectSubtasksAsSubtreeDTO(taskId, result);
+        
+        return result;
+    }
+    
+    /**
+     * Helper method để recursively collect tất cả subtask as TaskSubtreeDTO
+     * @param parentId ID của task cha
+     * @param result List để chứa kết quả
+     */
+    private void collectSubtasksAsSubtreeDTO(Integer parentId, List<TaskSubtreeDTO> result) {
+        List<Task> subtasks = taskRepository.findByParentIdAndDeletedFalse(parentId);
+        
+        for (Task subtask : subtasks) {
+            TaskDetailDTO subtaskDetail = getTaskDetailById(subtask.getId());
+            if (subtaskDetail != null) {
+                TaskSubtreeDTO subtaskSubtreeDTO = convertTaskDetailToSubtreeDTO(subtaskDetail);
+                result.add(subtaskSubtreeDTO);
+                // Recursively lấy subtask của subtask này
+                collectSubtasksAsSubtreeDTO(subtask.getId(), result);
+            }
+        }
+    }
+    
+    /**
+     * Helper method để convert TaskDetailDTO thành TaskSubtreeDTO
+     * @param taskDetailDTO TaskDetailDTO source
+     * @return TaskSubtreeDTO hoặc null nếu input null
+     */
+    private TaskSubtreeDTO convertTaskDetailToSubtreeDTO(TaskDetailDTO taskDetailDTO) {
+        if (taskDetailDTO == null) {
+            return null;
+        }
+        
+        TaskSubtreeDTO dto = new TaskSubtreeDTO();
+        
+        // Copy all fields from TaskDetailDTO to TaskSubtreeDTO
+        dto.setId(taskDetailDTO.getId());
+        dto.setTitle(taskDetailDTO.getTitle());
+        dto.setContent(taskDetailDTO.getContent());
+        dto.setInstructions(taskDetailDTO.getInstructions());
+        dto.setNotes(taskDetailDTO.getNotes());
+        dto.setCreatedAt(taskDetailDTO.getCreatedAt());
+        dto.setUpdatedAt(taskDetailDTO.getUpdatedAt());
+        dto.setStatus(taskDetailDTO.getStatus());
+        dto.setPriority(taskDetailDTO.getPriority());
+        dto.setParentId(taskDetailDTO.getParentId());
+        dto.setCreatedByUser(taskDetailDTO.getCreatedByUser());
+        dto.setAssignments(taskDetailDTO.getAssignments());
+        dto.setAttachments(taskDetailDTO.getAttachments());
+        
+        return dto;
     }
 
     @Override
@@ -1141,7 +1214,8 @@ public class TaskServiceImpl implements TaskService {
                                                          Map<Integer, com.project.quanlycanghangkhong.model.Team> teamsById,
                                                          Map<Integer, com.project.quanlycanghangkhong.model.Unit> unitsById,
                                                          Map<Integer, User> teamLeadsById,
-                                                         Map<Integer, User> unitLeadsById) {
+                                                         Map<Integer, User> unitLeadsById,
+                                                         Boolean hasSubtask) {
         TaskDetailDTO dto = new TaskDetailDTO();
         dto.setId(task.getId());
         dto.setTitle(task.getTitle());
@@ -1156,6 +1230,9 @@ public class TaskServiceImpl implements TaskService {
         if (task.getParent() != null) {
             dto.setParentId(task.getParent().getId());
         }
+        
+        // ✅ Set hasSubtask using pre-loaded data
+        dto.setHasSubtask(hasSubtask);
         
         // ✅ FIX: Use pre-loaded user data instead of task.getCreatedBy() which might be incomplete
         if (task.getCreatedBy() != null) {
@@ -1417,6 +1494,21 @@ public class TaskServiceImpl implements TaskService {
         Map<Integer, List<Attachment>> attachmentsByTaskId = allAttachments.stream()
             .collect(Collectors.groupingBy(a -> a.getTask().getId()));
         
+        // ✅ Batch load subtask counts for all tasks to determine hasSubtask
+        Map<Integer, Boolean> hasSubtaskByTaskId = new HashMap<>();
+        if (!taskIds.isEmpty()) {
+            List<Object[]> subtaskCounts = taskRepository.countSubtasksByParentIds(taskIds);
+            for (Object[] row : subtaskCounts) {
+                Integer parentId = (Integer) row[0];
+                Long count = (Long) row[1];
+                hasSubtaskByTaskId.put(parentId, count > 0);
+            }
+            // Set false for tasks that don't have any subtasks
+            for (Integer taskId : taskIds) {
+                hasSubtaskByTaskId.putIfAbsent(taskId, false);
+            }
+        }
+        
         // ✅ Batch load ALL user IDs needed (recipients + assignedBy + completedBy + uploadedBy)
         Set<Integer> allUserIds = new HashSet<>();
         
@@ -1506,7 +1598,8 @@ public class TaskServiceImpl implements TaskService {
             .map(task -> convertToTaskDetailDTOUltraFast(task, 
                 assignmentsByTaskId.getOrDefault(task.getId(), List.of()),
                 attachmentsByTaskId.getOrDefault(task.getId(), List.of()),
-                usersById, teamsById, unitsById, teamLeadsById, unitLeadsById))
+                usersById, teamsById, unitsById, teamLeadsById, unitLeadsById,
+                hasSubtaskByTaskId.getOrDefault(task.getId(), false)))
             .collect(Collectors.toList());
     }
     

@@ -4,6 +4,7 @@ import com.project.quanlycanghangkhong.request.CreateTaskRequest;
 import com.project.quanlycanghangkhong.request.CreateSubtaskRequest;
 import com.project.quanlycanghangkhong.dto.TaskDTO;
 import com.project.quanlycanghangkhong.dto.TaskDetailDTO;
+import com.project.quanlycanghangkhong.dto.TaskSubtreeDTO;
 import com.project.quanlycanghangkhong.dto.UpdateTaskDTO;
 import com.project.quanlycanghangkhong.dto.AttachmentDTO;
 import com.project.quanlycanghangkhong.request.BulkDeleteTasksRequest;
@@ -326,8 +327,8 @@ public class TaskController {
         @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
         @ApiResponse(responseCode = "404", description = "Không tìm thấy task", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
-    public ResponseEntity<ApiResponseCustom<List<TaskDetailDTO>>> getTaskSubtree(@PathVariable Integer id) {
-        List<TaskDetailDTO> subtree = taskService.getTaskSubtree(id);
+    public ResponseEntity<ApiResponseCustom<List<TaskSubtreeDTO>>> getTaskSubtree(@PathVariable Integer id) {
+        List<TaskSubtreeDTO> subtree = taskService.getTaskSubtreeAsSubtreeDTO(id);
         
         if (subtree.isEmpty()) {
             return ResponseEntity.status(404).body(

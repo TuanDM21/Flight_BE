@@ -37,6 +37,15 @@ public interface TaskRepository extends JpaRepository<Task, Integer> {
     List<Task> findByParentIdAndDeletedFalse(Integer parentId);
     
     /**
+     * 🚀 BATCH LOAD: Đếm số lượng subtask cho nhiều parent task trong 1 query
+     * Được dùng trong: convertTasksToTaskDetailDTOsBatch() để tính hasSubtask
+     * @param parentIds Danh sách ID các task cha
+     * @return List<Object[]> với [parentId, count]
+     */
+    @Query("SELECT t.parent.id, COUNT(t) FROM Task t WHERE t.parent.id IN :parentIds AND t.deleted = false GROUP BY t.parent.id")
+    List<Object[]> countSubtasksByParentIds(@Param("parentIds") List<Integer> parentIds);
+    
+    /**
      * 🟢 ĐANG SỬ DỤNG: Tìm tất cả task gốc (task không có cha) trong mô hình Adjacency List
      * Được dùng trong: getRootTasks()
      * @return Danh sách task gốc

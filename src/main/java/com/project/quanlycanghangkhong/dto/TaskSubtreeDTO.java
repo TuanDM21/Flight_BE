@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import com.project.quanlycanghangkhong.model.TaskPriority;
 
-public class TaskDetailDTO {
+public class TaskSubtreeDTO {
     private Integer id;
     private String title;
     private String content;
@@ -19,9 +19,6 @@ public class TaskDetailDTO {
     
     // MỚI: Hỗ trợ subtask cho mô hình Adjacency List
     private Integer parentId; // Tham chiếu đến ID task cha
-    
-    // MỚI: Thông tin có subtask hay không
-    private Boolean hasSubtask; // Cho biết task này có subtask con hay không
     
     // MỚI: Attachment trực tiếp (THAY THẾ hoàn toàn documents)
     private List<AttachmentDTO> attachments; // Quan hệ task-attachment trực tiếp
@@ -114,75 +111,19 @@ public class TaskDetailDTO {
         this.priority = priority;
     }
 
-    /**
-     * Lấy ID task cha cho cấu trúc phân cấp Adjacency List
-     * @return ID task cha, null nếu đây là task gốc
-     */
     public Integer getParentId() {
         return parentId;
     }
 
-    /**
-     * Đặt ID task cha cho cấu trúc phân cấp Adjacency List
-     * @param parentId ID task cha
-     */
     public void setParentId(Integer parentId) {
         this.parentId = parentId;
     }
 
-    /**
-     * Kiểm tra task này có subtask con hay không
-     * @return true nếu có subtask, false nếu không có
-     */
-    public Boolean getHasSubtask() {
-        return hasSubtask;
-    }
-
-    /**
-     * Đặt thông tin task này có subtask con hay không
-     * @param hasSubtask true nếu có subtask, false nếu không có
-     */
-    public void setHasSubtask(Boolean hasSubtask) {
-        this.hasSubtask = hasSubtask;
-    }
-
-    /**
-     * Lấy attachment được liên kết trực tiếp với task này
-     * THAY ĐỔI LOGIC NGHIỆP VỤ: Quan hệ task-attachment trực tiếp thay thế cách tiếp cận dựa trên document
-     * @return Danh sách attachment được liên kết trực tiếp với task
-     */
     public List<AttachmentDTO> getAttachments() {
         return attachments;
     }
 
-    /**
-     * Đặt attachment được liên kết trực tiếp với task này
-     * THAY ĐỔI LOGIC NGHIỆP VỤ: Thay thế quản lý file dựa trên document cũ
-     * @param attachments Danh sách attachment để liên kết với task
-     */
     public void setAttachments(List<AttachmentDTO> attachments) {
         this.attachments = attachments;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (obj == null || getClass() != obj.getClass()) return false;
-        TaskDetailDTO that = (TaskDetailDTO) obj;
-        return id != null && id.equals(that.id);
-    }
-
-    @Override
-    public int hashCode() {
-        return id != null ? id.hashCode() : 0;
-    }
-    
-    @Override
-    public String toString() {
-        return "TaskDetailDTO{" +
-            "id=" + id +
-            ", title='" + title + '\'' +
-            ", parentId=" + parentId +
-            '}';
     }
 }
