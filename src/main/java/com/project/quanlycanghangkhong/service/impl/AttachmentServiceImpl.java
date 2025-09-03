@@ -89,10 +89,7 @@ public class AttachmentServiceImpl implements AttachmentService {
         // Kiểm tra role admin thông qua Role entity
         if (currentUser.getRole() != null && currentUser.getRole().getRoleName() != null) {
             String roleName = currentUser.getRole().getRoleName();
-            return "admin".equalsIgnoreCase(roleName) || 
-                   "administrator".equalsIgnoreCase(roleName) ||
-                   "ADMIN".equals(roleName) ||
-                   "Admin".equals(roleName);
+            return "ADMIN".equals(roleName);
         }
         
         // Backup check qua email nếu role không có
@@ -210,34 +207,6 @@ public class AttachmentServiceImpl implements AttachmentService {
         
         return toDTO(att);
     }
-
-    @Override
-    public List<AttachmentDTO> getMyAttachments() {
-        User currentUser = getCurrentUser();
-        if (currentUser == null) {
-            throw new RuntimeException("Không thể xác định user hiện tại. Vui lòng đăng nhập lại.");
-        }
-        
-        // Lấy chỉ file của user hiện tại (owner)
-        List<Attachment> myFiles = attachmentRepository.findByUploadedByAndIsDeletedFalse(currentUser);
-        return myFiles.stream().map(this::toDTO).collect(Collectors.toList());
-    }
-
-    /**
-     * Lấy danh sách file có quyền truy cập (bao gồm file của mình và file được chia sẻ)
-     * @return Danh sách file có quyền truy cập
-     */
-    @Override
-    public List<AttachmentDTO> getAccessibleAttachments() {
-        User currentUser = getCurrentUser();
-        if (currentUser == null) {
-            throw new RuntimeException("Không thể xác định user hiện tại. Vui lòng đăng nhập lại.");
-        }
-        
-        // Chỉ lấy file của mình (không có file sharing)
-        List<Attachment> myFiles = attachmentRepository.findByUploadedByAndIsDeletedFalse(currentUser);
-        return myFiles.stream().map(this::toDTO).collect(Collectors.toList());
-    }
     
     @Override
     public List<AttachmentDTO> getAvailableAttachments() {
@@ -248,17 +217,5 @@ public class AttachmentServiceImpl implements AttachmentService {
         
         List<Attachment> availableAttachments = attachmentRepository.findByTaskIsNullAndIsDeletedFalse();
         return availableAttachments.stream().map(this::toDTO).collect(Collectors.toList());
-    }
-    
-    @Override
-    public List<AttachmentDTO> getMyAvailableAttachments() {
-        User currentUser = getCurrentUser();
-        if (currentUser == null) {
-            throw new RuntimeException("Không thể xác định user hiện tại. Vui lòng đăng nhập lại.");
-        }
-        
-        // Lấy file của user hiện tại chưa được gán vào task nào
-        List<Attachment> myAvailableFiles = attachmentRepository.findByTaskIsNullAndUploadedByAndIsDeletedFalse(currentUser);
-        return myAvailableFiles.stream().map(this::toDTO).collect(Collectors.toList());
     }
 }

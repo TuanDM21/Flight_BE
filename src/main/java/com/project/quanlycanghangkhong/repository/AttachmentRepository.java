@@ -1,7 +1,6 @@
 package com.project.quanlycanghangkhong.repository;
 
 import com.project.quanlycanghangkhong.model.Attachment;
-import com.project.quanlycanghangkhong.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -30,12 +29,6 @@ public interface AttachmentRepository extends JpaRepository<Attachment, Integer>
      * Dùng cho validation và chi tiết attachment
      */
     Attachment findByIdAndIsDeletedFalse(Integer id);
-    
-    /**
-     * � ĐANG SỬ DỤNG: Lấy attachment theo owner và chưa bị xoá mềm
-     * Dùng cho quản lý file theo user ownership
-     */
-    List<Attachment> findByUploadedByAndIsDeletedFalse(User uploadedBy);
     
     // ============== TASK-ATTACHMENT DIRECT RELATIONSHIP (ĐANG SỬ DỤNG) ==============
     
@@ -67,15 +60,7 @@ public interface AttachmentRepository extends JpaRepository<Attachment, Integer>
     List<Attachment> findByTaskIsNullAndIsDeletedFalse();
     
     /**
-     * 🟢 ĐANG BỔ SUNG: Tìm attachment chưa gán của một user cụ thể
-     * HỮU ÍCH: User chỉ thấy file của mình để gán
-     * @param uploadedBy User đã upload
-     * @return Danh sách attachment của user chưa được gán
-     */
-    List<Attachment> findByTaskIsNullAndUploadedByAndIsDeletedFalse(User uploadedBy);
-    
-    /**
-     * 🔴 CÂN NHẮC: Tìm tất cả attachment không được gán cho task hoặc document nào (hoàn toàn mồ côi)
+     *  CÂN NHẮC: Tìm tất cả attachment không được gán cho task hoặc document nào (hoàn toàn mồ côi)
      * CÓ THỂ HỮU ÍCH: Để cleanup file không sử dụng
      * @return Danh sách attachment hoàn toàn chưa được gán
      */

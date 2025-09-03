@@ -236,40 +236,6 @@ public class AttachmentController {
         return ResponseEntity.ok(ApiResponseCustom.success("Thành công", result));
     }
 
-    @GetMapping("/my-files")
-    @Operation(summary = "Lấy danh sách file của tôi", 
-               description = "Lấy danh sách tất cả file đính kèm mà user hiện tại đã upload")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Lấy danh sách file thành công", 
-                    content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
-    })
-    public ResponseEntity<ApiResponseCustom<List<AttachmentDTO>>> getMyAttachments() {
-        List<AttachmentDTO> result = attachmentService.getMyAttachments();
-        
-        return ResponseEntity.ok(ApiResponseCustom.success("Thành công", result));
-    }
-
-    @GetMapping("/accessible-files")
-    @Operation(summary = "Lấy danh sách file có quyền truy cập", 
-               description = "Lấy danh sách tất cả file mà user hiện tại có quyền truy cập (bao gồm file của mình và file được chia sẻ)")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Lấy danh sách file thành công", 
-                    content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
-    })
-    public ResponseEntity<ApiResponseCustom<List<AttachmentDTO>>> getAccessibleAttachments() {
-        try {
-            List<AttachmentDTO> result = attachmentService.getAccessibleAttachments();
-            
-            return ResponseEntity.ok(ApiResponseCustom.success("Thành công", result));
-            
-        } catch (Exception e) {
-            logger.error("Error getting accessible files", e);
-            return ResponseEntity.status(500).body(
-                ApiResponseCustom.internalError("Lỗi khi lấy danh sách file có quyền truy cập: " + e.getMessage())
-            );
-        }
-    }
-
     @GetMapping("/available")
     @Operation(summary = "Lấy danh sách file chưa gán vào task", 
                description = "Lấy danh sách tất cả file chưa được gán vào task nào (chỉ admin)")
@@ -286,18 +252,5 @@ public class AttachmentController {
         } catch (RuntimeException e) {
             return ResponseEntity.status(403).body(ApiResponseCustom.forbidden(e.getMessage()));
         }
-    }
-
-    @GetMapping("/my-available")
-    @Operation(summary = "Lấy danh sách file của tôi chưa gán vào task", 
-               description = "Lấy danh sách file của user hiện tại chưa được gán vào task nào")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Lấy danh sách file thành công", 
-                    content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
-    })
-    public ResponseEntity<ApiResponseCustom<List<AttachmentDTO>>> getMyAvailableAttachments() {
-        List<AttachmentDTO> result = attachmentService.getMyAvailableAttachments();
-        
-        return ResponseEntity.ok(ApiResponseCustom.success("Thành công", result));
     }
 }

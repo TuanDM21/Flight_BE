@@ -85,7 +85,7 @@ public class ShiftServiceImpl implements ShiftService {
         com.project.quanlycanghangkhong.model.User user = userRepository.findByEmail(email).orElse(null);
         if (user == null) return List.of();
         String role = user.getRole() != null ? user.getRole().getRoleName() : "";
-        if (role.equals("admin") || role.equals("DIRECTOR") || role.equals("VICE_DIRECTOR")) {
+        if (role.equals("ADMIN") || role.equals("DIRECTOR") || role.equals("VICE_DIRECTOR")) {
             return shiftRepository.findAll().stream().map(this::toDTO).toList();
         } else if (user.getTeam() != null) {
             return shiftRepository.findByTeamId(user.getTeam().getId()).stream().map(this::toDTO).toList();

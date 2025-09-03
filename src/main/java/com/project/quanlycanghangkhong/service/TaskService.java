@@ -8,7 +8,6 @@ import com.project.quanlycanghangkhong.dto.UpdateTaskDTO;
 import com.project.quanlycanghangkhong.dto.AttachmentDTO;
 
 // ✅ PRIORITY 3: Simplified DTOs imports
-import com.project.quanlycanghangkhong.dto.TaskDetailSimplifiedDTO;
 
 import java.util.List;
 
@@ -29,9 +28,6 @@ public interface TaskService {
     TaskDetailDTO getTaskDetailById(Integer id);
     List<TaskDetailDTO> getAllTaskDetails();
     void updateTaskStatus(com.project.quanlycanghangkhong.model.Task task);
-    
-    // ✅ PRIORITY 3: Simplified DTO method
-    TaskDetailSimplifiedDTO getTaskDetailSimplifiedById(Integer id);
     
     // Method mới để lấy task theo loại
     List<TaskDetailDTO> getMyTasks(String type);
@@ -109,12 +105,6 @@ public interface TaskService {
     List<TaskDetailDTO> getSubtasks(Integer parentId);
     
     /**
-     * Lấy tất cả task gốc (task không có cha) trong mô hình Adjacency List
-     * @return Danh sách task gốc
-     */
-    List<TaskDetailDTO> getRootTasks();
-    
-    /**
      * Lấy toàn bộ cây con (subtree) của một task - bao gồm task đó và tất cả subtask bên dưới
      * @param taskId ID task gốc để lấy cây con
      * @return Danh sách task theo thứ tự depth-first (task cha trước, subtask sau)
@@ -148,13 +138,6 @@ public interface TaskService {
     List<AttachmentDTO> getTaskAttachments(Integer taskId);
     
     /**
-     * Lấy tất cả attachment của task với simplified structure (không nested data)
-     * @param taskId ID Task
-     * @return Danh sách SimpleAttachmentDTO (flattened structure)
-     */
-    List<com.project.quanlycanghangkhong.dto.SimpleAttachmentDTO> getTaskAttachmentsSimplified(Integer taskId);
-    
-    /**
      * Thêm attachments vào task cụ thể
      * @param taskId ID của task
      * @param attachmentIds Danh sách ID attachment cần thêm
@@ -171,27 +154,6 @@ public interface TaskService {
     int removeAttachmentsFromTask(Integer taskId, List<Integer> attachmentIds);
     
     // ============== SEARCH & FILTER METHODS ==============
-    
-    /**
-     * Tìm kiếm task theo title
-     * @param title Từ khóa tìm kiếm
-     * @return Danh sách task match
-     */
-    List<TaskDetailDTO> searchTasksByTitle(String title);
-    
-    /**
-     * Lọc task theo priority
-     * @param priority Priority level
-     * @return Danh sách task có priority cụ thể
-     */
-    List<TaskDetailDTO> getTasksByPriority(com.project.quanlycanghangkhong.model.TaskPriority priority);
-    
-    /**
-     * Tìm kiếm task theo title hoặc content
-     * @param keyword Từ khóa tìm kiếm
-     * @return Danh sách task match
-     */
-    List<TaskDetailDTO> searchTasks(String keyword);
     
     // ============== DATABASE-LEVEL PAGINATION METHODS (OPTIMIZED) ==============
     
@@ -226,4 +188,39 @@ public interface TaskService {
         String type, String status, String keyword, String startTime, String endTime,
         java.util.List<String> priorities, java.util.List<String> recipientTypes, java.util.List<Integer> recipientIds,
         Integer page, Integer size);
+
+    // ============== UNIT TASKS METHODS (ROLE-BASED PERMISSIONS) ==============
+    
+    /**
+     * 🏢 UNIT TASKS: Get all tasks with role-based permissions
+     * ADMIN/DIRECTOR/VICE_DIRECTOR: Xem tất cả tasks
+     * Các role khác: Chỉ xem tasks của team mình
+     * @param status Status filter (optional)
+     * @return MyTasksData with role-based filtered tasks
+     */
+    com.project.quanlycanghangkhong.dto.MyTasksData getUnitTasks(String status);
+    
+    /**
+     * 🏢 UNIT TASKS: Get tasks with pagination and role-based permissions
+     * @param status Status filter (optional)
+     * @param page Page number (1-based)
+     * @param size Page size
+     * @return MyTasksData with pagination and role-based filtering
+     */
+    com.project.quanlycanghangkhong.dto.MyTasksData getUnitTasksWithPagination(String status, Integer page, Integer size);
+    
+    /**
+     * 🏢 UNIT TASKS: Get tasks with advanced search, pagination and role-based permissions
+     * @param status Status filter (optional)
+     * @param keyword Search keyword
+     * @param startTime Start time filter
+     * @param endTime End time filter
+     * @param priorities Priority filters
+     * @param page Page number (1-based)
+     * @param size Page size
+     * @return MyTasksData with advanced search and role-based filtering
+     */
+    com.project.quanlycanghangkhong.dto.MyTasksData getUnitTasksWithAdvancedSearchAndPagination(
+        String status, String keyword, String startTime, String endTime, 
+        java.util.List<String> priorities, Integer page, Integer size);
 }

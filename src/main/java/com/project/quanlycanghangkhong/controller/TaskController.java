@@ -15,7 +15,6 @@ import com.project.quanlycanghangkhong.request.TaskAttachmentUploadRequest;
 
 
 // ✅ PRIORITY 3: Simplified DTOs imports
-import com.project.quanlycanghangkhong.dto.TaskDetailSimplifiedDTO;
 
 import com.project.quanlycanghangkhong.service.TaskService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,13 +46,6 @@ import javax.validation.Valid;
 public class TaskController {
     @Autowired
     private TaskService taskService;
-
-    @PostMapping("/test")
-    @Operation(summary = "Test request body mapping", description = "Test endpoint để debug JSON mapping")
-    public ResponseEntity<ApiResponseCustom<Void>> testCreateTask(@RequestBody CreateTaskRequest request) {
-        System.out.println("[TEST] Test endpoint called with: " + request);
-        return ResponseEntity.ok(ApiResponseCustom.success("Test thành công", null));
-    }
 
     @PostMapping
     @Operation(summary = "Tạo task", description = "Tạo mới một công việc")
@@ -287,6 +279,89 @@ public class TaskController {
         return ResponseEntity.ok(ApiResponseCustom.success(response));
     }
 
+    @GetMapping("/unit")
+    @Operation(summary = "API đơn vị: Lấy tất cả công việc theo phân quyền với advanced search, filter status, pagination", 
+               description = "🏢 UNIT API với role-based permissions: " +
+                           "📋 PERMISSION LOGIC: " +
+                           "• ADMIN/DIRECTOR/VICE_DIRECTOR: Xem TẤT CẢ tasks trong hệ thống " +
+                           "• Các role khác: Chỉ xem tasks của TEAM mình " +
+                           "🎯 STATUS FILTER: IN_PROGRESS, COMPLETED, OVERDUE " +
+                           "🔍 KEYWORD SEARCH: Tìm kiếm trong 5 fields - ID, title, content, instructions, notes " +
+                           "⚡ ADVANCED FILTERS: priorities (LOW/NORMAL/HIGH/URGENT), time range (yyyy-MM-dd) " +
+                           "📄 PAGINATION: page (1-based), size (max 100, default 20)")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+        @ApiResponse(responseCode = "400", description = "Tham số không hợp lệ", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+        @ApiResponse(responseCode = "403", description = "Không có quyền truy cập", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
+    })
+    public ResponseEntity<ApiResponseCustom<MyTasksData>> getUnitTasks(
+            @Parameter(description = "Filter theo status", schema = @Schema(allowableValues = {"IN_PROGRESS", "COMPLETED", "OVERDUE"}))
+            @RequestParam(required = false) String status,
+            
+            @Parameter(description = "Từ khóa tìm kiếm (search trong 5 fields): ID, title, content, instructions, notes", example = "urgent task")
+            @RequestParam(required = false) String keyword,
+            
+            @Parameter(description = "Ngày bắt đầu (format: yyyy-MM-dd)", example = "2025-08-01")
+            @RequestParam(required = false) String startTime,
+            
+            @Parameter(description = "Ngày kết thúc (format: yyyy-MM-dd)", example = "2025-08-31")
+            @RequestParam(required = false) String endTime,
+            
+            @Parameter(description = "Danh sách priority để filter", 
+                      schema = @Schema(type = "array", 
+                                     allowableValues = {
+                                         "LOW",      // 🟢 Không khẩn cấp - có thể hoãn
+                                         "NORMAL",   // 🔵 Bình thường - công việc thường ngày  
+                                         "HIGH",     // 🟡 Quan trọng - ảnh hưởng đến chuyến bay
+                                         "URGENT"    // 🔴 Khẩn cấp - cần xử lý ngay lập tức
+                                     },
+                                     description = "LOW: Không khẩn cấp, NORMAL: Bình thường, HIGH: Quan trọng, URGENT: Khẩn cấp"))
+            @RequestParam(required = false) List<String> priorities,
+            
+            @Parameter(description = "Số trang (bắt đầu từ 1)", example = "1")
+            @RequestParam(required = false, defaultValue = "1") Integer page,
+            
+            @Parameter(description = "Số items per page (max 100)", example = "20")
+            @RequestParam(required = false, defaultValue = "20") Integer size) {
+        
+        // Validate status values
+        if (status != null && !status.matches("IN_PROGRESS|COMPLETED|OVERDUE")) {
+            return ResponseEntity.badRequest().body(
+                ApiResponseCustom.error("Status phải là: IN_PROGRESS, COMPLETED, hoặc OVERDUE")
+            );
+        }
+        
+        // Validate pagination parameters (1-based)
+        if (page != null && page < 1) {
+            return ResponseEntity.badRequest().body(
+                ApiResponseCustom.error("Page phải >= 1")
+            );
+        }
+        if (size != null && (size <= 0 || size > 100)) {
+            return ResponseEntity.badRequest().body(
+                ApiResponseCustom.error("Size phải từ 1 đến 100")
+            );
+        }
+        
+        MyTasksData response;
+        boolean hasAdvancedSearch = keyword != null || startTime != null || endTime != null || 
+                                  (priorities != null && !priorities.isEmpty());
+        
+        if (hasAdvancedSearch) {
+            // Sử dụng advanced search với role-based permissions
+            response = taskService.getUnitTasksWithAdvancedSearchAndPagination(status, keyword, 
+                startTime, endTime, priorities, page, size);
+        } else if (page != null || size != null) {
+            // Sử dụng pagination với role-based permissions
+            response = taskService.getUnitTasksWithPagination(status, page, size);
+        } else {
+            // Simple request với role-based permissions
+            response = taskService.getUnitTasks(status);
+        }
+        
+        return ResponseEntity.ok(ApiResponseCustom.success(response));
+    }
+
     // MÔ HÌNH ADJACENCY LIST: API Subtask
     @PostMapping("/{parentId}/subtasks")
     @Operation(summary = "Tạo subtask", description = "Tạo subtask con cho một task cha")
@@ -308,16 +383,6 @@ public class TaskController {
     public ResponseEntity<ApiResponseCustom<List<TaskDetailDTO>>> getSubtasks(@PathVariable Integer id) {
         List<TaskDetailDTO> subtasks = taskService.getSubtasks(id);
         return ResponseEntity.ok(ApiResponseCustom.success(subtasks));
-    }
-
-    @GetMapping("/root")
-    @Operation(summary = "Lấy danh sách task gốc", description = "Lấy tất cả task không có parent (task gốc)")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
-    })
-    public ResponseEntity<ApiResponseCustom<List<TaskDetailDTO>>> getRootTasks() {
-        List<TaskDetailDTO> rootTasks = taskService.getRootTasks();
-        return ResponseEntity.ok(ApiResponseCustom.success(rootTasks));
     }
 
     @GetMapping("/{id}/subtree")
@@ -365,31 +430,14 @@ public class TaskController {
     // Đã loại bỏ các API riêng biệt để gán/gỡ attachment vì không cần thiết
     
     @GetMapping("/{id}/attachments")
-    @Operation(summary = "Lấy danh sách file đính kèm của task (Simplified)", description = "Lấy tất cả file đính kèm trực tiếp của task với cấu trúc simplified, không có nested data")
+    @Operation(summary = "Lấy danh sách file đính kèm của task", description = "Lấy tất cả file đính kèm trực tiếp của task")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
         @ApiResponse(responseCode = "404", description = "Không tìm thấy task", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
-    public ResponseEntity<ApiResponseCustom<List<com.project.quanlycanghangkhong.dto.SimpleAttachmentDTO>>> getTaskAttachments(@PathVariable Integer id) {
-        List<com.project.quanlycanghangkhong.dto.SimpleAttachmentDTO> attachments = taskService.getTaskAttachmentsSimplified(id);
-        return ResponseEntity.ok(ApiResponseCustom.success(attachments));
-    }
-
-    @GetMapping("/{id}/attachments/legacy")
-    @Operation(summary = "Lấy danh sách file đính kèm của task (Legacy - có nested data)", description = "Legacy endpoint với AttachmentDTO có nested UserDTO - có thể gây lồng data")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Thành công"),
-        @ApiResponse(responseCode = "404", description = "Không tìm thấy task")
-    })
-    public ResponseEntity<?> getTaskAttachmentsLegacy(@PathVariable Integer id) {
+    public ResponseEntity<ApiResponseCustom<List<AttachmentDTO>>> getTaskAttachments(@PathVariable Integer id) {
         List<AttachmentDTO> attachments = taskService.getTaskAttachments(id);
-        return ResponseEntity.ok(Map.of(
-            "message", "Thành công (Legacy endpoint)",
-            "statusCode", 200,
-            "data", attachments,
-            "success", true,
-            "warning", "Endpoint này có thể có nested data. Khuyến nghị dùng /{id}/attachments"
-        ));
+        return ResponseEntity.ok(ApiResponseCustom.success(attachments));
     }
 
     @PostMapping("/{id}/attachments")
@@ -476,104 +524,10 @@ public class TaskController {
     }
 
     // ============== SEARCH & FILTER ENDPOINTS ==============
-
-    @GetMapping("/search")
-    @Operation(summary = "Tìm kiếm task theo title", description = "Tìm kiếm task theo title (case-insensitive)")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
-        @ApiResponse(responseCode = "400", description = "Thiếu từ khóa tìm kiếm", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
-    })
-    public ResponseEntity<ApiResponseCustom<List<TaskDetailDTO>>> searchTasksByTitle(@RequestParam String title) {
-        if (title == null || title.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body(
-                ApiResponseCustom.error("Từ khóa tìm kiếm không được để trống")
-            );
-        }
-        List<TaskDetailDTO> tasks = taskService.searchTasksByTitle(title.trim());
-        return ResponseEntity.ok(ApiResponseCustom.success(tasks));
-    }
-
-    @GetMapping("/priority/{priority}")
-    @Operation(summary = "Lọc task theo priority", description = "Lấy danh sách task theo mức độ ưu tiên")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
-        @ApiResponse(responseCode = "400", description = "Priority không hợp lệ", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
-    })
-    public ResponseEntity<ApiResponseCustom<List<TaskDetailDTO>>> getTasksByPriority(@PathVariable String priority) {
-        try {
-            com.project.quanlycanghangkhong.model.TaskPriority taskPriority = 
-                com.project.quanlycanghangkhong.model.TaskPriority.valueOf(priority.toUpperCase());
-            List<TaskDetailDTO> tasks = taskService.getTasksByPriority(taskPriority);
-            return ResponseEntity.ok(ApiResponseCustom.success(tasks));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(
-                ApiResponseCustom.error("Priority phải là: LOW, NORMAL, HIGH, hoặc URGENT")
-            );
-        }
-    }
-
-    @GetMapping("/search/all")
-    @Operation(summary = "Tìm kiếm task theo title hoặc content", description = "Tìm kiếm task trong title hoặc content")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
-        @ApiResponse(responseCode = "400", description = "Thiếu từ khóa tìm kiếm", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
-    })
-    public ResponseEntity<ApiResponseCustom<List<TaskDetailDTO>>> searchAllTasks(@RequestParam String keyword) {
-        if (keyword == null || keyword.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body(
-                ApiResponseCustom.error("Từ khóa tìm kiếm không được để trống")
-            );
-        }
-        List<TaskDetailDTO> tasks = taskService.searchTasks(keyword.trim());
-        return ResponseEntity.ok(ApiResponseCustom.success(tasks));
-    }
+    
     
     // ===================================================================
-    // ✅ PRIORITY 3: SIMPLIFIED DTOs ENDPOINTS
+    // TASK HIERARCHY & SUBTASK ENDPOINTS
     // ===================================================================
-    
-    @GetMapping("/{id}/simplified")
-    @Operation(summary = "Lấy chi tiết task với Simplified DTO", 
-               description = "PRIORITY 3: Trả về task detail với cấu trúc đơn giản hóa, không có nested DTOs phức tạp")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Thành công"),
-        @ApiResponse(responseCode = "404", description = "Không tìm thấy task")
-    })
-    public ResponseEntity<?> getTaskDetailSimplified(@PathVariable Integer id) {
-        try {
-            TaskDetailSimplifiedDTO task = taskService.getTaskDetailSimplifiedById(id);
-            if (task == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                    Map.of(
-                        "success", false,
-                        "message", "Không tìm thấy task với ID: " + id,
-                        "statusCode", 404,
-                        "data", null
-                    )
-                );
-            }
-            return ResponseEntity.ok(
-                Map.of(
-                    "success", true,
-                    "message", "Lấy chi tiết task thành công (Simplified DTO)",
-                    "statusCode", 200,
-                    "data", task,
-                    "simplifiedStructure", true,
-                    "explanation", "Flattened user info, no nested DTOs, better performance"
-                )
-            );
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-                Map.of(
-                    "success", false,
-                    "message", "Lỗi server: " + e.getMessage(),
-                    "statusCode", 500,
-                    "data", null
-                )
-            );
-        }
-    }
-    
-
     
 }

@@ -45,13 +45,6 @@ public interface TaskRepository extends JpaRepository<Task, Integer> {
     @Query("SELECT t.parent.id, COUNT(t) FROM Task t WHERE t.parent.id IN :parentIds AND t.deleted = false GROUP BY t.parent.id")
     List<Object[]> countSubtasksByParentIds(@Param("parentIds") List<Integer> parentIds);
     
-    /**
-     * 🟢 ĐANG SỬ DỤNG: Tìm tất cả task gốc (task không có cha) trong mô hình Adjacency List
-     * Được dùng trong: getRootTasks()
-     * @return Danh sách task gốc
-     */
-    List<Task> findByParentIsNullAndDeletedFalse();
-    
     // ============== COUNT ROOT TASKS ONLY (FOR MY TASKS API) ==============
     
     /**
@@ -165,14 +158,6 @@ public interface TaskRepository extends JpaRepository<Task, Integer> {
      * @return Danh sách task match
      */
     List<Task> findByTitleContainingIgnoreCaseOrContentContainingIgnoreCaseAndDeletedFalse(String title, String content);
-    
-    /**
-     * 🟢 HỮU ÍCH: Lọc task theo priority
-     * Dùng cho: Filter by priority trong frontend
-     * @param priority Priority level
-     * @return Danh sách task có priority cụ thể
-     */
-    List<Task> findByPriorityAndDeletedFalse(com.project.quanlycanghangkhong.model.TaskPriority priority);
     
     // ============== OPTIMIZED METHODS FOR MY TASKS API ==============
     
@@ -412,49 +397,6 @@ public interface TaskRepository extends JpaRepository<Task, Integer> {
                                                    @Param("recipientTypes") List<String> recipientTypes,
                                                    @Param("recipientIds") List<Integer> recipientIds);
 
-    // ============== ULTRA OPTIMIZED KEYWORD SEARCH ==============
-    
-    /**
-     * 🚀 ULTRA FAST: Optimized keyword search with native query and index support
-     * Uses FULLTEXT search instead of slow LIKE queries
-     * Performance: <1000ms for large datasets
-     * @param keyword Search keyword
-     * @return List of tasks matching keyword in id, title, content, instructions, or notes
-     */
-    @Query(value = 
-        "SELECT DISTINCT t.* FROM task t " +
-        "WHERE t.deleted = false " +
-        "AND (:keyword IS NULL OR :keyword = '' OR " +
-        "     (CAST(t.id AS CHAR) LIKE CONCAT('%', :keyword, '%') OR " +
-        "      t.title LIKE CONCAT('%', :keyword, '%') OR " +
-        "      t.content LIKE CONCAT('%', :keyword, '%') OR " +
-        "      t.instructions LIKE CONCAT('%', :keyword, '%') OR " +
-        "      t.notes LIKE CONCAT('%', :keyword, '%'))) " +
-        "ORDER BY " +
-        "  CASE WHEN CAST(t.id AS CHAR) LIKE CONCAT('%', :keyword, '%') THEN 0 " +
-        "       WHEN t.title LIKE CONCAT('%', :keyword, '%') THEN 1 " +
-        "       WHEN t.content LIKE CONCAT('%', :keyword, '%') THEN 2 " +
-        "       WHEN t.instructions LIKE CONCAT('%', :keyword, '%') THEN 3 " +
-        "       ELSE 4 END, " +
-        "  t.updated_at DESC " +
-        "LIMIT 100",
-        nativeQuery = true)
-    List<Task> findByKeywordOptimized(@Param("keyword") String keyword);
-    
-    /**
-     * 🚀 ULTRA FAST: Count for optimized keyword search
-     * @param keyword Search keyword  
-     * @return Count of matching tasks
-     */
-    @Query(value = 
-        "SELECT COUNT(DISTINCT t.id) FROM task t " +
-        "WHERE t.deleted = false " +
-        "AND (:keyword IS NULL OR :keyword = '' OR " +
-        "     (t.title LIKE CONCAT('%', :keyword, '%') OR " +
-        "      t.content LIKE CONCAT('%', :keyword, '%')))",
-        nativeQuery = true)
-    long countByKeywordOptimized(@Param("keyword") String keyword);
-
     // ============== ULTRA OPTIMIZED NATIVE QUERIES ==============
     
     /**
@@ -620,4 +562,33 @@ public interface TaskRepository extends JpaRepository<Task, Integer> {
                                                                @Param("recipientTypes") List<String> recipientTypes,
                                                                @Param("recipientIds") List<Integer> recipientIds,
                                                                org.springframework.data.domain.Pageable pageable);
+
+    // ============== UNIT TASKS METHODS (ROLE-BASED PERMISSIONS) ==============
+    
+    /**
+     * 🏢 UNIT TASKS: Get all tasks ordered by update time (for ADMIN/DIRECTOR/VICE_DIRECTOR)
+     * @return All tasks in the system
+     */
+    @Query("SELECT t FROM Task t WHERE t.deleted = false ORDER BY t.updatedAt DESC, t.createdAt DESC")
+    List<Task> findAllByDeletedFalseOrderByUpdatedAtDescCreatedAtDesc();
+    
+    /**
+     * 🏢 UNIT TASKS: Get tasks created by team members
+     * @param teamId Team ID
+     * @return Tasks created by any member of the team
+     */
+    @Query("SELECT DISTINCT t FROM Task t JOIN User u ON t.createdBy.id = u.id " +
+           "WHERE u.team.id = :teamId AND t.deleted = false " +
+           "ORDER BY t.updatedAt DESC, t.createdAt DESC")
+    List<Task> findTasksCreatedByTeamMembers(@Param("teamId") Integer teamId);
+    
+    /**
+     * 🏢 UNIT TASKS: Get tasks assigned by team members
+     * @param teamId Team ID
+     * @return Tasks assigned by any member of the team
+     */
+    @Query("SELECT DISTINCT a.task FROM Assignment a JOIN User u ON a.assignedBy.id = u.id " +
+           "WHERE u.team.id = :teamId AND a.task.deleted = false " +
+           "ORDER BY a.task.updatedAt DESC, a.task.createdAt DESC")
+    List<Task> findTasksAssignedByTeamMembers(@Param("teamId") Integer teamId);
 }

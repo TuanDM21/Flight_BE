@@ -17,23 +17,10 @@ public interface AttachmentService {
     List<AttachmentDTO> getAllAttachments();
     AttachmentDTO getAttachmentById(Integer id);
     AttachmentDTO updateAttachmentFileName(Integer id, String fileName);
-    List<AttachmentDTO> getMyAttachments();
-    
-    /**
-     * Lấy danh sách file có quyền truy cập (bao gồm file của mình và file được chia sẻ)
-     * @return Danh sách file có quyền truy cập
-     */
-    List<AttachmentDTO> getAccessibleAttachments();
     
     /**
      * Lấy danh sách attachment chưa được gán vào task nào (có thể gán được)
      * @return Danh sách attachment chưa gán
      */
     List<AttachmentDTO> getAvailableAttachments();
-    
-    /**
-     * Lấy danh sách attachment chưa gán của user hiện tại
-     * @return Danh sách attachment của tôi chưa gán
-     */
-    List<AttachmentDTO> getMyAvailableAttachments();
 }

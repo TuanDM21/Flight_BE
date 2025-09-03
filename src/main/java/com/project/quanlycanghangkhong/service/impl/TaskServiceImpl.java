@@ -7,9 +7,6 @@ import com.project.quanlycanghangkhong.repository.UserRepository;
 import com.project.quanlycanghangkhong.service.TaskService;
 
 // ✅ PRIORITY 3: Simplified DTOs imports
-import com.project.quanlycanghangkhong.dto.TaskDetailSimplifiedDTO;
-import com.project.quanlycanghangkhong.dto.SimpleAssignmentDTO;
-import com.project.quanlycanghangkhong.dto.SimpleAttachmentDTO;
 
 // ✅ Pagination imports
 import com.project.quanlycanghangkhong.dto.PaginationInfo;
@@ -234,14 +231,6 @@ public class TaskServiceImpl implements TaskService {
         
         // ✅ Sử dụng depth-controlled version bắt đầu từ depth 0
         return convertToTaskDetailDTOOptimized(task, 0);
-    }
-
-    // ✅ PRIORITY 3: New method using Simplified DTOs
-    public TaskDetailSimplifiedDTO getTaskDetailSimplifiedById(Integer id) {
-        Task task = taskRepository.findTaskWithAllRelationships(id).orElse(null);
-        if (task == null) return null;
-        
-        return convertToTaskDetailSimplifiedDTO(task, 0);
     }
 
     // ✅ OPTIMIZED: Convert Task to TaskDetailDTO as normal task (no hierarchy)
@@ -549,15 +538,6 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public List<TaskDetailDTO> getRootTasks() {
-        List<Task> rootTasks = taskRepository.findByParentIsNullAndDeletedFalse();
-        return rootTasks.stream()
-            .map(task -> getTaskDetailById(task.getId()))
-            .filter(taskDetail -> taskDetail != null)
-            .collect(Collectors.toList());
-    }
-
-    @Override
     public List<TaskDetailDTO> getTaskSubtree(Integer taskId) {
         List<TaskDetailDTO> result = new ArrayList<>();
         
@@ -762,31 +742,6 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public List<com.project.quanlycanghangkhong.dto.SimpleAttachmentDTO> getTaskAttachmentsSimplified(Integer taskId) {
-        List<Attachment> attachments = attachmentRepository.findByTask_IdAndIsDeletedFalse(taskId);
-        return attachments.stream()
-            .map(att -> {
-                com.project.quanlycanghangkhong.dto.SimpleAttachmentDTO dto = new com.project.quanlycanghangkhong.dto.SimpleAttachmentDTO();
-                dto.setId(att.getId());
-                dto.setFilePath(att.getFilePath());
-                dto.setFileName(att.getFileName());
-                dto.setFileSize(att.getFileSize());
-                dto.setCreatedAt(att.getCreatedAt());
-                dto.setIsDeleted(att.isDeleted());
-                
-                // Flattened user info instead of nested UserDTO
-                if (att.getUploadedBy() != null) {
-                    dto.setUploadedByUserId(att.getUploadedBy().getId());
-                    dto.setUploadedByUserName(att.getUploadedBy().getName());
-                    dto.setUploadedByUserEmail(att.getUploadedBy().getEmail());
-                }
-                
-                return dto;
-            })
-            .collect(Collectors.toList());
-    }
-
-    @Override
     @Transactional
     public List<AttachmentDTO> addAttachmentsToTask(Integer taskId, List<Integer> attachmentIds) {
         // Kiểm tra task có tồn tại không
@@ -842,46 +797,6 @@ public class TaskServiceImpl implements TaskService {
     }
 
     // ============== SEARCH & FILTER IMPLEMENTATIONS ==============
-
-    @Override
-    public List<TaskDetailDTO> searchTasksByTitle(String title) {
-        // 🚀 OPTIMIZED: Use keyword search method for title search as well
-        if (title == null || title.trim().isEmpty()) {
-            return new ArrayList<>();
-        }
-        
-        List<Task> tasks = taskRepository.findByKeywordOptimized(title.trim());
-        
-        // Filter to only include tasks where title contains the search term
-        List<Task> titleMatchedTasks = tasks.stream()
-            .filter(task -> task.getTitle().toLowerCase().contains(title.toLowerCase()))
-            .collect(Collectors.toList());
-        
-        // ✅ Use batch conversion for better performance
-        return convertTasksToTaskDetailDTOsBatch(titleMatchedTasks);
-    }
-
-    @Override
-    public List<TaskDetailDTO> getTasksByPriority(com.project.quanlycanghangkhong.model.TaskPriority priority) {
-        List<Task> tasks = taskRepository.findByPriorityAndDeletedFalse(priority);
-        return tasks.stream()
-            .map(task -> getTaskDetailById(task.getId()))
-            .filter(taskDetail -> taskDetail != null)
-            .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<TaskDetailDTO> searchTasks(String keyword) {
-        // 🚀 ULTRA OPTIMIZED: Use new optimized keyword search with native query
-        if (keyword == null || keyword.trim().isEmpty()) {
-            return new ArrayList<>();
-        }
-        
-        List<Task> tasks = taskRepository.findByKeywordOptimized(keyword.trim());
-        
-        // ✅ Use batch conversion instead of individual getTaskDetailById calls
-        return convertTasksToTaskDetailDTOsBatch(tasks);
-    }
 
     // ============== TASK COUNT AND RESPONSE METHODS ==============
 
@@ -1349,128 +1264,7 @@ public class TaskServiceImpl implements TaskService {
     }
     
     // ===================================================================
-    // ✅ PRIORITY 3: SIMPLIFIED DTOs CONVERSION METHODS
     // ===================================================================
-    
-    /**
-     * Convert Task to TaskDetailSimplifiedDTO với depth control
-     */
-    private TaskDetailSimplifiedDTO convertToTaskDetailSimplifiedDTO(Task task, int currentDepth) {
-        TaskDetailSimplifiedDTO dto = new TaskDetailSimplifiedDTO();
-        
-        // Basic task info
-        dto.setId(task.getId());
-        dto.setTitle(task.getTitle());
-        dto.setContent(task.getContent());
-        dto.setInstructions(task.getInstructions());
-        dto.setNotes(task.getNotes());
-        dto.setCreatedAt(task.getCreatedAt());
-        dto.setUpdatedAt(task.getUpdatedAt());
-        dto.setStatus(task.getStatus());
-        dto.setPriority(task.getPriority());
-        
-        // Parent info
-        if (task.getParent() != null) {
-            dto.setParentId(task.getParent().getId());
-        }
-        
-        // Flattened createdBy user info (thay thế nested UserDTO)
-        if (task.getCreatedBy() != null) {
-            dto.setCreatedByUserId(task.getCreatedBy().getId());
-            dto.setCreatedByUserName(task.getCreatedBy().getName());
-            dto.setCreatedByUserEmail(task.getCreatedBy().getEmail());
-            // Team info if available
-            if (task.getCreatedBy().getTeam() != null) {
-                dto.setCreatedByTeamName(task.getCreatedBy().getTeam().getTeamName());
-            }
-        }
-        
-        // Simplified assignments (thay thế nested AssignmentDTO)
-        List<SimpleAssignmentDTO> simpleAssignments = task.getAssignments().stream()
-            .map(this::convertToSimpleAssignmentDTO)
-            .toList();
-        dto.setAssignments(simpleAssignments);
-        
-        // Simplified attachments (thay thế nested AttachmentDTO)
-        List<SimpleAttachmentDTO> simpleAttachments = attachmentRepository.findByTask_IdAndIsDeletedFalse(task.getId())
-            .stream()
-            .map(this::convertToSimpleAttachmentDTO)
-            .toList();
-        dto.setAttachments(simpleAttachments);
-        
-        return dto;
-    }
-    
-    /**
-     * Convert Assignment to SimpleAssignmentDTO (flattened)
-     */
-    private SimpleAssignmentDTO convertToSimpleAssignmentDTO(Assignment assignment) {
-        SimpleAssignmentDTO dto = new SimpleAssignmentDTO();
-        
-        dto.setAssignmentId(assignment.getAssignmentId());
-        dto.setTaskId(assignment.getTask() != null ? assignment.getTask().getId() : null);
-        dto.setRecipientType(assignment.getRecipientType());
-        dto.setRecipientId(assignment.getRecipientId());
-        dto.setAssignedAt(assignment.getAssignedAt());
-        dto.setDueAt(assignment.getDueAt());
-        dto.setCompletedAt(assignment.getCompletedAt());
-        dto.setStatus(assignment.getStatus());
-        dto.setNote(assignment.getNote());
-        
-        // Flattened assignedBy user info
-        if (assignment.getAssignedBy() != null) {
-            dto.setAssignedByUserId(assignment.getAssignedBy().getId());
-            dto.setAssignedByUserName(assignment.getAssignedBy().getName());
-            dto.setAssignedByUserEmail(assignment.getAssignedBy().getEmail());
-        }
-        
-        // Flattened completedBy user info
-        if (assignment.getCompletedBy() != null) {
-            dto.setCompletedByUserId(assignment.getCompletedBy().getId());
-            dto.setCompletedByUserName(assignment.getCompletedBy().getName());
-            dto.setCompletedByUserEmail(assignment.getCompletedBy().getEmail());
-        }
-        
-        // Flattened recipient user info (chỉ khi recipientType = 'user')
-        // Note: Cần thêm logic để resolve recipient user từ recipientId
-        if ("user".equals(assignment.getRecipientType()) && assignment.getRecipientId() != null) {
-            // TODO: Load recipient user info từ userRepository nếu cần
-            // User recipientUser = userRepository.findById(assignment.getRecipientId()).orElse(null);
-            // if (recipientUser != null) {
-            //     dto.setRecipientUserName(recipientUser.getName());
-            //     dto.setRecipientUserEmail(recipientUser.getEmail());
-            // }
-        }
-        
-        return dto;
-    }
-    
-    /**
-     * Convert Attachment to SimpleAttachmentDTO (flattened)
-     */
-    private SimpleAttachmentDTO convertToSimpleAttachmentDTO(Attachment attachment) {
-        SimpleAttachmentDTO dto = new SimpleAttachmentDTO();
-        
-        dto.setId(attachment.getId());
-        dto.setFilePath(attachment.getFilePath());
-        dto.setFileName(attachment.getFileName());
-        dto.setFileSize(attachment.getFileSize());
-        // dto.setFileType(attachment.getContentType()); // Field không tồn tại, bỏ qua
-        dto.setCreatedAt(attachment.getCreatedAt());
-        // dto.setIsShared(attachment.getIsShared()); // Field không tồn tại, set default  
-        dto.setIsShared(false);
-        // dto.setIsDeleted(attachment.getIsDeleted()); // Field không tồn tại, set default
-        dto.setIsDeleted(false);
-        
-        // Flattened uploadedBy user info
-        if (attachment.getUploadedBy() != null) {
-            dto.setUploadedByUserId(attachment.getUploadedBy().getId());
-            dto.setUploadedByUserName(attachment.getUploadedBy().getName());
-            dto.setUploadedByUserEmail(attachment.getUploadedBy().getEmail());
-        }
-        
-        return dto;
-    }
     
     /**
      * 🚀 BATCH CONVERSION: Convert list of tasks to TaskDetailDTOs with batch loading
@@ -1943,5 +1737,242 @@ public class TaskServiceImpl implements TaskService {
         return allTasks.stream()
             .filter(statusFilter)
             .count();
+    }
+
+    // ============== UNIT TASKS METHODS (ROLE-BASED PERMISSIONS) ==============
+    
+    /**
+     * 🏢 UNIT TASKS: Get all tasks with role-based permissions
+     */
+    @Override
+    public com.project.quanlycanghangkhong.dto.MyTasksData getUnitTasks(String status) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication != null ? authentication.getName() : null;
+        User currentUser = (email != null) ? userRepository.findByEmail(email).orElse(null) : null;
+        
+        if (currentUser == null) {
+            return new com.project.quanlycanghangkhong.dto.MyTasksData(List.of());
+        }
+        
+        List<Task> tasks = getTasksBasedOnRole(currentUser);
+        
+        // Apply status filter if specified
+        if (status != null && !status.trim().isEmpty()) {
+            java.util.function.Predicate<Task> statusFilter = 
+                com.project.quanlycanghangkhong.util.TaskStatusMapper.getStatusFilter(status);
+            tasks = tasks.stream()
+                .filter(statusFilter)
+                .collect(java.util.stream.Collectors.toList());
+        }
+        
+        // Convert to DTOs
+        List<TaskDetailDTO> taskDTOs = convertTasksToTaskDetailDTOsBatch(tasks);
+        
+        return new com.project.quanlycanghangkhong.dto.MyTasksData(taskDTOs);
+    }
+    
+    /**
+     * 🏢 UNIT TASKS: Get tasks with pagination and role-based permissions
+     */
+    @Override
+    public com.project.quanlycanghangkhong.dto.MyTasksData getUnitTasksWithPagination(String status, Integer page, Integer size) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication != null ? authentication.getName() : null;
+        User currentUser = (email != null) ? userRepository.findByEmail(email).orElse(null) : null;
+        
+        if (currentUser == null) {
+            return new com.project.quanlycanghangkhong.dto.MyTasksData(
+                List.of(), new com.project.quanlycanghangkhong.dto.PaginationInfo(1, 20, 0));
+        }
+        
+        // Normalize pagination parameters
+        int[] normalizedParams = com.project.quanlycanghangkhong.dto.PaginationInfo.normalizePageParams(page, size);
+        int currentPage = normalizedParams[0]; // 1-based
+        int pageSize = normalizedParams[1];
+        
+        List<Task> allTasks = getTasksBasedOnRole(currentUser);
+        
+        // Apply status filter if specified
+        if (status != null && !status.trim().isEmpty()) {
+            java.util.function.Predicate<Task> statusFilter = 
+                com.project.quanlycanghangkhong.util.TaskStatusMapper.getStatusFilter(status);
+            allTasks = allTasks.stream()
+                .filter(statusFilter)
+                .collect(java.util.stream.Collectors.toList());
+        }
+        
+        // Apply pagination
+        int startIndex = (currentPage - 1) * pageSize;
+        int endIndex = Math.min(startIndex + pageSize, allTasks.size());
+        List<Task> paginatedTasks = startIndex < allTasks.size() ? 
+            allTasks.subList(startIndex, endIndex) : List.of();
+        
+        // Convert to DTOs
+        List<TaskDetailDTO> taskDTOs = convertTasksToTaskDetailDTOsBatch(paginatedTasks);
+        
+        // Create pagination info
+        com.project.quanlycanghangkhong.dto.PaginationInfo paginationInfo = 
+            new com.project.quanlycanghangkhong.dto.PaginationInfo(currentPage, pageSize, allTasks.size());
+        
+        return new com.project.quanlycanghangkhong.dto.MyTasksData(taskDTOs, paginationInfo);
+    }
+    
+    /**
+     * 🏢 UNIT TASKS: Get tasks with advanced search, pagination and role-based permissions
+     */
+    @Override
+    public com.project.quanlycanghangkhong.dto.MyTasksData getUnitTasksWithAdvancedSearchAndPagination(
+            String status, String keyword, String startTime, String endTime, 
+            java.util.List<String> priorities, Integer page, Integer size) {
+        
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication != null ? authentication.getName() : null;
+        User currentUser = (email != null) ? userRepository.findByEmail(email).orElse(null) : null;
+        
+        if (currentUser == null) {
+            return new com.project.quanlycanghangkhong.dto.MyTasksData(
+                List.of(), new com.project.quanlycanghangkhong.dto.PaginationInfo(1, 20, 0));
+        }
+        
+        // Normalize pagination parameters
+        int[] normalizedParams = com.project.quanlycanghangkhong.dto.PaginationInfo.normalizePageParams(page, size);
+        int currentPage = normalizedParams[0]; // 1-based
+        int pageSize = normalizedParams[1];
+        
+        // Parse time filters
+        java.time.LocalDateTime tempStartDateTime = null;
+        java.time.LocalDateTime tempEndDateTime = null;
+        
+        try {
+            if (startTime != null && !startTime.isEmpty()) {
+                tempStartDateTime = java.time.LocalDate.parse(startTime).atStartOfDay();
+            }
+        } catch (Exception e) {
+            // Invalid start date format, keep null
+        }
+        
+        try {
+            if (endTime != null && !endTime.isEmpty()) {
+                tempEndDateTime = java.time.LocalDate.parse(endTime).atTime(23, 59, 59);
+            }
+        } catch (Exception e) {
+            // Invalid end date format, keep null
+        }
+        
+        final java.time.LocalDateTime finalStartDateTime = tempStartDateTime;
+        final java.time.LocalDateTime finalEndDateTime = tempEndDateTime;
+        
+        // Parse priority filters
+        List<com.project.quanlycanghangkhong.model.TaskPriority> priorityEnums = new ArrayList<>();
+        if (priorities != null) {
+            for (String priority : priorities) {
+                try {
+                    priorityEnums.add(com.project.quanlycanghangkhong.model.TaskPriority.valueOf(priority.toUpperCase()));
+                } catch (Exception e) {
+                    // Invalid priority, skip
+                }
+            }
+        }
+        
+        // Get all tasks based on role
+        List<Task> allTasks = getTasksBasedOnRole(currentUser);
+        
+        // Apply advanced search filters
+        final String finalKeyword = keyword;
+        List<Task> filteredTasks = allTasks.stream()
+            .filter(task -> {
+                // Keyword filter (search in title, content, instructions, notes, task ID)
+                if (finalKeyword != null && !finalKeyword.trim().isEmpty()) {
+                    String searchKeyword = finalKeyword.trim().toLowerCase();
+                    boolean matchesKeyword = task.getId().toString().contains(searchKeyword) ||
+                                           task.getTitle().toLowerCase().contains(searchKeyword) ||
+                                           (task.getContent() != null && task.getContent().toLowerCase().contains(searchKeyword)) ||
+                                           (task.getInstructions() != null && task.getInstructions().toLowerCase().contains(searchKeyword)) ||
+                                           (task.getNotes() != null && task.getNotes().toLowerCase().contains(searchKeyword));
+                    if (!matchesKeyword) return false;
+                }
+                
+                // Time range filter
+                if (finalStartDateTime != null && task.getCreatedAt().isBefore(finalStartDateTime)) return false;
+                if (finalEndDateTime != null && task.getCreatedAt().isAfter(finalEndDateTime)) return false;
+                
+                // Priority filter
+                if (!priorityEnums.isEmpty() && !priorityEnums.contains(task.getPriority())) return false;
+                
+                return true;
+            })
+            .collect(java.util.stream.Collectors.toList());
+        
+        // Apply status filter if specified
+        if (status != null && !status.trim().isEmpty()) {
+            java.util.function.Predicate<Task> statusFilter = 
+                com.project.quanlycanghangkhong.util.TaskStatusMapper.getStatusFilter(status);
+            filteredTasks = filteredTasks.stream()
+                .filter(statusFilter)
+                .collect(java.util.stream.Collectors.toList());
+        }
+        
+        // Apply pagination
+        int startIndex = (currentPage - 1) * pageSize;
+        int endIndex = Math.min(startIndex + pageSize, filteredTasks.size());
+        List<Task> paginatedTasks = startIndex < filteredTasks.size() ? 
+            filteredTasks.subList(startIndex, endIndex) : List.of();
+        
+        // Convert to DTOs
+        List<TaskDetailDTO> taskDTOs = convertTasksToTaskDetailDTOsBatch(paginatedTasks);
+        
+        // Create pagination info
+        com.project.quanlycanghangkhong.dto.PaginationInfo paginationInfo = 
+            new com.project.quanlycanghangkhong.dto.PaginationInfo(currentPage, pageSize, filteredTasks.size());
+        
+        return new com.project.quanlycanghangkhong.dto.MyTasksData(taskDTOs, paginationInfo);
+    }
+    
+    /**
+     * 🎯 Helper method: Get tasks based on user role
+     * ADMIN/DIRECTOR/VICE_DIRECTOR: Get all tasks
+     * Other roles: Get tasks of their team
+     */
+    private List<Task> getTasksBasedOnRole(User currentUser) {
+        String roleName = currentUser.getRole() != null ? currentUser.getRole().getRoleName() : "";
+        
+        // High-level roles: See all tasks
+        if ("ADMIN".equals(roleName) || "DIRECTOR".equals(roleName) || "VICE_DIRECTOR".equals(roleName)) {
+            return taskRepository.findAllByDeletedFalseOrderByUpdatedAtDescCreatedAtDesc();
+        }
+        
+        // Other roles: See only their team's tasks
+        if (currentUser.getTeam() != null) {
+            return getTeamTasks(currentUser.getTeam().getId());
+        }
+        
+        // No team assigned, return empty list
+        return List.of();
+    }
+    
+    /**
+     * 🎯 Helper method: Get all tasks related to a team
+     * Includes: created by team members, assigned to team, received by team
+     */
+    private List<Task> getTeamTasks(Integer teamId) {
+        Set<Task> teamTasks = new HashSet<>();
+        
+        // 1. Tasks created by team members
+        teamTasks.addAll(taskRepository.findTasksCreatedByTeamMembers(teamId));
+        
+        // 2. Tasks assigned to the team
+        teamTasks.addAll(taskRepository.findReceivedTasksByTeamId(teamId));
+        
+        // 3. Tasks assigned by team members
+        teamTasks.addAll(taskRepository.findTasksAssignedByTeamMembers(teamId));
+        
+        // Convert to list and sort
+        return teamTasks.stream()
+            .sorted((t1, t2) -> {
+                int updatedCompare = t2.getUpdatedAt().compareTo(t1.getUpdatedAt());
+                if (updatedCompare != 0) return updatedCompare;
+                return t2.getCreatedAt().compareTo(t1.getCreatedAt());
+            })
+            .collect(java.util.stream.Collectors.toList());
     }
 }
