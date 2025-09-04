@@ -6,6 +6,8 @@ import com.project.quanlycanghangkhong.model.Task;
 import com.project.quanlycanghangkhong.repository.AssignmentRepository;
 import com.project.quanlycanghangkhong.repository.TaskRepository;
 import com.project.quanlycanghangkhong.repository.UserRepository;
+import com.project.quanlycanghangkhong.repository.TeamRepository;
+import com.project.quanlycanghangkhong.repository.UnitRepository;
 import com.project.quanlycanghangkhong.service.AssignmentService;
 import com.project.quanlycanghangkhong.request.UpdateAssignmentRequest;
 import com.project.quanlycanghangkhong.service.TaskService;
@@ -34,6 +36,10 @@ public class AssignmentServiceImpl implements AssignmentService {
     @Autowired
     private UserRepository userRepository;
     @Autowired
+    private TeamRepository teamRepository;
+    @Autowired
+    private UnitRepository unitRepository;
+    @Autowired
     private TaskService taskService;
 
     private AssignmentDTO toDTO(Assignment a) {
@@ -56,9 +62,23 @@ public class AssignmentServiceImpl implements AssignmentService {
         if ("user".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null) {
             userRepository.findById(a.getRecipientId()).ifPresent(u -> dto.setRecipientUser(new com.project.quanlycanghangkhong.dto.UserDTO(u)));
         } else if ("team".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null) {
-            userRepository.findTeamLeadByTeamId(a.getRecipientId()).ifPresent(u -> dto.setRecipientUser(new com.project.quanlycanghangkhong.dto.UserDTO(u)));
+            // Set team information
+            teamRepository.findById(a.getRecipientId()).ifPresent(team -> {
+                dto.setRecipientTeamName(team.getTeamName());
+                // Also set team lead for reference
+                userRepository.findTeamLeadByTeamId(a.getRecipientId()).ifPresent(u -> {
+                    dto.setRecipientTeamLead(new com.project.quanlycanghangkhong.dto.UserDTO(u));
+                });
+            });
         } else if ("unit".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null) {
-            userRepository.findUnitLeadByUnitId(a.getRecipientId()).ifPresent(u -> dto.setRecipientUser(new com.project.quanlycanghangkhong.dto.UserDTO(u)));
+            // Set unit information  
+            unitRepository.findById(a.getRecipientId()).ifPresent(unit -> {
+                dto.setRecipientUnitName(unit.getUnitName());
+                // Also set unit lead for reference
+                userRepository.findUnitLeadByUnitId(a.getRecipientId()).ifPresent(u -> {
+                    dto.setRecipientUnitLead(new com.project.quanlycanghangkhong.dto.UserDTO(u));
+                });
+            });
         }
         return dto;
     }

@@ -1481,7 +1481,7 @@ public class TaskServiceImpl implements TaskService {
                 .collect(java.util.stream.Collectors.toList());
             // ⚠️ IMPORTANT: Recalculate totalCount to match filtered results for accurate pagination
             // This sacrifices some performance for UI accuracy
-            totalCount = getFilteredTaskCount(type, status, userId, currentUser);
+            totalCount = getFilteredTaskCountOptimized(type, status, userId, currentUser);
         }
         
         // ✅ Convert to DTOs (only paginated data)
@@ -1514,9 +1514,6 @@ public class TaskServiceImpl implements TaskService {
         }
         
         Integer userId = currentUser.getId();
-        
-        // ✅ Import and use TaskStatusMapper
-        java.util.function.Predicate<Task> statusFilter = com.project.quanlycanghangkhong.util.TaskStatusMapper.getStatusFilter(status);
         
         // ✅ Normalize 1-based pagination parameters
         int[] normalizedParams = com.project.quanlycanghangkhong.dto.PaginationInfo.normalizePageParams(page, size);
@@ -1669,6 +1666,8 @@ public class TaskServiceImpl implements TaskService {
         
         // ✅ Apply status filter using TaskStatusMapper
         if (status != null && !status.trim().isEmpty()) {
+            java.util.function.Predicate<Task> statusFilter = 
+                com.project.quanlycanghangkhong.util.TaskStatusMapper.getStatusFilter(status);
             tasks = tasks.stream()
                 .filter(statusFilter)
                 .collect(java.util.stream.Collectors.toList());
@@ -1686,59 +1685,139 @@ public class TaskServiceImpl implements TaskService {
     }
     
     /**
-     * 🎯 Helper method: Calculate accurate total count after status filtering
-     * Used to fix pagination totalElements mismatch when status filter is applied
+     * 🏢 COMPANY TASKS: Get tasks with advanced search, pagination, role-based permissions and recipient search
      */
-    private long getFilteredTaskCount(String type, String status, Integer userId, User currentUser) {
-        if (status == null || status.trim().isEmpty()) {
-            // No status filter, return original database count
-            switch (type.toLowerCase()) {
-                case "assigned":
-                    return taskRepository.countAssignedTasksByUserId(userId);
-                case "received":
-                    Integer teamId = (currentUser.getRole() != null && 
-                        "TEAM_LEAD".equals(currentUser.getRole().getRoleName()) &&
-                        currentUser.getTeam() != null) ? currentUser.getTeam().getId() : null;
-                    Integer unitId = (currentUser.getRole() != null && 
-                        "UNIT_LEAD".equals(currentUser.getRole().getRoleName()) &&
-                        currentUser.getUnit() != null) ? currentUser.getUnit().getId() : null;
-                    return taskRepository.countReceivedTasksByUserId(userId, teamId, unitId);
-                default:
-                    return 0;
+    @Override
+    public com.project.quanlycanghangkhong.dto.MyTasksData getCompanyTasksWithAdvancedSearchAndPagination(
+            String status, String keyword, String startTime, String endTime, 
+            java.util.List<String> priorities, java.util.List<String> recipientTypes, 
+            java.util.List<Integer> recipientIds, Integer page, Integer size) {
+        
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication != null ? authentication.getName() : null;
+        User currentUser = (email != null) ? userRepository.findByEmail(email).orElse(null) : null;
+        
+        if (currentUser == null) {
+            return new com.project.quanlycanghangkhong.dto.MyTasksData(
+                List.of(), new com.project.quanlycanghangkhong.dto.PaginationInfo(1, 20, 0));
+        }
+        
+        // Normalize pagination parameters
+        int[] normalizedParams = com.project.quanlycanghangkhong.dto.PaginationInfo.normalizePageParams(page, size);
+        int currentPage = normalizedParams[0]; // 1-based
+        int pageSize = normalizedParams[1];
+        
+        // Parse time filters
+        java.time.LocalDateTime tempStartDateTime = null;
+        java.time.LocalDateTime tempEndDateTime = null;
+        
+        try {
+            if (startTime != null && !startTime.isEmpty()) {
+                tempStartDateTime = java.time.LocalDate.parse(startTime).atStartOfDay();
+            }
+        } catch (Exception e) {
+            // Invalid start date format, keep null
+        }
+        
+        try {
+            if (endTime != null && !endTime.isEmpty()) {
+                tempEndDateTime = java.time.LocalDate.parse(endTime).atTime(23, 59, 59);
+            }
+        } catch (Exception e) {
+            // Invalid end date format, keep null
+        }
+        
+        final java.time.LocalDateTime finalStartDateTime = tempStartDateTime;
+        final java.time.LocalDateTime finalEndDateTime = tempEndDateTime;
+        
+        // Parse priority filters
+        List<com.project.quanlycanghangkhong.model.TaskPriority> priorityEnums = new ArrayList<>();
+        if (priorities != null) {
+            for (String priority : priorities) {
+                try {
+                    priorityEnums.add(com.project.quanlycanghangkhong.model.TaskPriority.valueOf(priority.toUpperCase()));
+                } catch (Exception e) {
+                    // Invalid priority, skip
+                }
             }
         }
         
-        // Get ALL tasks of this type (without pagination) and apply status filter
-        List<Task> allTasks;
-        switch (type.toLowerCase()) {
-            case "assigned":
-                allTasks = taskRepository.findAssignedTasksByUserId(userId);
-                break;
-            case "received":
-                // Use the same logic as the paginated method for consistency
-                Integer teamId = (currentUser.getRole() != null && 
-                    "TEAM_LEAD".equals(currentUser.getRole().getRoleName()) &&
-                    currentUser.getTeam() != null) ? currentUser.getTeam().getId() : null;
-                Integer unitId = (currentUser.getRole() != null && 
-                    "UNIT_LEAD".equals(currentUser.getRole().getRoleName()) &&
-                    currentUser.getUnit() != null) ? currentUser.getUnit().getId() : null;
+        // Get all tasks based on role
+        List<Task> allTasks = getTasksBasedOnRole(currentUser);
+        
+        // Apply advanced search filters
+        final String finalKeyword = keyword;
+        List<Task> filteredTasks = allTasks.stream()
+            .filter(task -> {
+                // Keyword filter (search in title, content, instructions, notes, task ID)
+                if (finalKeyword != null && !finalKeyword.trim().isEmpty()) {
+                    String searchKeyword = finalKeyword.trim().toLowerCase();
+                    boolean matchesKeyword = task.getId().toString().contains(searchKeyword) ||
+                                           task.getTitle().toLowerCase().contains(searchKeyword) ||
+                                           (task.getContent() != null && task.getContent().toLowerCase().contains(searchKeyword)) ||
+                                           (task.getInstructions() != null && task.getInstructions().toLowerCase().contains(searchKeyword)) ||
+                                           (task.getNotes() != null && task.getNotes().toLowerCase().contains(searchKeyword));
+                    if (!matchesKeyword) return false;
+                }
                 
-                // Use a non-paginated version that uses the same query logic
-                org.springframework.data.domain.Pageable unboundedPageable = 
-                    org.springframework.data.domain.PageRequest.of(0, Integer.MAX_VALUE);
-                allTasks = taskRepository.findReceivedTasksWithPagination(userId, teamId, unitId, unboundedPageable);
-                break;
-            default:
-                return 0;
+                // Time range filter
+                if (finalStartDateTime != null && task.getCreatedAt().isBefore(finalStartDateTime)) return false;
+                if (finalEndDateTime != null && task.getCreatedAt().isAfter(finalEndDateTime)) return false;
+                
+                // Priority filter
+                if (!priorityEnums.isEmpty() && !priorityEnums.contains(task.getPriority())) return false;
+                
+                // Recipient filter (similar to assigned type in /my API)
+                if (recipientTypes != null && !recipientTypes.isEmpty() && recipientIds != null && !recipientIds.isEmpty()) {
+                    List<Assignment> taskAssignments = assignmentRepository.findByTaskId(task.getId());
+                    boolean hasMatchingRecipient = false;
+                    
+                    for (int i = 0; i < recipientTypes.size(); i++) {
+                        String targetType = recipientTypes.get(i);
+                        Integer targetId = recipientIds.get(i);
+                        
+                        for (Assignment assignment : taskAssignments) {
+                            if (targetType.equalsIgnoreCase(assignment.getRecipientType()) && 
+                                targetId.equals(assignment.getRecipientId())) {
+                                hasMatchingRecipient = true;
+                                break;
+                            }
+                        }
+                        if (hasMatchingRecipient) break;
+                    }
+                    
+                    if (!hasMatchingRecipient) return false;
+                }
+                
+                return true;
+            })
+            .collect(java.util.stream.Collectors.toList());
+        
+        // Apply status filter if specified
+        if (status != null && !status.trim().isEmpty()) {
+            java.util.function.Predicate<Task> statusFilter = 
+                com.project.quanlycanghangkhong.util.TaskStatusMapper.getStatusFilter(status);
+            filteredTasks = filteredTasks.stream()
+                .filter(statusFilter)
+                .collect(java.util.stream.Collectors.toList());
         }
         
-        // Apply status filter and count
-        java.util.function.Predicate<Task> statusFilter = com.project.quanlycanghangkhong.util.TaskStatusMapper.getStatusFilter(status);
-        return allTasks.stream()
-            .filter(statusFilter)
-            .count();
+        // Apply pagination
+        int startIndex = (currentPage - 1) * pageSize;
+        int endIndex = Math.min(startIndex + pageSize, filteredTasks.size());
+        List<Task> paginatedTasks = startIndex < filteredTasks.size() ? 
+            filteredTasks.subList(startIndex, endIndex) : List.of();
+        
+        // Convert to DTOs
+        List<TaskDetailDTO> taskDTOs = convertTasksToTaskDetailDTOsBatch(paginatedTasks);
+        
+        // Create pagination info
+        com.project.quanlycanghangkhong.dto.PaginationInfo paginationInfo = 
+            new com.project.quanlycanghangkhong.dto.PaginationInfo(currentPage, pageSize, filteredTasks.size());
+        
+        return new com.project.quanlycanghangkhong.dto.MyTasksData(taskDTOs, paginationInfo);
     }
-
+    
     // ============== UNIT TASKS METHODS (ROLE-BASED PERMISSIONS) ==============
     
     /**
@@ -1751,24 +1830,30 @@ public class TaskServiceImpl implements TaskService {
         User currentUser = (email != null) ? userRepository.findByEmail(email).orElse(null) : null;
         
         if (currentUser == null) {
-            return new com.project.quanlycanghangkhong.dto.MyTasksData(List.of());
+            return new com.project.quanlycanghangkhong.dto.MyTasksData(
+                List.of(), new com.project.quanlycanghangkhong.dto.PaginationInfo(1, 20, 0));
         }
         
-        List<Task> tasks = getTasksBasedOnRole(currentUser);
+        // Get all tasks based on role
+        List<Task> allTasks = getTasksBasedOnRole(currentUser);
         
         // Apply status filter if specified
         if (status != null && !status.trim().isEmpty()) {
             java.util.function.Predicate<Task> statusFilter = 
                 com.project.quanlycanghangkhong.util.TaskStatusMapper.getStatusFilter(status);
-            tasks = tasks.stream()
+            allTasks = allTasks.stream()
                 .filter(statusFilter)
                 .collect(java.util.stream.Collectors.toList());
         }
         
         // Convert to DTOs
-        List<TaskDetailDTO> taskDTOs = convertTasksToTaskDetailDTOsBatch(tasks);
+        List<TaskDetailDTO> taskDTOs = convertTasksToTaskDetailDTOsBatch(allTasks);
         
-        return new com.project.quanlycanghangkhong.dto.MyTasksData(taskDTOs);
+        // Create pagination info
+        com.project.quanlycanghangkhong.dto.PaginationInfo paginationInfo = 
+            new com.project.quanlycanghangkhong.dto.PaginationInfo(1, taskDTOs.size(), taskDTOs.size());
+        
+        return new com.project.quanlycanghangkhong.dto.MyTasksData(taskDTOs, paginationInfo);
     }
     
     /**
@@ -1790,6 +1875,7 @@ public class TaskServiceImpl implements TaskService {
         int currentPage = normalizedParams[0]; // 1-based
         int pageSize = normalizedParams[1];
         
+        // Get all tasks based on role
         List<Task> allTasks = getTasksBasedOnRole(currentUser);
         
         // Apply status filter if specified
@@ -1928,51 +2014,79 @@ public class TaskServiceImpl implements TaskService {
         return new com.project.quanlycanghangkhong.dto.MyTasksData(taskDTOs, paginationInfo);
     }
     
+    // ============== HELPER METHODS ==============
+    
     /**
-     * 🎯 Helper method: Get tasks based on user role
-     * ADMIN/DIRECTOR/VICE_DIRECTOR: Get all tasks
-     * Other roles: Get tasks of their team
+     * Get tasks based on user role
      */
     private List<Task> getTasksBasedOnRole(User currentUser) {
-        String roleName = currentUser.getRole() != null ? currentUser.getRole().getRoleName() : "";
+        String roleName = currentUser.getRole() != null ? currentUser.getRole().getRoleName() : null;
         
-        // High-level roles: See all tasks
+        // ADMIN, DIRECTOR, VICE_DIRECTOR see all tasks
         if ("ADMIN".equals(roleName) || "DIRECTOR".equals(roleName) || "VICE_DIRECTOR".equals(roleName)) {
-            return taskRepository.findAllByDeletedFalseOrderByUpdatedAtDescCreatedAtDesc();
+            return taskRepository.findAllByDeletedFalse();
+        } else {
+            // Other roles see only team tasks (assigned to their team)
+            return getTeamTasks(currentUser);
         }
-        
-        // Other roles: See only their team's tasks
+    }
+    
+    /**
+     * Get team tasks (only tasks assigned TO the team)
+     */
+    private List<Task> getTeamTasks(User currentUser) {
         if (currentUser.getTeam() != null) {
-            return getTeamTasks(currentUser.getTeam().getId());
+            return taskRepository.findReceivedTasksByTeamId(currentUser.getTeam().getId());
         }
-        
-        // No team assigned, return empty list
         return List.of();
     }
     
     /**
-     * 🎯 Helper method: Get all tasks related to a team
-     * Includes: created by team members, assigned to team, received by team
+     * Get filtered task count for pagination accuracy
      */
-    private List<Task> getTeamTasks(Integer teamId) {
-        Set<Task> teamTasks = new HashSet<>();
+    private long getFilteredTaskCountOptimized(String type, String status, Integer userId, User currentUser) {
+        // Get all tasks for the type first
+        List<Task> allTasks;
+        switch (type.toLowerCase()) {
+            case "created":
+                allTasks = taskRepository.findCreatedTasksWithoutAssignments(userId);
+                break;
+            case "assigned":
+                allTasks = taskRepository.findAssignedTasksByUserId(userId);
+                break;
+            case "received":
+                Integer teamId = (currentUser.getRole() != null && 
+                    "TEAM_LEAD".equals(currentUser.getRole().getRoleName()) &&
+                    currentUser.getTeam() != null) ? currentUser.getTeam().getId() : null;
+                Integer unitId = (currentUser.getRole() != null && 
+                    "UNIT_LEAD".equals(currentUser.getRole().getRoleName()) &&
+                    currentUser.getUnit() != null) ? currentUser.getUnit().getId() : null;
+                
+                List<Task> receivedTasks = new ArrayList<>();
+                receivedTasks.addAll(taskRepository.findReceivedTasksByUserId(userId));
+                if (teamId != null) {
+                    receivedTasks.addAll(taskRepository.findReceivedTasksByTeamId(teamId));
+                }
+                if (unitId != null) {
+                    receivedTasks.addAll(taskRepository.findReceivedTasksByUnitId(unitId));
+                }
+                allTasks = receivedTasks.stream().distinct().collect(java.util.stream.Collectors.toList());
+                break;
+            default:
+                allTasks = List.of();
+        }
         
-        // 1. Tasks created by team members
-        teamTasks.addAll(taskRepository.findTasksCreatedByTeamMembers(teamId));
+        // Apply status filter and count
+        if (status != null && !status.trim().isEmpty()) {
+            java.util.function.Predicate<Task> statusFilter = 
+                com.project.quanlycanghangkhong.util.TaskStatusMapper.getStatusFilter(status);
+            return allTasks.stream()
+                .filter(statusFilter)
+                .count();
+        }
         
-        // 2. Tasks assigned to the team
-        teamTasks.addAll(taskRepository.findReceivedTasksByTeamId(teamId));
-        
-        // 3. Tasks assigned by team members
-        teamTasks.addAll(taskRepository.findTasksAssignedByTeamMembers(teamId));
-        
-        // Convert to list and sort
-        return teamTasks.stream()
-            .sorted((t1, t2) -> {
-                int updatedCompare = t2.getUpdatedAt().compareTo(t1.getUpdatedAt());
-                if (updatedCompare != 0) return updatedCompare;
-                return t2.getCreatedAt().compareTo(t1.getCreatedAt());
-            })
-            .collect(java.util.stream.Collectors.toList());
+        return allTasks.size();
     }
+    
+    // ...existing code...
 }

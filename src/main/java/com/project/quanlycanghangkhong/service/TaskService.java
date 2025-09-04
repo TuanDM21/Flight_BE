@@ -223,4 +223,22 @@ public interface TaskService {
     com.project.quanlycanghangkhong.dto.MyTasksData getUnitTasksWithAdvancedSearchAndPagination(
         String status, String keyword, String startTime, String endTime, 
         java.util.List<String> priorities, Integer page, Integer size);
+    
+    /**
+     * 🏢 COMPANY TASKS: Get tasks with advanced search, pagination, role-based permissions and recipient search
+     * @param status Status filter (optional)
+     * @param keyword Search keyword
+     * @param startTime Start time filter
+     * @param endTime End time filter
+     * @param priorities Priority filters
+     * @param recipientTypes Recipient types (USER, TEAM, UNIT)
+     * @param recipientIds Recipient IDs
+     * @param page Page number (1-based)
+     * @param size Page size
+     * @return MyTasksData with advanced search, role-based filtering and recipient search
+     */
+    com.project.quanlycanghangkhong.dto.MyTasksData getCompanyTasksWithAdvancedSearchAndPagination(
+        String status, String keyword, String startTime, String endTime, 
+        java.util.List<String> priorities, java.util.List<String> recipientTypes, 
+        java.util.List<Integer> recipientIds, Integer page, Integer size);
 }

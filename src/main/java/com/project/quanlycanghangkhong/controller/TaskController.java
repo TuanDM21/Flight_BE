@@ -270,8 +270,8 @@ public class TaskController {
         return ResponseEntity.ok(ApiResponseCustom.success(response));
     }
 
-    @GetMapping("/unit")
-    @Operation(summary = "API đơn vị: Lấy tất cả công việc theo phân quyền với advanced search, filter status, pagination", description = "🏢 UNIT API với role-based permissions: "
+    @GetMapping("/company")
+    @Operation(summary = "API công ty: Lấy tất cả công việc theo phân quyền với advanced search, filter status, pagination", description = "🏢 COMPANY API với role-based permissions: "
             +
             "📋 PERMISSION LOGIC: " +
             "• ADMIN/DIRECTOR/VICE_DIRECTOR: Xem TẤT CẢ tasks trong hệ thống " +
@@ -279,13 +279,14 @@ public class TaskController {
             "🎯 STATUS FILTER: IN_PROGRESS, COMPLETED, OVERDUE " +
             "🔍 KEYWORD SEARCH: Tìm kiếm trong 5 fields - ID, title, content, instructions, notes " +
             "⚡ ADVANCED FILTERS: priorities (LOW/NORMAL/HIGH/URGENT), time range (yyyy-MM-dd) " +
-            "📄 PAGINATION: page (1-based), size (max 100, default 20)")
+            "� RECIPIENT SEARCH: recipientTypes + recipientIds (tìm tasks được giao cho team/unit cụ thể) " +
+            "�📄 PAGINATION: page (1-based), size (max 100, default 20)")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
             @ApiResponse(responseCode = "400", description = "Tham số không hợp lệ", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
             @ApiResponse(responseCode = "403", description = "Không có quyền truy cập", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
-    public ResponseEntity<ApiResponseCustom<MyTasksData>> getUnitTasks(
+    public ResponseEntity<ApiResponseCustom<MyTasksData>> getCompanyTasks(
             @Parameter(description = "Filter theo status", schema = @Schema(allowableValues = { "IN_PROGRESS",
                     "COMPLETED", "OVERDUE", "OPEN" })) @RequestParam(required = false) String status,
 
@@ -302,6 +303,11 @@ public class TaskController {
                     "URGENT" // 🔴 Khẩn cấp - cần xử lý ngay lập tức
             }, description = "LOW: Không khẩn cấp, NORMAL: Bình thường, HIGH: Quan trọng, URGENT: Khẩn cấp")) @RequestParam(required = false) List<String> priorities,
 
+            @Parameter(description = "Loại recipient để filter", schema = @Schema(type = "array", allowableValues = {
+                    "USER", "TEAM", "UNIT" })) @RequestParam(required = false) List<String> recipientTypes,
+
+            @Parameter(description = "ID của recipients tương ứng với recipientTypes") @RequestParam(required = false) List<Integer> recipientIds,
+
             @Parameter(description = "Số trang (bắt đầu từ 1)", example = "1") @RequestParam(required = false, defaultValue = "1") Integer page,
 
             @Parameter(description = "Số items per page (max 100)", example = "20") @RequestParam(required = false, defaultValue = "20") Integer size) {
@@ -310,6 +316,22 @@ public class TaskController {
         if (status != null && !status.matches("IN_PROGRESS|COMPLETED|OVERDUE|OPEN")) {
             return ResponseEntity.badRequest().body(
                     ApiResponseCustom.error("Status phải là: IN_PROGRESS, COMPLETED, OVERDUE, hoặc OPEN"));
+        }
+
+        // Validate recipients matching
+        if (recipientTypes != null && recipientIds != null && recipientTypes.size() != recipientIds.size()) {
+            return ResponseEntity.badRequest().body(
+                    ApiResponseCustom.error("Số lượng recipientTypes và recipientIds phải bằng nhau"));
+        }
+
+        // Validate recipient types
+        if (recipientTypes != null) {
+            for (String recipientType : recipientTypes) {
+                if (!recipientType.matches("USER|TEAM|UNIT")) {
+                    return ResponseEntity.badRequest().body(
+                            ApiResponseCustom.error("recipientType phải là: USER, TEAM, hoặc UNIT"));
+                }
+            }
         }
 
         // Validate pagination parameters (1-based)
@@ -324,12 +346,12 @@ public class TaskController {
 
         MyTasksData response;
         boolean hasAdvancedSearch = keyword != null || startTime != null || endTime != null ||
-                (priorities != null && !priorities.isEmpty());
+                (priorities != null && !priorities.isEmpty()) || (recipientTypes != null && !recipientTypes.isEmpty());
 
         if (hasAdvancedSearch) {
-            // Sử dụng advanced search với role-based permissions
-            response = taskService.getUnitTasksWithAdvancedSearchAndPagination(status, keyword,
-                    startTime, endTime, priorities, page, size);
+            // Sử dụng advanced search với role-based permissions và recipient search
+            response = taskService.getCompanyTasksWithAdvancedSearchAndPagination(status, keyword,
+                    startTime, endTime, priorities, recipientTypes, recipientIds, page, size);
         } else if (page != null || size != null) {
             // Sử dụng pagination với role-based permissions
             response = taskService.getUnitTasksWithPagination(status, page, size);
