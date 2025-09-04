@@ -295,7 +295,7 @@ public class TaskController {
         @ApiResponse(responseCode = "403", description = "Không có quyền truy cập", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
     public ResponseEntity<ApiResponseCustom<MyTasksData>> getUnitTasks(
-            @Parameter(description = "Filter theo status", schema = @Schema(allowableValues = {"IN_PROGRESS", "COMPLETED", "OVERDUE"}))
+            @Parameter(description = "Filter theo status", schema = @Schema(allowableValues = {"IN_PROGRESS", "COMPLETED", "OVERDUE", "OPEN"}))
             @RequestParam(required = false) String status,
             
             @Parameter(description = "Từ khóa tìm kiếm (search trong 5 fields): ID, title, content, instructions, notes", example = "urgent task")
@@ -325,9 +325,9 @@ public class TaskController {
             @RequestParam(required = false, defaultValue = "20") Integer size) {
         
         // Validate status values
-        if (status != null && !status.matches("IN_PROGRESS|COMPLETED|OVERDUE")) {
+        if (status != null && !status.matches("IN_PROGRESS|COMPLETED|OVERDUE|OPEN")) {
             return ResponseEntity.badRequest().body(
-                ApiResponseCustom.error("Status phải là: IN_PROGRESS, COMPLETED, hoặc OVERDUE")
+                ApiResponseCustom.error("Status phải là: IN_PROGRESS, COMPLETED, OVERDUE, hoặc OPEN")
             );
         }
         

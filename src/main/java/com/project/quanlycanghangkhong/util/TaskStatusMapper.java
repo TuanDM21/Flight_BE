@@ -33,6 +33,10 @@ public class TaskStatusMapper {
                 // ✅ OVERDUE: Task có status = OVERDUE
                 return task -> TaskStatus.OVERDUE.equals(task.getStatus());
                 
+            case "OPEN":
+                // ✅ OPEN: Task có status = OPEN
+                return task -> TaskStatus.OPEN.equals(task.getStatus());
+                
             default:
                 return task -> true; // Invalid status, no filter
         }
@@ -55,6 +59,8 @@ public class TaskStatusMapper {
                 return TaskStatus.COMPLETED;
             case "OVERDUE":
                 return TaskStatus.OVERDUE;
+            case "OPEN":
+                return TaskStatus.OPEN;
             default:
                 return null; // Invalid status
         }
@@ -81,12 +87,16 @@ public class TaskStatusMapper {
         switch (status.toLowerCase().trim()) {
             case "completed":
                 return "Tasks đã hoàn thành (status = COMPLETED)";
+            case "in_progress":
+                return "Tasks đang thực hiện (status = IN_PROGRESS)";
+            case "open":
+                return "Tasks mới tạo chưa bắt đầu (status = OPEN)";
+            case "overdue":
+                return "Tasks quá hạn (status = OVERDUE)";
             case "pending":
                 return "Tasks đang chờ xử lý (status = OPEN hoặc IN_PROGRESS)";
             case "urgent":
                 return "Tasks có độ ưu tiên cao (priority = HIGH hoặc URGENT)";
-            case "overdue":
-                return "Tasks quá hạn (status = OVERDUE)";
             default:
                 return "Status không hợp lệ";
         }
