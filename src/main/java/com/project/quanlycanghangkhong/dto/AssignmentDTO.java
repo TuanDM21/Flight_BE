@@ -2,26 +2,58 @@ package com.project.quanlycanghangkhong.dto;
 
 import java.util.Date;
 import com.project.quanlycanghangkhong.model.AssignmentStatus;
+import io.swagger.v3.oas.annotations.media.Schema;
 
+@Schema(description = "Assignment information for tasks")
 public class AssignmentDTO {
+    @Schema(description = "Assignment ID", example = "1")
     private Integer assignmentId;
+
+    @Schema(description = "Task ID", example = "5")
     private Integer taskId;
+
+    @Schema(description = "Recipient type", example = "USER", allowableValues = { "USER", "TEAM", "UNIT" })
     private String recipientType; // 'team', 'unit', 'user'
+
+    @Schema(description = "Assignment timestamp", example = "2025-09-04T10:30:00")
     private Date assignedAt;
+
+    @Schema(description = "Due date", example = "2025-09-05T18:00:00")
     private Date dueAt;
+
+    @Schema(description = "Completion timestamp", example = "2025-09-05T16:30:00")
     private Date completedAt;
+
+    @Schema(description = "Assignment status", example = "IN_PROGRESS")
     private AssignmentStatus status;
+
+    @Schema(description = "Assignment note", example = "Urgent task")
     private String note;
+
+    @Schema(description = "User who assigned the task")
     private UserDTO assignedByUser;
+
+    @Schema(description = "User who completed the task")
     private UserDTO completedByUser;
+
+    @Schema(description = "Recipient user (if recipientType = USER)")
     private UserDTO recipientUser;
+
+    @Schema(description = "Recipient ID (team or unit ID)", example = "10")
     private Integer recipientId; // Id của team hoặc unit nếu recipientType là 'team' hoặc 'unit'
-    
+
     // Additional fields for team/unit information
-    private String recipientTeamName;    // Tên team nếu recipientType = 'team'
-    private String recipientUnitName;    // Tên unit nếu recipientType = 'unit'
-    private UserDTO recipientTeamLead;   // Team lead nếu recipientType = 'team'
-    private UserDTO recipientUnitLead;   // Unit lead nếu recipientType = 'unit'
+    @Schema(description = "Team name (if recipientType = TEAM)", example = "Security Team")
+    private String recipientTeamName; // Tên team nếu recipientType = 'team'
+
+    @Schema(description = "Unit name (if recipientType = UNIT)", example = "Airport Operations")
+    private String recipientUnitName; // Tên unit nếu recipientType = 'unit'
+
+    @Schema(description = "Team leader (if recipientType = TEAM)")
+    private UserDTO recipientTeamLead; // Team lead nếu recipientType = 'team'
+
+    @Schema(description = "Unit leader (if recipientType = UNIT)")
+    private UserDTO recipientUnitLead; // Unit lead nếu recipientType = 'unit'
 
     public Integer getAssignmentId() {
         return assignmentId;

@@ -3,27 +3,53 @@ package com.project.quanlycanghangkhong.dto;
 import java.time.LocalDateTime;
 import java.util.List;
 import com.project.quanlycanghangkhong.model.TaskPriority;
+import io.swagger.v3.oas.annotations.media.Schema;
 
+@Schema(description = "Detailed task information with assignments and attachments")
 public class TaskDetailDTO {
+    @Schema(description = "Task ID", example = "1")
     private Integer id;
+
+    @Schema(description = "Task title", example = "Kiểm tra hành lý")
     private String title;
+
+    @Schema(description = "Task content/description", example = "Kiểm tra hành lý khách hàng")
     private String content;
+
+    @Schema(description = "Task instructions", example = "Thực hiện theo quy trình ABC")
     private String instructions;
+
+    @Schema(description = "Task notes", example = "Ghi chú bổ sung")
     private String notes;
+
+    @Schema(description = "Creation timestamp", example = "2025-09-04T10:30:00")
     private LocalDateTime createdAt;
+
+    @Schema(description = "Last update timestamp", example = "2025-09-04T11:00:00")
     private LocalDateTime updatedAt;
+
+    @Schema(description = "User who created this task")
     private UserDTO createdByUser;
+
+    @Schema(description = "List of task assignments")
     private List<AssignmentDTO> assignments;
+
+    @Schema(description = "Task status", example = "IN_PROGRESS")
     private com.project.quanlycanghangkhong.model.TaskStatus status;
+
+    @Schema(description = "Task priority", example = "HIGH")
     private TaskPriority priority;
-    
+
     // MỚI: Hỗ trợ subtask cho mô hình Adjacency List
+    @Schema(description = "Parent task ID (for subtasks)", example = "5")
     private Integer parentId; // Tham chiếu đến ID task cha
-    
+
     // MỚI: Thông tin có subtask hay không
+    @Schema(description = "Whether this task has subtasks", example = "true")
     private Boolean hasSubtask; // Cho biết task này có subtask con hay không
-    
+
     // MỚI: Attachment trực tiếp (THAY THẾ hoàn toàn documents)
+    @Schema(description = "List of attached files")
     private List<AttachmentDTO> attachments; // Quan hệ task-attachment trực tiếp
 
     public Integer getId() {
@@ -116,6 +142,7 @@ public class TaskDetailDTO {
 
     /**
      * Lấy ID task cha cho cấu trúc phân cấp Adjacency List
+     * 
      * @return ID task cha, null nếu đây là task gốc
      */
     public Integer getParentId() {
@@ -124,6 +151,7 @@ public class TaskDetailDTO {
 
     /**
      * Đặt ID task cha cho cấu trúc phân cấp Adjacency List
+     * 
      * @param parentId ID task cha
      */
     public void setParentId(Integer parentId) {
@@ -132,6 +160,7 @@ public class TaskDetailDTO {
 
     /**
      * Kiểm tra task này có subtask con hay không
+     * 
      * @return true nếu có subtask, false nếu không có
      */
     public Boolean getHasSubtask() {
@@ -140,6 +169,7 @@ public class TaskDetailDTO {
 
     /**
      * Đặt thông tin task này có subtask con hay không
+     * 
      * @param hasSubtask true nếu có subtask, false nếu không có
      */
     public void setHasSubtask(Boolean hasSubtask) {
@@ -148,7 +178,9 @@ public class TaskDetailDTO {
 
     /**
      * Lấy attachment được liên kết trực tiếp với task này
-     * THAY ĐỔI LOGIC NGHIỆP VỤ: Quan hệ task-attachment trực tiếp thay thế cách tiếp cận dựa trên document
+     * THAY ĐỔI LOGIC NGHIỆP VỤ: Quan hệ task-attachment trực tiếp thay thế cách
+     * tiếp cận dựa trên document
+     * 
      * @return Danh sách attachment được liên kết trực tiếp với task
      */
     public List<AttachmentDTO> getAttachments() {
@@ -158,6 +190,7 @@ public class TaskDetailDTO {
     /**
      * Đặt attachment được liên kết trực tiếp với task này
      * THAY ĐỔI LOGIC NGHIỆP VỤ: Thay thế quản lý file dựa trên document cũ
+     * 
      * @param attachments Danh sách attachment để liên kết với task
      */
     public void setAttachments(List<AttachmentDTO> attachments) {
@@ -166,8 +199,10 @@ public class TaskDetailDTO {
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (obj == null || getClass() != obj.getClass()) return false;
+        if (this == obj)
+            return true;
+        if (obj == null || getClass() != obj.getClass())
+            return false;
         TaskDetailDTO that = (TaskDetailDTO) obj;
         return id != null && id.equals(that.id);
     }
@@ -176,13 +211,13 @@ public class TaskDetailDTO {
     public int hashCode() {
         return id != null ? id.hashCode() : 0;
     }
-    
+
     @Override
     public String toString() {
         return "TaskDetailDTO{" +
-            "id=" + id +
-            ", title='" + title + '\'' +
-            ", parentId=" + parentId +
-            '}';
+                "id=" + id +
+                ", title='" + title + '\'' +
+                ", parentId=" + parentId +
+                '}';
     }
 }

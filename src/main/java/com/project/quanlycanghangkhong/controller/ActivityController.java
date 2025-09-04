@@ -16,8 +16,6 @@ import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api/activities")
@@ -65,7 +63,7 @@ public class ActivityController {
     public ResponseEntity<List<ActivityDTO>> searchActivitiesByMonthYear(
             @RequestParam int month,
             @RequestParam int year) {
-                System.out.println("Month: " + month + ", Year: " + year);
+        System.out.println("Month: " + month + ", Year: " + year);
         return ResponseEntity.ok(activityService.searchActivitiesByMonthYear(month, year));
     }
 
@@ -76,7 +74,8 @@ public class ActivityController {
     }
 
     @GetMapping("/search-by-range")
-    public ResponseEntity<List<ActivityDTO>> getActivitiesByDateRange(@RequestParam String startDate, @RequestParam String endDate) {
+    public ResponseEntity<List<ActivityDTO>> getActivitiesByDateRange(@RequestParam String startDate,
+            @RequestParam String endDate) {
         java.time.LocalDate start = java.time.LocalDate.parse(startDate);
         java.time.LocalDate end = java.time.LocalDate.parse(endDate);
         return ResponseEntity.ok(activityService.getActivitiesByDateRange(start, end));
@@ -101,24 +100,24 @@ public class ActivityController {
     @GetMapping("/my")
     public ResponseEntity<List<ActivityDTO>> getMyActivities() {
         long startTime = System.currentTimeMillis();
-        
+
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String email = authentication.getName();
         logger.info("[GET /api/activities/my] Starting request for user: {}", email);
-        
+
         Optional<User> userOpt = userRepository.findByEmail(email);
         if (userOpt.isEmpty()) {
             logger.warn("[GET /api/activities/my] User not found with email: {}", email);
             return ResponseEntity.status(401).build();
         }
-        
+
         Integer userId = userOpt.get().getId();
         List<ActivityDTO> activities = activityService.getActivitiesForUser(userId);
-        
+
         long duration = System.currentTimeMillis() - startTime;
-        logger.info("[GET /api/activities/my] Completed in {}ms for user: {}, returned {} activities", 
-                   duration, email, activities.size());
-        
+        logger.info("[GET /api/activities/my] Completed in {}ms for user: {}, returned {} activities",
+                duration, email, activities.size());
+
         return ResponseEntity.ok(activities);
     }
 

@@ -1,0 +1,48 @@
+# Build artifacts
+target/
+*.jar
+*.war
+*.ear
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Backup files
+backup_*/
+
+# Scripts (nếu không cần trong container)
+scripts/
+
+# Environment files (sẽ được mount riêng)
+.env*
+
+# Node modules (nếu có)
+node_modules/
+
+# Maven local repository cache
+.m2/
