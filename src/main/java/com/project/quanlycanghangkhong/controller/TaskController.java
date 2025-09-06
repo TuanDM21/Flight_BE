@@ -283,10 +283,10 @@ public class TaskController {
             "🎯 STATUS FILTER: IN_PROGRESS, COMPLETED, OVERDUE " +
             "🔍 KEYWORD SEARCH: Tìm kiếm trong 5 fields - ID, title, content, instructions, notes " +
             "⚡ ADVANCED FILTERS: priorities (LOW/NORMAL/HIGH/URGENT), time range (yyyy-MM-dd) " +
-            "� RECIPIENT SEARCH: recipientTypes + recipientIds (tìm tasks được giao cho team/unit cụ thể) " +
-            "�📄 PAGINATION: page (1-based), size (max 100, default 20)")
+            "👥 RECIPIENT SEARCH: recipientTypes + recipientIds (tìm tasks được giao cho team/unit cụ thể) " +
+            "📄 PAGINATION: page (1-based), size (max 100, default 20)")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+            @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = MyTasksApiResponse.class))),
             @ApiResponse(responseCode = "400", description = "Tham số không hợp lệ", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
             @ApiResponse(responseCode = "403", description = "Không có quyền truy cập", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
