@@ -36,7 +36,7 @@ public class AssignmentDTO {
     @Schema(description = "User who completed the task")
     private UserDTO completedByUser;
 
-    @Schema(description = "Recipient user (if recipientType = USER)")
+    @Schema(description = "Recipient user (if recipientType = USER)", example = "null when recipientType = TEAM/UNIT")
     private UserDTO recipientUser;
 
     @Schema(description = "Recipient ID (team or unit ID)", example = "10")
@@ -49,11 +49,13 @@ public class AssignmentDTO {
     @Schema(description = "Unit name (if recipientType = UNIT)", example = "Airport Operations")
     private String recipientUnitName; // Tên unit nếu recipientType = 'unit'
 
-    @Schema(description = "Team leader (if recipientType = TEAM)")
-    private UserDTO recipientTeamLead; // Team lead nếu recipientType = 'team'
+    // NOTE: Team/Unit leads không được trả về vì họ không phải người nhận việc thực tế
+    // Khi giao việc cho team/unit, recipientUser sẽ là null cho đến khi có user cụ thể nhận việc
+    @Schema(description = "Team leader (DEPRECATED - will be removed)", deprecated = true)
+    private UserDTO recipientTeamLead; // DEPRECATED: Không sử dụng nữa
 
-    @Schema(description = "Unit leader (if recipientType = UNIT)")
-    private UserDTO recipientUnitLead; // Unit lead nếu recipientType = 'unit'
+    @Schema(description = "Unit leader (DEPRECATED - will be removed)", deprecated = true)
+    private UserDTO recipientUnitLead; // DEPRECATED: Không sử dụng nữa
 
     public Integer getAssignmentId() {
         return assignmentId;

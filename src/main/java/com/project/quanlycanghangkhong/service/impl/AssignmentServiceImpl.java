@@ -47,7 +47,6 @@ public class AssignmentServiceImpl implements AssignmentService {
         dto.setAssignmentId(a.getAssignmentId());
         // Set taskId from Assignment entity
         dto.setTaskId(a.getTask() != null ? a.getTask().getId() : null);
-        // Không set recipientId, assignedBy, completedBy vào DTO nữa
         dto.setRecipientType(a.getRecipientType());
         dto.setRecipientId(a.getRecipientId()); // Đảm bảo luôn set recipientId cho DTO
         System.out.println("[DEBUG] toDTO: assignmentId=" + a.getAssignmentId() + ", recipientType=" + a.getRecipientType() + ", recipientId=" + a.getRecipientId());
@@ -56,28 +55,42 @@ public class AssignmentServiceImpl implements AssignmentService {
         dto.setCompletedAt(a.getCompletedAt() != null ? Timestamp.valueOf(a.getCompletedAt()) : null);
         dto.setStatus(a.getStatus());
         dto.setNote(a.getNote());
+        
         // Set user info dạng object
         if (a.getAssignedBy() != null) dto.setAssignedByUser(new com.project.quanlycanghangkhong.dto.UserDTO(a.getAssignedBy()));
         if (a.getCompletedBy() != null) dto.setCompletedByUser(new com.project.quanlycanghangkhong.dto.UserDTO(a.getCompletedBy()));
-        if ("user".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null) {
-            userRepository.findById(a.getRecipientId()).ifPresent(u -> dto.setRecipientUser(new com.project.quanlycanghangkhong.dto.UserDTO(u)));
-        } else if ("team".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null) {
-            // Set team information
+        
+        /* 📋 RECIPIENT MAPPING LOGIC:
+         * ┌──────────────┬─────────────────┬──────────────────┬──────────────────────┬──────────────────────┐
+         * │ recipientType│ recipientUser   │ recipientId      │ recipientTeamName    │ recipientUnitName    │
+         * ├──────────────┼─────────────────┼──────────────────┼──────────────────────┼──────────────────────┤
+         * │ USER         │ ✅ UserDTO       │ ✅ userId        │ null                 │ null                 │
+         * │ TEAM         │ null            │ ✅ teamId        │ ✅ team name         │ null                 │
+         * │ UNIT         │ null            │ ✅ unitId        │ null                 │ ✅ unit name         │
+         * └──────────────┴─────────────────┴──────────────────┴──────────────────────┴──────────────────────┘
+         * 🚨 IMPORTANT: recipientTeamLead và recipientUnitLead sẽ LUÔN là null
+         */
+        
+        // Xử lý recipient theo type
+        if ("USER".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null) {
+            // ✅ Trường hợp giao trực tiếp cho user cụ thể
+            userRepository.findById(a.getRecipientId()).ifPresent(u -> 
+                dto.setRecipientUser(new com.project.quanlycanghangkhong.dto.UserDTO(u)));
+                
+        } else if ("TEAM".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null) {
+            // ✅ Trường hợp giao cho team - chỉ set thông tin team
             teamRepository.findById(a.getRecipientId()).ifPresent(team -> {
                 dto.setRecipientTeamName(team.getTeamName());
-                // Also set team lead for reference
-                userRepository.findTeamLeadByTeamId(a.getRecipientId()).ifPresent(u -> {
-                    dto.setRecipientTeamLead(new com.project.quanlycanghangkhong.dto.UserDTO(u));
-                });
+                // recipientUser = null (chính xác vì chưa assign cho user cụ thể)
+                // recipientTeamLead = null (không set vì không phải người nhận việc thực tế)
             });
-        } else if ("unit".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null) {
-            // Set unit information  
+            
+        } else if ("UNIT".equalsIgnoreCase(a.getRecipientType()) && a.getRecipientId() != null) {
+            // ✅ Trường hợp giao cho unit - chỉ set thông tin unit
             unitRepository.findById(a.getRecipientId()).ifPresent(unit -> {
                 dto.setRecipientUnitName(unit.getUnitName());
-                // Also set unit lead for reference
-                userRepository.findUnitLeadByUnitId(a.getRecipientId()).ifPresent(u -> {
-                    dto.setRecipientUnitLead(new com.project.quanlycanghangkhong.dto.UserDTO(u));
-                });
+                // recipientUser = null (chính xác vì chưa assign cho user cụ thể)
+                // recipientUnitLead = null (không set vì không phải người nhận việc thực tế)
             });
         }
         return dto;

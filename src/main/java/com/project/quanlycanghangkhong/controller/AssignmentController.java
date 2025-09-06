@@ -3,6 +3,9 @@ package com.project.quanlycanghangkhong.controller;
 import com.project.quanlycanghangkhong.dto.AssignmentDTO;
 import com.project.quanlycanghangkhong.request.UpdateAssignmentRequest;
 import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
+import com.project.quanlycanghangkhong.dto.response.assignment.AssignmentApiResponse;
+import com.project.quanlycanghangkhong.dto.response.assignment.AssignmentListApiResponse;
+import com.project.quanlycanghangkhong.dto.response.assignment.AssignmentCommentsApiResponse;
 import com.project.quanlycanghangkhong.request.AssignmentCommentRequest;
 import com.project.quanlycanghangkhong.dto.AssignmentCommentHistoryDTO;
 import com.project.quanlycanghangkhong.service.AssignmentService;
@@ -41,7 +44,7 @@ public class AssignmentController {
     @PostMapping
     @Operation(summary = "Tạo assignment cho nhiều người", description = "Tạo mới nhiều assignment cùng lúc cho nhiều người nhận việc")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Tạo assignment thành công", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
+        @ApiResponse(responseCode = "201", description = "Tạo assignment thành công", content = @Content(schema = @Schema(implementation = AssignmentListApiResponse.class)))
     })
     public ResponseEntity<ApiResponseCustom<List<AssignmentDTO>>> createAssignments(@RequestBody CreateAssignmentsRequest request) {
         List<AssignmentDTO> result = assignmentService.createAssignments(request);
@@ -52,7 +55,7 @@ public class AssignmentController {
     @PutMapping("/{id}")
     @Operation(summary = "Cập nhật assignment", description = "Cập nhật thông tin assignment")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Cập nhật assignment thành công", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+        @ApiResponse(responseCode = "200", description = "Cập nhật assignment thành công", content = @Content(schema = @Schema(implementation = AssignmentApiResponse.class))),
         @ApiResponse(responseCode = "404", description = "Không tìm thấy assignment", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
     public ResponseEntity<ApiResponseCustom<AssignmentDTO>> updateAssignment(@PathVariable Integer id, @RequestBody UpdateAssignmentRequest request) {
@@ -76,7 +79,7 @@ public class AssignmentController {
     @GetMapping("/{id}")
     @Operation(summary = "Lấy chi tiết assignment", description = "Lấy chi tiết một assignment theo id")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Lấy assignment thành công", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+        @ApiResponse(responseCode = "200", description = "Lấy assignment thành công", content = @Content(schema = @Schema(implementation = AssignmentApiResponse.class))),
         @ApiResponse(responseCode = "404", description = "Không tìm thấy assignment", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
     public ResponseEntity<ApiResponseCustom<AssignmentDTO>> getAssignmentById(@PathVariable Integer id) {
@@ -89,7 +92,7 @@ public class AssignmentController {
     @GetMapping("/task/{taskId}")
     @Operation(summary = "Lấy danh sách assignment theo task", description = "Lấy danh sách assignment theo taskId")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Lấy danh sách assignment thành công", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
+        @ApiResponse(responseCode = "200", description = "Lấy danh sách assignment thành công", content = @Content(schema = @Schema(implementation = AssignmentListApiResponse.class)))
     })
     public ResponseEntity<ApiResponseCustom<List<AssignmentDTO>>> getAssignmentsByTaskId(@PathVariable Integer taskId) {
         List<AssignmentDTO> result = assignmentService.getAssignmentsByTaskId(taskId);
@@ -99,7 +102,7 @@ public class AssignmentController {
     @PostMapping("/{id}/comment")
     @Operation(summary = "Thêm comment cho assignment", description = "Thêm comment vào assignment, nhận JSON {\"comment\": \"...\"}")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Thêm comment thành công", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
+        @ApiResponse(responseCode = "200", description = "Thêm comment thành công", content = @Content(schema = @Schema(implementation = AssignmentCommentsApiResponse.class)))
     })
     public ResponseEntity<ApiResponseCustom<List<AssignmentCommentHistoryDTO>>> addAssignmentComment(
             @PathVariable Integer id,
@@ -121,7 +124,7 @@ public class AssignmentController {
     @GetMapping("/{id}/comments")
     @Operation(summary = "Lấy danh sách comment của assignment", description = "Lấy tất cả comment của assignment, gồm id, assignmentId, comment, createdAt, user")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Lấy danh sách comment thành công", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
+        @ApiResponse(responseCode = "200", description = "Lấy danh sách comment thành công", content = @Content(schema = @Schema(implementation = AssignmentCommentsApiResponse.class)))
     })
     public ResponseEntity<ApiResponseCustom<List<AssignmentCommentHistoryDTO>>> getAssignmentComments(@PathVariable Integer id) {
         List<AssignmentCommentHistoryDTO> dtoList = assignmentCommentHistoryService.getCommentsByAssignmentId(Long.valueOf(id));
