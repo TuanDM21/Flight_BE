@@ -208,14 +208,4 @@ public class AttachmentServiceImpl implements AttachmentService {
         return toDTO(att);
     }
     
-    @Override
-    public List<AttachmentDTO> getAvailableAttachments() {
-        // Chỉ admin mới có thể xem tất cả file chưa gán
-        if (!isAdmin()) {
-            throw new RuntimeException("Bạn không có quyền truy cập chức năng này. Chỉ admin mới có thể xem tất cả file chưa gán.");
-        }
-        
-        List<Attachment> availableAttachments = attachmentRepository.findByTaskIsNullAndIsDeletedFalse();
-        return availableAttachments.stream().map(this::toDTO).collect(Collectors.toList());
-    }
 }

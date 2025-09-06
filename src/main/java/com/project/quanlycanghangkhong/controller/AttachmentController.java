@@ -8,6 +8,10 @@ import com.project.quanlycanghangkhong.request.FlexibleUploadRequest;
 import com.project.quanlycanghangkhong.request.ConfirmFlexibleUploadRequest;
 import com.project.quanlycanghangkhong.dto.FlexiblePreSignedUrlDTO;
 import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
+import com.project.quanlycanghangkhong.dto.response.attachment.AttachmentApiResponse;
+import com.project.quanlycanghangkhong.dto.response.attachment.AttachmentListApiResponse;
+import com.project.quanlycanghangkhong.dto.response.attachment.PreSignedUrlApiResponse;
+import com.project.quanlycanghangkhong.dto.response.attachment.DownloadUrlApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -45,7 +49,7 @@ public class AttachmentController {
                             "Tự động detect và xử lý cả single file (1 file) và multiple files (nhiều file)")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Tạo pre-signed URL thành công", 
-                    content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+                    content = @Content(schema = @Schema(implementation = PreSignedUrlApiResponse.class))),
         @ApiResponse(responseCode = "400", description = "Dữ liệu đầu vào không hợp lệ"),
         @ApiResponse(responseCode = "500", description = "Lỗi server khi tạo pre-signed URL")
     })
@@ -77,7 +81,7 @@ public class AttachmentController {
                             "Tự động detect và xử lý cả single file và multiple files")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Xác nhận upload thành công", 
-                    content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+                    content = @Content(schema = @Schema(implementation = AttachmentListApiResponse.class))),
         @ApiResponse(responseCode = "404", description = "Không tìm thấy file hoặc upload thất bại"),
         @ApiResponse(responseCode = "500", description = "Lỗi server khi xác nhận upload")
     })
@@ -106,7 +110,7 @@ public class AttachmentController {
                description = "Tạo pre-signed URL để download file từ Azure Blob Storage")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Tạo download URL thành công", 
-                    content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+                    content = @Content(schema = @Schema(implementation = DownloadUrlApiResponse.class))),
         @ApiResponse(responseCode = "404", description = "Không tìm thấy file đính kèm"),
         @ApiResponse(responseCode = "500", description = "Lỗi server khi tạo download URL")
     })
@@ -132,7 +136,7 @@ public class AttachmentController {
                description = "Chỉ cho phép cập nhật tên file đính kèm (fileName)")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Cập nhật file thành công", 
-                    content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+                    content = @Content(schema = @Schema(implementation = AttachmentApiResponse.class))),
         @ApiResponse(responseCode = "404", description = "Không tìm thấy file đính kèm")
     })
     public ResponseEntity<ApiResponseCustom<AttachmentDTO>> updateAttachment(
@@ -211,7 +215,7 @@ public class AttachmentController {
                description = "Lấy danh sách tất cả file đính kèm đã upload")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Lấy danh sách file thành công", 
-                    content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
+                    content = @Content(schema = @Schema(implementation = AttachmentListApiResponse.class)))
     })
     public ResponseEntity<ApiResponseCustom<List<AttachmentDTO>>> getAllAttachments() {
         List<AttachmentDTO> result = attachmentService.getAllAttachments();
@@ -224,7 +228,7 @@ public class AttachmentController {
                description = "Lấy chi tiết một file đính kèm theo ID")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Lấy chi tiết file thành công", 
-                    content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+                    content = @Content(schema = @Schema(implementation = AttachmentApiResponse.class))),
         @ApiResponse(responseCode = "404", description = "Không tìm thấy file đính kèm")
     })
     public ResponseEntity<ApiResponseCustom<AttachmentDTO>> getAttachmentById(@PathVariable Integer id) {
@@ -234,23 +238,5 @@ public class AttachmentController {
         }
         
         return ResponseEntity.ok(ApiResponseCustom.success("Thành công", result));
-    }
-
-    @GetMapping("/available")
-    @Operation(summary = "Lấy danh sách file chưa gán vào task", 
-               description = "Lấy danh sách tất cả file chưa được gán vào task nào (chỉ admin)")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Lấy danh sách file thành công", 
-                    content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
-        @ApiResponse(responseCode = "403", description = "Không có quyền truy cập")
-    })
-    public ResponseEntity<ApiResponseCustom<List<AttachmentDTO>>> getAvailableAttachments() {
-        try {
-            List<AttachmentDTO> result = attachmentService.getAvailableAttachments();
-            
-            return ResponseEntity.ok(ApiResponseCustom.success("Thành công", result));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(403).body(ApiResponseCustom.forbidden(e.getMessage()));
-        }
     }
 }

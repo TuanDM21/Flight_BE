@@ -17,10 +17,4 @@ public interface AttachmentService {
     List<AttachmentDTO> getAllAttachments();
     AttachmentDTO getAttachmentById(Integer id);
     AttachmentDTO updateAttachmentFileName(Integer id, String fileName);
-    
-    /**
-     * Lấy danh sách attachment chưa được gán vào task nào (có thể gán được)
-     * @return Danh sách attachment chưa gán
-     */
-    List<AttachmentDTO> getAvailableAttachments();
 }
