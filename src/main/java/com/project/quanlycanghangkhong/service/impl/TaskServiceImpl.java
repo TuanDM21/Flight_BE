@@ -421,7 +421,11 @@ public class TaskServiceImpl implements TaskService {
         return convertTasksToTaskDetailDTOsBatch(tasks);
     }
 
-    // ✅ LOGIC MỚI - ĐƠN GIẢN: Cập nhật trạng thái Task dựa trên trạng thái các Assignment con
+    // ✅ UPDATED BUSINESS LOGIC: Cập nhật trạng thái Task dựa trên trạng thái các Assignment con
+    // - Nếu có ít nhất 1 assignment quá hạn → OVERDUE (kể cả khi assignments khác đã hủy)
+    // - Nếu tất cả assignments đều DONE → COMPLETED  
+    // - Nếu có ít nhất 1 assignment WORKING → IN_PROGRESS
+    // - Ngược lại → OPEN
     public void updateTaskStatus(Task task) {
         // ✅ Sử dụng repository method thay vì findAll + filter
         List<Assignment> assignments = assignmentRepository.findByTaskId(task.getId());
@@ -436,12 +440,6 @@ public class TaskServiceImpl implements TaskService {
         // Check assignment statuses for task status logic
         LocalDateTime now = LocalDateTime.now();
         
-        // NEW BUSINESS RULE: Task OVERDUE chỉ khi TẤT CẢ assignments đều OVERDUE
-        boolean allAssignmentsOverdue = assignments.stream()
-                .allMatch(a -> a.getDueAt() != null && 
-                              a.getDueAt().isBefore(now) && 
-                              a.getStatus() != AssignmentStatus.DONE);
-        
         // Tất cả assignments đều DONE → COMPLETED  
         boolean allDone = assignments.stream()
                 .allMatch(a -> a.getStatus() == AssignmentStatus.DONE);
@@ -450,8 +448,23 @@ public class TaskServiceImpl implements TaskService {
         boolean anyWorking = assignments.stream()
                 .anyMatch(a -> a.getStatus() == AssignmentStatus.WORKING);
         
-        // NEW Priority logic: OVERDUE (khi TẤT CẢ overdue) > COMPLETED > IN_PROGRESS > OPEN
-        if (allAssignmentsOverdue && !allDone) {
+        // ✅ UPDATED BUSINESS RULE: Task OVERDUE nếu có ít nhất 1 assignment quá hạn 
+        // (kể cả khi các assignment khác đã bị hủy)
+        boolean hasOverdueAssignment = assignments.stream()
+                .anyMatch(a -> a.getDueAt() != null && 
+                              a.getDueAt().isBefore(now) && 
+                              a.getStatus() != AssignmentStatus.DONE &&
+                              a.getStatus() != AssignmentStatus.CANCELLED);
+                              
+        // ✅ Kiểm tra có assignment quá hạn trong trường hợp các assignment khác đã hủy
+        boolean hasOverdueEvenWithCancelled = assignments.stream()
+                .anyMatch(a -> a.getStatus() == AssignmentStatus.OVERDUE || 
+                              (a.getDueAt() != null && 
+                               a.getDueAt().isBefore(now) && 
+                               a.getStatus() == AssignmentStatus.WORKING));
+        
+        // UPDATED Priority logic: OVERDUE (có ít nhất 1 overdue) > COMPLETED > IN_PROGRESS > OPEN
+        if (hasOverdueAssignment || hasOverdueEvenWithCancelled) {
             task.setStatus(TaskStatus.OVERDUE);
         } else if (allDone) {
             task.setStatus(TaskStatus.COMPLETED);

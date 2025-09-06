@@ -11,6 +11,9 @@ import com.project.quanlycanghangkhong.model.Team;
 import com.project.quanlycanghangkhong.service.TeamService;
 import com.project.quanlycanghangkhong.dto.ApiResponse;
 import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
+import com.project.quanlycanghangkhong.dto.response.team.TeamListApiResponse;
+import com.project.quanlycanghangkhong.dto.response.team.TeamCreateApiResponse;
+import com.project.quanlycanghangkhong.dto.response.team.AssignableTeamsApiResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -33,6 +36,11 @@ public class TeamController {
 	    @io.swagger.v3.oas.annotations.responses.ApiResponse(
 	        responseCode = "200",
 	        description = "Successfully retrieved all teams",
+	        content = @Content(schema = @Schema(implementation = TeamListApiResponse.class))
+	    ),
+	    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+	        responseCode = "500",
+	        description = "Internal server error",
 	        content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))
 	    )
 	})
@@ -44,8 +52,9 @@ public class TeamController {
 	@PostMapping
 	@Operation(summary = "Create a new team", description = "Create a new team with the provided details")
 	@ApiResponses(value = {
-			@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Team created successfully", content = @Content(schema = @Schema(implementation = TeamDTO.class))),
-			@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid input")
+			@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Team created successfully", content = @Content(schema = @Schema(implementation = TeamCreateApiResponse.class))),
+			@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid input", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+			@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
 	})
 	public ResponseEntity<ApiResponse<TeamDTO>> createTeam(@RequestBody TeamDTO teamDTO) {
 		Team team = new Team();
@@ -57,6 +66,23 @@ public class TeamController {
 
 	@GetMapping("/assignable")
 	@Operation(summary = "Get assignable teams", description = "Lấy danh sách team mà user hiện tại có thể giao việc cho theo phân quyền")
+	@ApiResponses(value = {
+	    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+	        responseCode = "200",
+	        description = "Successfully retrieved assignable teams",
+	        content = @Content(schema = @Schema(implementation = AssignableTeamsApiResponse.class))
+	    ),
+	    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+	        responseCode = "403",
+	        description = "Forbidden - User not authorized",
+	        content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))
+	    ),
+	    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+	        responseCode = "500",
+	        description = "Internal server error",
+	        content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))
+	    )
+	})
 	public ResponseEntity<ApiResponseCustom<List<TeamDTO>>> getAssignableTeams() {
 		List<TeamDTO> dtos = teamService.getAssignableTeamsForCurrentUser();
 		return ResponseEntity.ok(ApiResponseCustom.success("Thành công", dtos));

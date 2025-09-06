@@ -23,15 +23,21 @@ import com.project.quanlycanghangkhong.model.User;
 import com.project.quanlycanghangkhong.repository.UserRepository;
 import com.project.quanlycanghangkhong.service.UserService;
 import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
+import com.project.quanlycanghangkhong.dto.response.user.UserListApiResponse;
+import com.project.quanlycanghangkhong.dto.response.user.UserApiResponse;
+import com.project.quanlycanghangkhong.dto.response.user.CurrentUserApiResponse;
+import com.project.quanlycanghangkhong.dto.response.user.UserDeleteApiResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/users")
+@Tag(name = "User Management", description = "APIs for managing users")
 public class UserController {
         @Autowired
         private UserService userService;
@@ -43,7 +49,8 @@ public class UserController {
         @GetMapping
         @Operation(summary = "Get all users", description = "Retrieve a list of all users")
         @ApiResponses(value = {
-                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully retrieved all users", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
+                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully retrieved all users", content = @Content(schema = @Schema(implementation = UserListApiResponse.class))),
+                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
         })
         public ResponseEntity<ApiResponseCustom<List<UserDTO>>> getAllUsers() {
                 List<UserDTO> dtos = userService.getAllUsers();
@@ -54,8 +61,9 @@ public class UserController {
         @GetMapping("/{id}")
         @Operation(summary = "Get user by ID", description = "Retrieve a user by their ID")
         @ApiResponses(value = {
-                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully retrieved user", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
-                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
+                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully retrieved user", content = @Content(schema = @Schema(implementation = UserApiResponse.class))),
+                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
         })
         public ResponseEntity<ApiResponseCustom<User>> getUserById(@PathVariable Integer id) {
                 return userService.getUserById(id)
@@ -68,7 +76,9 @@ public class UserController {
         @PostMapping
         @Operation(summary = "Create user", description = "Create a new user")
         @ApiResponses(value = {
-                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "User created successfully", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
+                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "User created successfully", content = @Content(schema = @Schema(implementation = UserApiResponse.class))),
+                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid input", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
         })
         public ResponseEntity<ApiResponseCustom<User>> createUser(@RequestBody User user) {
                 User created = userService.createUser(user);
@@ -79,8 +89,10 @@ public class UserController {
         @PutMapping("/{id}")
         @Operation(summary = "Update user", description = "Update an existing user")
         @ApiResponses(value = {
-                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "User updated successfully", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
-                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
+                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "User updated successfully", content = @Content(schema = @Schema(implementation = UserApiResponse.class))),
+                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid input", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
         })
         public ResponseEntity<ApiResponseCustom<User>> updateUser(@PathVariable Integer id, @RequestBody User user) {
                 User updatedUser = userService.updateUser(id, user);
@@ -96,7 +108,9 @@ public class UserController {
         @DeleteMapping("/{id}")
         @Operation(summary = "Delete user", description = "Delete a user by ID")
         @ApiResponses(value = {
-                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "204", description = "User deleted successfully", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
+                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "204", description = "User deleted successfully", content = @Content(schema = @Schema(implementation = UserDeleteApiResponse.class))),
+                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
         })
         public ResponseEntity<ApiResponseCustom<Void>> deleteUser(@PathVariable Integer id) {
                 userService.deleteUser(id);
@@ -107,7 +121,9 @@ public class UserController {
         @GetMapping("/filter")
         @Operation(summary = "Filter users", description = "Filter users by team, unit, or search text")
         @ApiResponses(value = {
-                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully filtered users", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
+                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully filtered users", content = @Content(schema = @Schema(implementation = UserListApiResponse.class))),
+                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid filter parameters", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
         })
         public ResponseEntity<ApiResponseCustom<List<UserDTO>>> filterUsers(
                         @RequestParam(value = "teamId", required = false) Integer teamId,
@@ -121,8 +137,9 @@ public class UserController {
         @GetMapping("/me")
         @Operation(summary = "Get current user", description = "Get the current user based on token")
         @ApiResponses(value = {
-                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully retrieved current user", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
-                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
+                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully retrieved current user", content = @Content(schema = @Schema(implementation = CurrentUserApiResponse.class))),
+                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+                        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
         })
         public ResponseEntity<ApiResponseCustom<UserDTO>> getCurrentUser() {
                 ApiResponseCustom<UserDTO> userResponse = userService.getCurrentUser();
@@ -207,6 +224,11 @@ public class UserController {
 
         @GetMapping("/assignable")
         @Operation(summary = "Get assignable users", description = "Lấy danh sách user mà user hiện tại có thể giao việc cho theo phân quyền")
+        @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully retrieved assignable users", content = @Content(schema = @Schema(implementation = UserListApiResponse.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - User not authorized", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
+        })
         public ResponseEntity<ApiResponseCustom<List<UserDTO>>> getAssignableUsers() {
             List<UserDTO> dtos = userService.getAssignableUsersForCurrentUser();
             return ResponseEntity.ok(ApiResponseCustom.success(dtos));

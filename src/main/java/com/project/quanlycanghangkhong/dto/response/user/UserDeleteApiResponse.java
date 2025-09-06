@@ -1,0 +1,45 @@
+package com.project.quanlycanghangkhong.dto.response.user;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Schema(description = "API response wrapper for user delete operations")
+public class UserDeleteApiResponse {
+
+	@Schema(description = "Response message", example = "Xóa user thành công")
+	private String message;
+
+	@Schema(description = "HTTP status code", example = "204")
+	private int statusCode;
+
+	@Schema(description = "Delete data (usually null)", nullable = true)
+	private Void data;
+
+	@Schema(description = "Success status", example = "true")
+	private boolean success;
+
+	public static UserDeleteApiResponse success() {
+		return UserDeleteApiResponse.builder()
+				.message("Xóa user thành công")
+				.statusCode(204)
+				.data(null)
+				.success(true)
+				.build();
+	}
+
+	public static UserDeleteApiResponse error(String message, int statusCode) {
+		return UserDeleteApiResponse.builder()
+				.message(message)
+				.statusCode(statusCode)
+				.data(null)
+				.success(false)
+				.build();
+	}
+}

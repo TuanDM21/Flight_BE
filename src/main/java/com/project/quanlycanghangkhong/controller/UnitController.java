@@ -13,15 +13,19 @@ import org.springframework.web.bind.annotation.RestController;
 import com.project.quanlycanghangkhong.dto.UnitDTO;
 import com.project.quanlycanghangkhong.service.UnitService;
 import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
+import com.project.quanlycanghangkhong.dto.response.unit.UnitListApiResponse;
+import com.project.quanlycanghangkhong.dto.response.unit.AssignableUnitsApiResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/units")
+@Tag(name = "Unit Management", description = "APIs for managing units")
 public class UnitController {
 
 	 @Autowired
@@ -34,6 +38,16 @@ public class UnitController {
 	        @io.swagger.v3.oas.annotations.responses.ApiResponse(
 	            responseCode = "200",
 	            description = "Successfully retrieved all units",
+	            content = @Content(schema = @Schema(implementation = UnitListApiResponse.class))
+	        ),
+	        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+	            responseCode = "400",
+	            description = "Invalid teamId parameter",
+	            content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))
+	        ),
+	        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+	            responseCode = "500",
+	            description = "Internal server error",
 	            content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))
 	        )
 	    })
@@ -49,6 +63,23 @@ public class UnitController {
 
 	    @GetMapping("/assignable")
 	    @Operation(summary = "Get assignable units", description = "Lấy danh sách unit mà user hiện tại có thể giao việc cho theo phân quyền")
+	    @ApiResponses(value = {
+	        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+	            responseCode = "200",
+	            description = "Successfully retrieved assignable units",
+	            content = @Content(schema = @Schema(implementation = AssignableUnitsApiResponse.class))
+	        ),
+	        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+	            responseCode = "403",
+	            description = "Forbidden - User not authorized",
+	            content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))
+	        ),
+	        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+	            responseCode = "500",
+	            description = "Internal server error",
+	            content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))
+	        )
+	    })
 	    public ResponseEntity<ApiResponseCustom<List<UnitDTO>>> getAssignableUnits() {
 	        List<UnitDTO> dtos = unitService.getAssignableUnitsForCurrentUser();
 	        return ResponseEntity.ok(ApiResponseCustom.success("Thành công", dtos));
