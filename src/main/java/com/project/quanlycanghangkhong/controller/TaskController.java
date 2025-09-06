@@ -23,6 +23,7 @@ import com.project.quanlycanghangkhong.request.TaskAttachmentUploadRequest;
 // ✅ PRIORITY 3: Simplified DTOs imports
 
 import com.project.quanlycanghangkhong.service.TaskService;
+import com.project.quanlycanghangkhong.service.OverdueTaskService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -52,6 +53,9 @@ import javax.validation.Valid;
 public class TaskController {
     @Autowired
     private TaskService taskService;
+    
+    @Autowired
+    private OverdueTaskService overdueTaskService;
 
     @PostMapping
     @Operation(summary = "Tạo task", description = "Tạo mới một công việc")
@@ -515,6 +519,33 @@ public class TaskController {
     }
 
     // ============== SEARCH & FILTER ENDPOINTS ==============
+
+    // ===================================================================
+    // OVERDUE MANAGEMENT ENDPOINTS
+    // ===================================================================
+
+    @PostMapping("/force-update-overdue")
+    @Operation(summary = "Force update overdue status", description = "Manually trigger overdue status update for all assignments and tasks. Useful for testing or immediate update without waiting for scheduled job.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Overdue update completed successfully"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<ApiResponseCustom<Map<String, Object>>> forceUpdateOverdueStatus() {
+        try {
+            // Trigger manual overdue update
+            overdueTaskService.forceUpdateOverdueStatus();
+            
+            return ResponseEntity.ok(ApiResponseCustom.success(Map.of(
+                    "message", "Overdue status update completed successfully",
+                    "executedAt", java.time.LocalDateTime.now().toString(),
+                    "note", "All assignments and tasks have been checked and updated if overdue"
+            )));
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(ApiResponseCustom.internalError("Failed to update overdue status: " + e.getMessage()));
+        }
+    }
 
     // ===================================================================
     // TASK HIERARCHY & SUBTASK ENDPOINTS

@@ -21,11 +21,11 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import com.project.quanlycanghangkhong.model.User;
 
 import java.sql.Timestamp;
-import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.time.ZoneId;
 
 @Service
 public class AssignmentServiceImpl implements AssignmentService {
@@ -131,6 +131,7 @@ public class AssignmentServiceImpl implements AssignmentService {
     public AssignmentDTO createAssignment(CreateAssignmentRequest request) {
         Assignment a = toEntity(request);
         Assignment saved = assignmentRepository.save(a);
+        
         if (saved.getTask() != null) {
             taskService.updateTaskStatus(saved.getTask());
         }
@@ -214,13 +215,19 @@ public class AssignmentServiceImpl implements AssignmentService {
     public List<AssignmentDTO> createAssignments(CreateAssignmentsRequest request) {
         List<CreateAssignmentRequest> reqs = request.getAssignments();
         Integer taskId = request.getTaskId();
-        return reqs.stream().map(req -> {
+        
+        List<AssignmentDTO> results = new ArrayList<>();
+        
+        for (CreateAssignmentRequest req : reqs) {
             Assignment a = toEntity(req, taskId);
             Assignment saved = assignmentRepository.save(a);
+            results.add(toDTO(saved));
+            
             if (saved.getTask() != null) {
                 taskService.updateTaskStatus(saved.getTask());
             }
-            return toDTO(saved);
-        }).collect(Collectors.toList());
+        }
+        
+        return results;
     }
 }

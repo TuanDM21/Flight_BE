@@ -433,10 +433,12 @@ public class TaskServiceImpl implements TaskService {
             return;
         }
         
-        // Check for overdue assignments first (highest priority)
+        // Check assignment statuses for task status logic
         LocalDateTime now = LocalDateTime.now();
-        boolean hasOverdueAssignments = assignments.stream()
-                .anyMatch(a -> a.getDueAt() != null && 
+        
+        // NEW BUSINESS RULE: Task OVERDUE chỉ khi TẤT CẢ assignments đều OVERDUE
+        boolean allAssignmentsOverdue = assignments.stream()
+                .allMatch(a -> a.getDueAt() != null && 
                               a.getDueAt().isBefore(now) && 
                               a.getStatus() != AssignmentStatus.DONE);
         
@@ -448,15 +450,15 @@ public class TaskServiceImpl implements TaskService {
         boolean anyWorking = assignments.stream()
                 .anyMatch(a -> a.getStatus() == AssignmentStatus.WORKING);
         
-        // Priority logic: OVERDUE > COMPLETED > IN_PROGRESS > OPEN
-        if (hasOverdueAssignments && !allDone) {
+        // NEW Priority logic: OVERDUE (khi TẤT CẢ overdue) > COMPLETED > IN_PROGRESS > OPEN
+        if (allAssignmentsOverdue && !allDone) {
             task.setStatus(TaskStatus.OVERDUE);
         } else if (allDone) {
             task.setStatus(TaskStatus.COMPLETED);
         } else if (anyWorking) {
             task.setStatus(TaskStatus.IN_PROGRESS);
         } else {
-            // Tất cả assignments đều CANCELLED → OPEN (task có thể assign lại)
+            // Tất cả assignments đều CANCELLED hoặc mixed states → OPEN (task có thể assign lại)
             task.setStatus(TaskStatus.OPEN);
         }
         
