@@ -39,6 +39,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -283,7 +284,7 @@ public class TaskController {
             "🎯 STATUS FILTER: IN_PROGRESS, COMPLETED, OVERDUE " +
             "🔍 KEYWORD SEARCH: Tìm kiếm trong 5 fields - ID, title, content, instructions, notes " +
             "⚡ ADVANCED FILTERS: priorities (LOW/NORMAL/HIGH/URGENT), time range (yyyy-MM-dd) " +
-            "👥 RECIPIENT SEARCH: recipientTypes + recipientIds (tìm tasks được giao cho team/unit cụ thể) " +
+            "👥 RECIPIENT SEARCH: teamIds, userIds, unitIds (đơn giản hơn recipientTypes/recipientIds) " +
             "📄 PAGINATION: page (1-based), size (max 100, default 20)")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Thành công", content = @Content(schema = @Schema(implementation = MyTasksApiResponse.class))),
@@ -307,10 +308,11 @@ public class TaskController {
                     "URGENT" // 🔴 Khẩn cấp - cần xử lý ngay lập tức
             }, description = "LOW: Không khẩn cấp, NORMAL: Bình thường, HIGH: Quan trọng, URGENT: Khẩn cấp")) @RequestParam(required = false) List<String> priorities,
 
-            @Parameter(description = "Loại recipient để filter", schema = @Schema(type = "array", allowableValues = {
-                    "USER", "TEAM", "UNIT" })) @RequestParam(required = false) List<String> recipientTypes,
+            @Parameter(description = "Danh sách Team IDs để filter tasks giao cho teams", example = "1,2,3") @RequestParam(required = false) List<Integer> teamIds,
 
-            @Parameter(description = "ID của recipients tương ứng với recipientTypes") @RequestParam(required = false) List<Integer> recipientIds,
+            @Parameter(description = "Danh sách User IDs để filter tasks giao cho users", example = "1,5,10") @RequestParam(required = false) List<Integer> userIds,
+
+            @Parameter(description = "Danh sách Unit IDs để filter tasks giao cho units", example = "1,2") @RequestParam(required = false) List<Integer> unitIds,
 
             @Parameter(description = "Số trang (bắt đầu từ 1)", example = "1") @RequestParam(required = false, defaultValue = "1") Integer page,
 
@@ -320,22 +322,6 @@ public class TaskController {
         if (status != null && !status.matches("IN_PROGRESS|COMPLETED|OVERDUE|OPEN")) {
             return ResponseEntity.badRequest().body(
                     ApiResponseCustom.error("Status phải là: IN_PROGRESS, COMPLETED, OVERDUE, hoặc OPEN"));
-        }
-
-        // Validate recipients matching
-        if (recipientTypes != null && recipientIds != null && recipientTypes.size() != recipientIds.size()) {
-            return ResponseEntity.badRequest().body(
-                    ApiResponseCustom.error("Số lượng recipientTypes và recipientIds phải bằng nhau"));
-        }
-
-        // Validate recipient types
-        if (recipientTypes != null) {
-            for (String recipientType : recipientTypes) {
-                if (!recipientType.matches("USER|TEAM|UNIT")) {
-                    return ResponseEntity.badRequest().body(
-                            ApiResponseCustom.error("recipientType phải là: USER, TEAM, hoặc UNIT"));
-                }
-            }
         }
 
         // Validate pagination parameters (1-based)
@@ -348,9 +334,38 @@ public class TaskController {
                     ApiResponseCustom.error("Size phải từ 1 đến 100"));
         }
 
+        // Convert simplified parameters to recipientTypes/recipientIds format for service
+        List<String> recipientTypes = new ArrayList<>();
+        List<Integer> recipientIds = new ArrayList<>();
+        
+        // Parse teamIds -> TEAM + teamIds
+        if (teamIds != null && !teamIds.isEmpty()) {
+            for (Integer teamId : teamIds) {
+                recipientTypes.add("TEAM");
+                recipientIds.add(teamId);
+            }
+        }
+        
+        // Parse userIds -> USER + userIds  
+        if (userIds != null && !userIds.isEmpty()) {
+            for (Integer userId : userIds) {
+                recipientTypes.add("USER");
+                recipientIds.add(userId);
+            }
+        }
+        
+        // Parse unitIds -> UNIT + unitIds
+        if (unitIds != null && !unitIds.isEmpty()) {
+            for (Integer unitId : unitIds) {
+                recipientTypes.add("UNIT");
+                recipientIds.add(unitId);
+            }
+        }
+
         MyTasksData response;
+        boolean hasRecipientSearch = !recipientTypes.isEmpty();
         boolean hasAdvancedSearch = keyword != null || startTime != null || endTime != null ||
-                (priorities != null && !priorities.isEmpty()) || (recipientTypes != null && !recipientTypes.isEmpty());
+                (priorities != null && !priorities.isEmpty()) || hasRecipientSearch;
 
         if (hasAdvancedSearch) {
             // Sử dụng advanced search với role-based permissions và recipient search
