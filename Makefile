@@ -5,7 +5,7 @@ COMPOSE_FILE_PROD = docker-compose.yml
 COMPOSE_FILE_DEV = docker-compose.dev.yml
 ENV_FILE = .env
 
-.PHONY: help build run-prod run-dev stop down clean logs status restart test mvn-clean mvn-compile mvn-test mvn-package mvn-install ssl-cert
+.PHONY: help build run-prod run-dev stop down clean logs status restart test mvn-clean mvn-compile mvn-test mvn-package mvn-install ssl-cert db-migrate db-info db-clean db-validate db-repair
 
 # Default target
 .DEFAULT_GOAL := help
@@ -31,6 +31,13 @@ help: ## Show this help message
 	@echo "  make mvn-package - Package the application"
 	@echo "  make mvn-install - Install dependencies and build"
 	@echo "  make test        - Run tests (alias for mvn-test)"
+	@echo ""
+	@echo "🗄️  Database Migration Commands:"
+	@echo "  make db-migrate  - Run Flyway migrations"
+	@echo "  make db-info     - Show migration status"
+	@echo "  make db-clean    - Clean database (DANGEROUS)"
+	@echo "  make db-validate - Validate migrations"
+	@echo "  make db-repair   - Repair Flyway schema history"
 	@echo ""
 	@echo "🔐 SSL Commands:"
 	@echo "  make ssl-cert    - Generate SSL certificates"
@@ -63,9 +70,9 @@ run-dev: ## Start development environment
 	fi
 	@docker-compose -f $(COMPOSE_FILE_DEV) up -d
 	@echo "✅ Development environment started"
-	@echo "🌐 Application: http://localhost:8081"
+	@echo "🌐 Application: http://localhost:8080"
 	@echo "🔄 LiveReload: http://localhost:35729"
-	@echo "🗄️  MySQL: localhost:3307"
+	@echo "🗄️  MySQL: localhost:3306"
 
 stop: ## Stop all containers
 	@echo "🛑 Stopping all containers..."
@@ -146,3 +153,30 @@ ssl-cert: ## Generate SSL certificates
 	@chmod +x scripts/generate-ssl.sh
 	@./scripts/generate-ssl.sh
 	@echo "✅ SSL certificates generated"
+
+# Database Migration Commands
+db-migrate: ## Run Flyway migrations
+	@echo "🗄️  Running database migrations..."
+	@docker-compose -f $(COMPOSE_FILE_DEV) exec app mvn flyway:migrate
+	@echo "✅ Migrations completed"
+
+db-info: ## Show migration status
+	@echo "📊 Database migration status:"
+	@docker-compose -f $(COMPOSE_FILE_DEV) exec app mvn flyway:info
+
+db-clean: ## Clean database (DANGEROUS - will drop all objects)
+	@echo "⚠️  WARNING: This will DROP ALL database objects!"
+	@read -p "Are you sure? Type 'yes' to continue: " confirm && [ "$$confirm" = "yes" ] || exit 1
+	@echo "🧹 Cleaning database..."
+	@docker-compose -f $(COMPOSE_FILE_DEV) exec app mvn flyway:clean
+	@echo "✅ Database cleaned"
+
+db-validate: ## Validate migrations
+	@echo "✅ Validating migrations..."
+	@docker-compose -f $(COMPOSE_FILE_DEV) exec app mvn flyway:validate
+	@echo "✅ Validation completed"
+
+db-repair: ## Repair Flyway schema history
+	@echo "🔧 Repairing Flyway schema history..."
+	@docker-compose -f $(COMPOSE_FILE_DEV) exec app mvn flyway:repair
+	@echo "✅ Repair completed"
