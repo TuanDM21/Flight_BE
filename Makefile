@@ -157,26 +157,26 @@ ssl-cert: ## Generate SSL certificates
 # Database Migration Commands
 db-migrate: ## Run Flyway migrations
 	@echo "🗄️  Running database migrations..."
-	@docker-compose -f $(COMPOSE_FILE_DEV) exec app mvn flyway:migrate
+	@SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/flight_db SPRING_DATASOURCE_USERNAME=root SPRING_DATASOURCE_PASSWORD=rootpassword123 ./mvnw flyway:migrate
 	@echo "✅ Migrations completed"
 
 db-info: ## Show migration status
 	@echo "📊 Database migration status:"
-	@docker-compose -f $(COMPOSE_FILE_DEV) exec app mvn flyway:info
+	@SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/flight_db SPRING_DATASOURCE_USERNAME=root SPRING_DATASOURCE_PASSWORD=rootpassword123 ./mvnw flyway:info
 
 db-clean: ## Clean database (DANGEROUS - will drop all objects)
 	@echo "⚠️  WARNING: This will DROP ALL database objects!"
 	@read -p "Are you sure? Type 'yes' to continue: " confirm && [ "$$confirm" = "yes" ] || exit 1
 	@echo "🧹 Cleaning database..."
-	@docker-compose -f $(COMPOSE_FILE_DEV) exec app mvn flyway:clean
+	@SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/flight_db SPRING_DATASOURCE_USERNAME=root SPRING_DATASOURCE_PASSWORD=rootpassword123 ./mvnw flyway:clean
 	@echo "✅ Database cleaned"
 
 db-validate: ## Validate migrations
 	@echo "✅ Validating migrations..."
-	@docker-compose -f $(COMPOSE_FILE_DEV) exec app mvn flyway:validate
+	@SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/flight_db SPRING_DATASOURCE_USERNAME=root SPRING_DATASOURCE_PASSWORD=rootpassword123 ./mvnw flyway:validate
 	@echo "✅ Validation completed"
 
 db-repair: ## Repair Flyway schema history
 	@echo "🔧 Repairing Flyway schema history..."
-	@docker-compose -f $(COMPOSE_FILE_DEV) exec app mvn flyway:repair
+	@SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/flight_db SPRING_DATASOURCE_USERNAME=root SPRING_DATASOURCE_PASSWORD=rootpassword123 ./mvnw flyway:repair
 	@echo "✅ Repair completed"
