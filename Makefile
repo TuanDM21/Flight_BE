@@ -46,17 +46,17 @@ help: ## Show this help message
 # Docker Commands
 build: ## Build all Docker images
 	@echo "🔨 Building Docker images..."
-	@docker-compose -f $(COMPOSE_FILE_PROD) build
-	@docker-compose -f $(COMPOSE_FILE_DEV) build
-	@echo "✅ Build completed"
+	@docker compose -f $(COMPOSE_FILE_PROD) build
+	@docker compose -f $(COMPOSE_FILE_DEV) build
+	@echo "✅ Docker images built successfully"
 
 run-prod: ## Start production environment
 	@echo "🚀 Starting Production Environment..."
 	@if [ ! -f $(ENV_FILE) ]; then \
-		echo "❌ .env file not found. Please create it first."; \
+		echo "❌ .env file not found! Please create one."; \
 		exit 1; \
 	fi
-	@docker-compose -f $(COMPOSE_FILE_PROD) up -d
+	@docker compose -f $(COMPOSE_FILE_PROD) up -d
 	@echo "✅ Production environment started"
 	@echo "🌐 Application: http://localhost:8080"
 	@echo "🌐 HTTPS: https://localhost:8443"
@@ -65,10 +65,10 @@ run-prod: ## Start production environment
 run-dev: ## Start development environment
 	@echo "🛠️  Starting Development Environment..."
 	@if [ ! -f $(ENV_FILE) ]; then \
-		echo "❌ .env file not found. Please create it first."; \
+		echo "❌ .env file not found! Please create one."; \
 		exit 1; \
 	fi
-	@docker-compose -f $(COMPOSE_FILE_DEV) up -d
+	@docker compose -f $(COMPOSE_FILE_DEV) up -d
 	@echo "✅ Development environment started"
 	@echo "🌐 Application: http://localhost:8080"
 	@echo "🔄 LiveReload: http://localhost:35729"
@@ -76,14 +76,14 @@ run-dev: ## Start development environment
 
 stop: ## Stop all containers
 	@echo "🛑 Stopping all containers..."
-	@docker-compose -f $(COMPOSE_FILE_PROD) down
-	@docker-compose -f $(COMPOSE_FILE_DEV) down
+	@docker compose -f $(COMPOSE_FILE_PROD) down
+	@docker compose -f $(COMPOSE_FILE_DEV) down
 	@echo "✅ All containers stopped"
 
 down: ## Stop and remove containers
 	@echo "⬇️  Stopping and removing containers..."
-	@docker-compose -f $(COMPOSE_FILE_PROD) down --remove-orphans
-	@docker-compose -f $(COMPOSE_FILE_DEV) down --remove-orphans
+	@docker compose -f $(COMPOSE_FILE_PROD) down --remove-orphans
+	@docker compose -f $(COMPOSE_FILE_DEV) down --remove-orphans
 	@echo "✅ Containers stopped and removed"
 
 restart: ## Restart all containers
@@ -94,18 +94,18 @@ restart: ## Restart all containers
 
 clean: ## Clean up containers, images and volumes
 	@echo "🧹 Cleaning up..."
-	@docker-compose -f $(COMPOSE_FILE_PROD) down -v --remove-orphans
-	@docker-compose -f $(COMPOSE_FILE_DEV) down -v --remove-orphans
+	@docker compose -f $(COMPOSE_FILE_PROD) down -v --remove-orphans
+	@docker compose -f $(COMPOSE_FILE_DEV) down -v --remove-orphans
 	@docker system prune -f
 	@docker volume prune -f
 	@echo "✅ Cleanup completed"
 
 logs: ## Show logs from all containers
 	@echo "📋 Showing container logs..."
-	@if [ "$(shell docker-compose -f $(COMPOSE_FILE_DEV) ps -q 2>/dev/null)" ]; then \
-		docker-compose -f $(COMPOSE_FILE_DEV) logs -f --tail=100; \
-	elif [ "$(shell docker-compose -f $(COMPOSE_FILE_PROD) ps -q 2>/dev/null)" ]; then \
-		docker-compose -f $(COMPOSE_FILE_PROD) logs -f --tail=100; \
+	@if [ "$(shell docker compose -f $(COMPOSE_FILE_DEV) ps -q 2>/dev/null)" ]; then \
+		docker compose -f $(COMPOSE_FILE_DEV) logs -f --tail=100; \
+	elif [ "$(shell docker compose -f $(COMPOSE_FILE_PROD) ps -q 2>/dev/null)" ]; then \
+		docker compose -f $(COMPOSE_FILE_PROD) logs -f --tail=100; \
 	else \
 		echo "❌ No running containers found"; \
 	fi
@@ -114,10 +114,10 @@ status: ## Show status of all containers
 	@echo "📊 Container Status:"
 	@echo ""
 	@echo "Production Environment:"
-	@docker-compose -f $(COMPOSE_FILE_PROD) ps
+	@docker compose -f $(COMPOSE_FILE_PROD) ps
 	@echo ""
 	@echo "Development Environment:"
-	@docker-compose -f $(COMPOSE_FILE_DEV) ps
+	@docker compose -f $(COMPOSE_FILE_DEV) ps
 
 # Maven Commands
 mvn-clean: ## Clean Maven build artifacts
@@ -157,26 +157,71 @@ ssl-cert: ## Generate SSL certificates
 # Database Migration Commands
 db-migrate: ## Run Flyway migrations
 	@echo "🗄️  Running database migrations..."
-	@SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/flight_db SPRING_DATASOURCE_USERNAME=root SPRING_DATASOURCE_PASSWORD=rootpassword123 ./mvnw flyway:migrate
+	@if [ "$(shell docker compose -f $(COMPOSE_FILE_DEV) ps -q mariadb 2>/dev/null)" ]; then \
+		echo "📍 Using development environment"; \
+		docker compose -f $(COMPOSE_FILE_DEV) --profile migration run --rm migration mvn flyway:migrate; \
+	elif [ "$(shell docker compose -f $(COMPOSE_FILE_PROD) ps -q mariadb 2>/dev/null)" ]; then \
+		echo "📍 Using production environment"; \
+		docker compose -f $(COMPOSE_FILE_PROD) --profile migration run --rm migration mvn flyway:migrate; \
+	else \
+		echo "❌ No MariaDB container found. Please start an environment first with 'make run-dev' or 'make run-prod'"; \
+		exit 1; \
+	fi
 	@echo "✅ Migrations completed"
 
 db-info: ## Show migration status
 	@echo "📊 Database migration status:"
-	@SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/flight_db SPRING_DATASOURCE_USERNAME=root SPRING_DATASOURCE_PASSWORD=rootpassword123 ./mvnw flyway:info
+	@if [ "$(shell docker compose -f $(COMPOSE_FILE_DEV) ps -q mariadb 2>/dev/null)" ]; then \
+		echo "📍 Using development environment"; \
+		docker compose -f $(COMPOSE_FILE_DEV) --profile migration run --rm migration mvn flyway:info; \
+	elif [ "$(shell docker compose -f $(COMPOSE_FILE_PROD) ps -q mariadb 2>/dev/null)" ]; then \
+		echo "📍 Using production environment"; \
+		docker compose -f $(COMPOSE_FILE_PROD) --profile migration run --rm migration mvn flyway:info; \
+	else \
+		echo "❌ No MariaDB container found. Please start an environment first with 'make run-dev' or 'make run-prod'"; \
+		exit 1; \
+	fi
 
 db-clean: ## Clean database (DANGEROUS - will drop all objects)
 	@echo "⚠️  WARNING: This will DROP ALL database objects!"
 	@read -p "Are you sure? Type 'yes' to continue: " confirm && [ "$$confirm" = "yes" ] || exit 1
 	@echo "🧹 Cleaning database..."
-	@SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/flight_db SPRING_DATASOURCE_USERNAME=root SPRING_DATASOURCE_PASSWORD=rootpassword123 ./mvnw flyway:clean
+	@if [ "$(shell docker compose -f $(COMPOSE_FILE_DEV) ps -q mariadb 2>/dev/null)" ]; then \
+		echo "📍 Using development environment"; \
+		docker compose -f $(COMPOSE_FILE_DEV) --profile migration run --rm migration mvn flyway:clean; \
+	elif [ "$(shell docker compose -f $(COMPOSE_FILE_PROD) ps -q mariadb 2>/dev/null)" ]; then \
+		echo "📍 Using production environment"; \
+		docker compose -f $(COMPOSE_FILE_PROD) --profile migration run --rm migration mvn flyway:clean; \
+	else \
+		echo "❌ No MariaDB container found. Please start an environment first"; \
+		exit 1; \
+	fi
 	@echo "✅ Database cleaned"
 
 db-validate: ## Validate migrations
 	@echo "✅ Validating migrations..."
-	@SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/flight_db SPRING_DATASOURCE_USERNAME=root SPRING_DATASOURCE_PASSWORD=rootpassword123 ./mvnw flyway:validate
+	@if [ "$(shell docker compose -f $(COMPOSE_FILE_DEV) ps -q mariadb 2>/dev/null)" ]; then \
+		echo "📍 Using development environment"; \
+		docker compose -f $(COMPOSE_FILE_DEV) --profile migration run --rm migration mvn flyway:validate; \
+	elif [ "$(shell docker compose -f $(COMPOSE_FILE_PROD) ps -q mariadb 2>/dev/null)" ]; then \
+		echo "📍 Using production environment"; \
+		docker compose -f $(COMPOSE_FILE_PROD) --profile migration run --rm migration mvn flyway:validate; \
+	else \
+		echo "❌ No MariaDB container found. Please start an environment first"; \
+		exit 1; \
+	fi
 	@echo "✅ Validation completed"
 
 db-repair: ## Repair Flyway schema history
 	@echo "🔧 Repairing Flyway schema history..."
-	@SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/flight_db SPRING_DATASOURCE_USERNAME=root SPRING_DATASOURCE_PASSWORD=rootpassword123 ./mvnw flyway:repair
+	@if [ "$(shell docker compose -f $(COMPOSE_FILE_DEV) ps -q mariadb 2>/dev/null)" ]; then \
+		echo "📍 Using development environment"; \
+		docker compose -f $(COMPOSE_FILE_DEV) --profile migration run --rm migration mvn flyway:repair; \
+	elif [ "$(shell docker compose -f $(COMPOSE_FILE_PROD) ps -q mariadb 2>/dev/null)" ]; then \
+		echo "📍 Using production environment"; \
+		docker compose -f $(COMPOSE_FILE_PROD) --profile migration run --rm migration mvn flyway:repair; \
+	else \
+		echo "❌ No MariaDB container found. Please start an environment first"; \
+		exit 1; \
+	fi
 	@echo "✅ Repair completed"
