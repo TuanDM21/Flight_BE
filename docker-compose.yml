@@ -13,36 +13,45 @@ services:
     networks:
       - airport-network
     depends_on:
-      mysql:
+      mariadb:
         condition: service_healthy
     restart: unless-stopped
 
-  mysql:
-    image: mysql:8.4
-    container_name: flight-mysql-prod
+  migration:
+    image: maven:3.9-eclipse-temurin-17
+    container_name: flight-migration-prod
+    working_dir: /app
+    volumes:
+      - .:/app
+      - ~/.m2:/root/.m2
     env_file:
       - .env
     environment:
+      MYSQL_ROOT_PASSWORD: "${SPRING_DATASOURCE_PASSWORD}"
+      MYSQL_DATABASE: "${MYSQL_DATABASE}"
+      MYSQL_USER: "${SPRING_DATASOURCE_USERNAME}"
+      MYSQL_PASSWORD: "${SPRING_DATASOURCE_PASSWORD}"
       MYSQL_ROOT_HOST: "%"
-      MYSQL_CHARACTER_SET_SERVER: utf8mb4
-      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
+    networks:
+      - airport-network
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    profiles:
+      - migration
+
+  mariadb:
+    image: mariadb:11.4
+    container_name: flight-mariadb-prod
+    env_file:
+      - .env
     ports:
       - "3306:3306"
     volumes:
-      - mysql_data_prod:/var/lib/mysql
-    command: --mysql-native-password=ON --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+      - mariadb_data_prod:/var/lib/mysql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --max_allowed_packet=256M
     healthcheck:
-      test:
-        [
-          "CMD",
-          "mysqladmin",
-          "ping",
-          "-h",
-          "localhost",
-          "-u",
-          "root",
-          "-p${SPRING_DATASOURCE_PASSWORD}",
-        ]
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -51,7 +60,7 @@ services:
     restart: unless-stopped
 
 volumes:
-  mysql_data_prod:
+  mariadb_data_prod:
 
 networks:
   airport-network:
