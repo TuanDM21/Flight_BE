@@ -299,7 +299,7 @@ public class TaskController {
             +
             "📋 PERMISSION LOGIC: " +
             "• ADMIN/DIRECTOR/VICE_DIRECTOR: Xem TẤT CẢ tasks trong hệ thống " +
-            "• Các role khác: Chỉ xem tasks của TEAM mình " +
+            "• Các role khác: Xem tasks của TEAM + tasks của các UNIT thuộc team đó " +
             "🎯 STATUS FILTER: IN_PROGRESS, COMPLETED, OVERDUE " +
             "🔍 KEYWORD SEARCH: Tìm kiếm trong 5 fields - ID, title, content, instructions, notes " +
             "⚡ ADVANCED FILTERS: priorities (LOW/NORMAL/HIGH/URGENT), time range (yyyy-MM-dd) " +

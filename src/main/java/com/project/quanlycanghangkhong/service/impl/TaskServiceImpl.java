@@ -399,6 +399,11 @@ public class TaskServiceImpl implements TaskService {
                     "TEAM_LEAD".equals(currentUser.getRole().getRoleName()) &&
                     currentUser.getTeam() != null) {
                     receivedTasks.addAll(taskRepository.findReceivedTasksByTeamId(currentUser.getTeam().getId()));
+                    // Also add tasks assigned to units under this team
+                    List<Unit> unitsInTeam = unitRepository.findByTeam_Id(currentUser.getTeam().getId());
+                    for (Unit unit : unitsInTeam) {
+                        receivedTasks.addAll(taskRepository.findReceivedTasksByUnitId(unit.getId()));
+                    }
                 }
                 
                 if (currentUser.getRole() != null && 
@@ -846,6 +851,11 @@ public class TaskServiceImpl implements TaskService {
                     "TEAM_LEAD".equals(currentUser.getRole().getRoleName()) &&
                     currentUser.getTeam() != null) {
                     receivedTasks.addAll(taskRepository.findReceivedTasksByTeamId(currentUser.getTeam().getId()));
+                    // Also add tasks assigned to units under this team
+                    List<Unit> unitsInTeam = unitRepository.findByTeam_Id(currentUser.getTeam().getId());
+                    for (Unit unit : unitsInTeam) {
+                        receivedTasks.addAll(taskRepository.findReceivedTasksByUnitId(unit.getId()));
+                    }
                 }
                 
                 // Add unit tasks if user is unit lead
@@ -915,6 +925,11 @@ public class TaskServiceImpl implements TaskService {
                     "TEAM_LEAD".equals(currentUser.getRole().getRoleName()) &&
                     currentUser.getTeam() != null) {
                     receivedTasks.addAll(taskRepository.findReceivedTasksByTeamId(currentUser.getTeam().getId()));
+                    // Also add tasks assigned to units under this team
+                    List<Unit> unitsInTeam = unitRepository.findByTeam_Id(currentUser.getTeam().getId());
+                    for (Unit unit : unitsInTeam) {
+                        receivedTasks.addAll(taskRepository.findReceivedTasksByUnitId(unit.getId()));
+                    }
                 }
                 
                 if (currentUser.getRole() != null && 
@@ -1029,6 +1044,11 @@ public class TaskServiceImpl implements TaskService {
                     "TEAM_LEAD".equals(currentUser.getRole().getRoleName()) &&
                     currentUser.getTeam() != null) {
                     receivedTasks.addAll(taskRepository.findReceivedTasksByTeamId(currentUser.getTeam().getId()));
+                    // Also add tasks assigned to units under this team
+                    List<Unit> unitsInTeam = unitRepository.findByTeam_Id(currentUser.getTeam().getId());
+                    for (Unit unit : unitsInTeam) {
+                        receivedTasks.addAll(taskRepository.findReceivedTasksByUnitId(unit.getId()));
+                    }
                 }
                 
                 if (currentUser.getRole() != null && 
@@ -1107,6 +1127,11 @@ public class TaskServiceImpl implements TaskService {
                     "TEAM_LEAD".equals(currentUser.getRole().getRoleName()) &&
                     currentUser.getTeam() != null) {
                     receivedTasks.addAll(taskRepository.findReceivedTasksByTeamId(currentUser.getTeam().getId()));
+                    // Also add tasks assigned to units under this team
+                    List<Unit> unitsInTeam = unitRepository.findByTeam_Id(currentUser.getTeam().getId());
+                    for (Unit unit : unitsInTeam) {
+                        receivedTasks.addAll(taskRepository.findReceivedTasksByUnitId(unit.getId()));
+                    }
                 }
                 
                 if (currentUser.getRole() != null && 
@@ -1679,10 +1704,9 @@ public class TaskServiceImpl implements TaskService {
             totalCount = 0;
         }
         
-        // ✅ Apply status filter using TaskStatusMapper
-        if (status != null && !status.trim().isEmpty()) {
-            java.util.function.Predicate<Task> statusFilter = 
-                com.project.quanlycanghangkhong.util.TaskStatusMapper.getStatusFilter(status);
+        // ✅ Apply status filter cho type=assigned và type=received using TaskStatusMapper
+        if (type.matches("assigned|received") && status != null && !status.trim().isEmpty()) {
+            java.util.function.Predicate<Task> statusFilter = com.project.quanlycanghangkhong.util.TaskStatusMapper.getStatusFilter(status);
             tasks = tasks.stream()
                 .filter(statusFilter)
                 .collect(java.util.stream.Collectors.toList());
@@ -2047,11 +2071,23 @@ public class TaskServiceImpl implements TaskService {
     }
     
     /**
-     * Get team tasks (only tasks assigned TO the team)
+     * Get team tasks (tasks assigned TO the team AND to units under the team)
      */
     private List<Task> getTeamTasks(User currentUser) {
         if (currentUser.getTeam() != null) {
-            return taskRepository.findReceivedTasksByTeamId(currentUser.getTeam().getId());
+            List<Task> teamTasks = new ArrayList<>();
+            
+            // Add tasks assigned directly to the team
+            teamTasks.addAll(taskRepository.findReceivedTasksByTeamId(currentUser.getTeam().getId()));
+            
+            // Add tasks assigned to units under this team
+            List<Unit> unitsInTeam = unitRepository.findByTeam_Id(currentUser.getTeam().getId());
+            for (Unit unit : unitsInTeam) {
+                teamTasks.addAll(taskRepository.findReceivedTasksByUnitId(unit.getId()));
+            }
+            
+            // Remove duplicates using stream distinct
+            return teamTasks.stream().distinct().collect(java.util.stream.Collectors.toList());
         }
         return List.of();
     }
@@ -2081,6 +2117,11 @@ public class TaskServiceImpl implements TaskService {
                 receivedTasks.addAll(taskRepository.findReceivedTasksByUserId(userId));
                 if (teamId != null) {
                     receivedTasks.addAll(taskRepository.findReceivedTasksByTeamId(teamId));
+                    // Also add tasks assigned to units under this team
+                    List<Unit> unitsInTeam = unitRepository.findByTeam_Id(teamId);
+                    for (Unit unit : unitsInTeam) {
+                        receivedTasks.addAll(taskRepository.findReceivedTasksByUnitId(unit.getId()));
+                    }
                 }
                 if (unitId != null) {
                     receivedTasks.addAll(taskRepository.findReceivedTasksByUnitId(unitId));
@@ -2102,6 +2143,4 @@ public class TaskServiceImpl implements TaskService {
         
         return allTasks.size();
     }
-    
-    // ...existing code...
 }

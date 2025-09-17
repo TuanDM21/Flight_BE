@@ -35,7 +35,7 @@ import java.util.ArrayList;
 public class AzurePreSignedUrlServiceImpl implements AzurePreSignedUrlService {
     
     private static final Logger logger = LoggerFactory.getLogger(AzurePreSignedUrlServiceImpl.class);
-    
+        
     @Value("${AZURE_STORAGE_CONNECTION_STRING}")
     private String connectionString;
     
