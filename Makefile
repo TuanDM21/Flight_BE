@@ -42,6 +42,17 @@ help: ## Show this help message
 	@echo "🔐 SSL Commands:"
 	@echo "  make ssl-cert    - Generate SSL certificates"
 	@echo ""
+	@echo "🚀 CI/CD Commands:"
+	@echo "  make setup-ssh   - Generate SSH keys for deployment"
+	@echo "  make test-cicd   - Test CI/CD pipeline locally"
+	@echo "  make deploy-prod - Deploy to production locally"
+	@echo "  make backup-db   - Create database backup"
+	@echo "  make health-check- Check application health"
+	@echo "  make logs-prod   - Show production logs"
+	@echo "  make restart-prod- Restart production services"
+	@echo "  make stop-prod   - Stop production services"
+	@echo "  make clean-prod  - Clean production environment"
+	@echo ""
 
 # Docker Commands
 build: ## Build all Docker images
@@ -225,3 +236,68 @@ db-repair: ## Repair Flyway schema history
 		exit 1; \
 	fi
 	@echo "✅ Repair completed"
+
+# CI/CD Commands
+setup-ssh: ## Generate SSH keys for CI/CD deployment
+	@echo "🔐 Generating SSH keys for CI/CD..."
+	@chmod +x scripts/generate-ssh-keys.sh
+	@./scripts/generate-ssh-keys.sh
+
+test-cicd: ## Test CI/CD pipeline locally
+	@echo "🧪 Testing CI/CD pipeline locally..."
+	@chmod +x scripts/test-cicd.sh
+	@./scripts/test-cicd.sh
+
+deploy-prod: ## Deploy to production (local testing)
+	@echo "🚀 Deploying to production..."
+	@if [ ! -f .env.production ]; then \
+		echo "❌ .env.production file not found! Please create it."; \
+		exit 1; \
+	fi
+	@cp .env.production .env
+	@docker compose down
+	@docker compose up -d --build
+	@docker compose --profile migration run --rm migration mvn flyway:migrate
+	@echo "✅ Production deployment completed"
+
+backup-db: ## Create database backup
+	@echo "💾 Creating database backup..."
+	@TIMESTAMP=$(shell date +%Y%m%d_%H%M%S)
+	@mkdir -p backups/$$TIMESTAMP
+	@if [ "$(shell docker compose ps -q mariadb 2>/dev/null)" ]; then \
+		docker compose exec mariadb mysqldump -u root -p"$$MYSQL_ROOT_PASSWORD" airport_db > backups/$$TIMESTAMP/backup.sql; \
+		echo "✅ Database backup created: backups/$$TIMESTAMP/backup.sql"; \
+	else \
+		echo "❌ MariaDB container not running"; \
+		exit 1; \
+	fi
+
+health-check: ## Check application health
+	@echo "🏥 Checking application health..."
+	@if curl -f http://localhost:8080/actuator/health 2>/dev/null; then \
+		echo "✅ Application is healthy"; \
+	else \
+		echo "❌ Application is not responding"; \
+		exit 1; \
+	fi
+
+logs-prod: ## Show production logs
+	@echo "📋 Showing production logs..."
+	@docker compose logs -f --tail=100
+
+restart-prod: ## Restart production services
+	@echo "🔄 Restarting production services..."
+	@docker compose restart
+	@echo "✅ Production services restarted"
+
+stop-prod: ## Stop production services
+	@echo "🛑 Stopping production services..."
+	@docker compose down
+	@echo "✅ Production services stopped"
+
+clean-prod: ## Clean production environment
+	@echo "🧹 Cleaning production environment..."
+	@docker compose down -v --remove-orphans
+	@docker system prune -f
+	@docker volume prune -f
+	@echo "✅ Production environment cleaned"

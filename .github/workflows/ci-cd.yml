@@ -1,0 +1,178 @@
+name: CI/CD Pipeline (Backend)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-push:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image-tags: ${{ steps.meta.outputs.tags }}
+      first-tag: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🏷️ Set custom tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "custom_tag=manual-$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
+          else
+            echo "custom_tag=latest-$(date +%Y%m%d)" >> $GITHUB_OUTPUT
+          fi
+
+      - name: ⚙️ Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🔐 Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🧩 Extract metadata (tags)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=${{ steps.tag.outputs.custom_tag }}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: 🐳 Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    environment: production
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: 📥 Checkout (for docker-compose.yml)
+        uses: actions/checkout@v4
+
+      - name: 💾 Pull and compress image (specific tag)
+        run: |
+          IMAGE="${{ needs.build-and-push.outputs.first-tag }}"
+          echo "📥 Pulling specific image: $IMAGE"
+          docker pull "$IMAGE"
+          echo "📦 Compressing image..."
+          docker save "$IMAGE" | gzip > image.tar.gz
+
+      - name: 📤 Copy to VPS
+        uses: appleboy/scp-action@v1.0.4
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          source: "image.tar.gz"
+          target: "${{ vars.DEPLOY_PATH || '/app' }}"
+
+      - name: 🚀 Deploy with validation & rollback
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            #!/bin/bash
+            set -e
+
+            DEPLOY_PATH="${{ vars.DEPLOY_PATH || '/app' }}"
+            cd "$DEPLOY_PATH"
+
+            # Load new image
+            echo "🖼️ Loading new image..."
+            gunzip -c image.tar.gz | docker load
+
+            # Get image name (from loaded image)
+            IMAGE_NAME="${{ needs.build-and-push.outputs.first-tag }}"
+
+            # Validate: run for 5s
+            echo "🧪 Validating image..."
+            CONTAINER_ID=$(docker run -d --rm "$IMAGE_NAME")
+            sleep 5
+            if ! docker ps -q --no-trunc | grep -q "$CONTAINER_ID"; then
+              echo "❌ Validation failed: container crashed"
+              docker rm -f "$CONTAINER_ID" 2>/dev/null || true
+              exit 1
+            fi
+            docker kill "$CONTAINER_ID" 2>/dev/null || true
+            echo "✅ Validation passed."
+
+            # Save current image for rollback
+            OLD_IMAGE=""
+            if docker compose ps -q | grep -q .; then
+              SERVICE_NAME=$(docker compose config --services | head -1)
+              [ -n "$SERVICE_NAME" ] && OLD_IMAGE=$(docker compose images "$SERVICE_NAME" | tail -1 | awk '{print $2}')
+              [ -n "$OLD_IMAGE" ] && echo "🔁 Rollback candidate: $OLD_IMAGE"
+            fi
+
+            # Deploy
+            echo "🔄 Updating docker compose to use new image..."
+            # Replace image: line for first service (adjust if needed)
+            SERVICE_NAME=$(docker compose config --services | head -1)
+            if [ -n "$SERVICE_NAME" ]; then
+              sed -i "s|^\(\s*\)image:\s*.*|\\1image: $IMAGE_NAME|g" docker-compose.yml
+            fi
+
+            echo "⏹️ Stopping services..."
+            docker compose down --remove-orphans || true
+
+            set +e
+            echo "🚀 Starting services..."
+            docker compose up -d
+            EXIT_CODE=$?
+            set -e
+
+            if [ $EXIT_CODE -ne 0 ]; then
+              echo "❌ Deployment failed."
+
+              if [ -n "$OLD_IMAGE" ]; then
+                echo "🔄 Rolling back to: $OLD_IMAGE"
+                sed -i "s|^\(\s*\)image:\s*.*|\\1image: $OLD_IMAGE|g" docker-compose.yml
+                docker compose up -d
+                echo "✅ Rollback succeeded."
+              else
+                echo "⚠️ No rollback candidate."
+              fi
+
+              exit $EXIT_CODE
+            fi
+
+            # Run migrations
+            echo "⏳ Running Flyway migrations (safe to run always)..."
+            docker compose --profile migration run --rm migration mvn flyway:migrate
+            echo "✅ Flyway migration completed (no-op if no new scripts)."
+
+            # Cleanup
+            rm -f image.tar.gz
+            docker image prune -f
+
+            echo "✅ Deployment completed successfully."

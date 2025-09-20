@@ -1,11 +1,9 @@
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/tuandm21/backendquanlycanghangkhong:latest
     container_name: flight-app-prod
     ports:
-      - "8080:8080"
+      - "${SERVER_PORT}:${SERVER_PORT}"
     env_file:
       - .env
     environment:
@@ -16,6 +14,13 @@ services:
       mariadb:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test:
+        ["CMD", "curl", "-f", "http://localhost:${SERVER_PORT}/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   migration:
     image: maven:3.9-eclipse-temurin-17
@@ -39,10 +44,18 @@ services:
     container_name: flight-mariadb-prod
     env_file:
       - .env
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-airport_db}
+      - MYSQL_USER=${MYSQL_USER:-app_user}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-app_password}
+      - MYSQL_CHARACTER_SET_SERVER=${MYSQL_CHARACTER_SET_SERVER:-utf8mb4}
+      - MYSQL_COLLATION_SERVER=${MYSQL_COLLATION_SERVER:-utf8mb4_unicode_ci}
     ports:
-      - "3306:3306"
+      - "${MYSQL_PORT:-3306}:3306"
     volumes:
       - mariadb_data_prod:/var/lib/mysql
+      - ./db/migration:/docker-entrypoint-initdb.d
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --max_allowed_packet=256M
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
