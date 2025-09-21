@@ -85,4 +85,13 @@ public class GlobalExceptionHandler {
 				ex.getMessage());
 		return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
 	}
+
+	@ExceptionHandler(org.springframework.web.servlet.NoHandlerFoundException.class)
+	public ResponseEntity<ApiResponseCustom<Object>> handleNoHandlerFound(
+			org.springframework.web.servlet.NoHandlerFoundException ex) {
+		ApiResponseCustom<Object> response = ApiResponseCustom.error(
+				HttpStatus.NOT_FOUND,
+				"Endpoint không tồn tại: " + ex.getRequestURL());
+		return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+	}
 }

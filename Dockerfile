@@ -38,7 +38,7 @@ RUN chown spring:spring app.jar
 # Switch to non-root user
 USER spring
 
-# Configure JVM for production with better memory management
+# Configure JVM for production with better memory management and faster startup
 ENV JAVA_OPTS="-server \
     -Xms256m \
     -Xmx512m \
@@ -49,6 +49,12 @@ ENV JAVA_OPTS="-server \
     -XX:+OptimizeStringConcat \
     -XX:+UseCompressedOops \
     -XX:+UseCompressedClassPointers \
+    -XX:+TieredCompilation \
+    -XX:TieredStopAtLevel=1 \
+    -XX:+UnlockExperimentalVMOptions \
+    -XX:+UseContainerSupport \
+    -XX:+DisableAttachMechanism \
+    -Xshare:auto \
     -Djava.security.egd=file:/dev/./urandom \
     -Dspring.profiles.active=prod"
 

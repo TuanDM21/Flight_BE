@@ -8,8 +8,10 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -24,6 +26,7 @@ import java.io.IOException;
 
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "spring.main.web-application-type", havingValue = "servlet", matchIfMissing = true)
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 	private final JwtTokenProvider jwtTokenProvider;
@@ -32,7 +35,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
 	@Override
-	protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+	protected boolean shouldNotFilter(@NonNull HttpServletRequest request) throws ServletException {
 		String path = request.getRequestURI();
 
 		return path.equals("/") ||
@@ -49,9 +52,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 	@Override
 	protected void doFilterInternal(
-			HttpServletRequest request,
-			HttpServletResponse response,
-			FilterChain filterChain) throws ServletException, IOException {
+			@NonNull HttpServletRequest request,
+			@NonNull HttpServletResponse response,
+			@NonNull FilterChain filterChain) throws ServletException, IOException {
 
 		final String authHeader = request.getHeader("Authorization");
 
@@ -59,10 +62,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 		log.info("Authorization Header: {}", authHeader);
 
 		// Không có header Authorization hoặc không đúng format
+		// Thay vì trả về 401 ngay lập tức, hãy để Spring Security xử lý
 		if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-			log.error("Missing or invalid Authorization header");
-			sendUnauthorizedError(response,
-					"Thiếu header Authorization hoặc định dạng không hợp lệ. Vui lòng đăng nhập.");
+			filterChain.doFilter(request, response);
 			return;
 		}
 
@@ -82,16 +84,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 					authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 					SecurityContextHolder.getContext().setAuthentication(authToken);
 				} else {
-					sendUnauthorizedError(response, "Token không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.");
-					return;
+					log.warn("Invalid or expired token, continuing without authentication");
 				}
 			} else {
-				sendUnauthorizedError(response, "Không tìm thấy thông tin xác thực. Vui lòng đăng nhập.");
-				return;
+				log.warn("No user found or authentication already exists, continuing without authentication");
 			}
 		} catch (Exception e) {
-			sendUnauthorizedError(response, "Lỗi xử lý token. Vui lòng thử lại.");
-			return;
+			log.error("Error processing JWT token: {}", e.getMessage());
+			// Tiếp tục filter chain thay vì trả về lỗi
 		}
 
 		filterChain.doFilter(request, response);

@@ -1,0 +1,310 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: main
+  cancel-in-progress: true
+
+jobs:
+  build-and-push:
+    name: Build and Push App Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image-tags: ${{ steps.meta.outputs.tags }}
+      first-tag: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🏷️ Set custom tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "custom_tag=manual-$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
+          else
+            echo "custom_tag=latest-$(date +%Y%m%d)" >> $GITHUB_OUTPUT
+          fi
+
+      - name: ⚙️ Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🔐 Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🧩 Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/tuandm21/backendquanlycanghangkhong
+          tags: |
+            type=raw,value=${{ steps.tag.outputs.custom_tag }}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: 🐳 Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    environment: production
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 💾 Pull and compress app image
+        run: |
+          IMAGE="${{ needs.build-and-push.outputs.first-tag }}"
+          echo "📥 Pulling app image: $IMAGE"
+          docker pull "$IMAGE"
+          echo "📦 Compressing image..."
+          docker save "$IMAGE" | gzip > app-image.tar.gz
+
+      - name: 🔍 Verify files before SCP
+        run: |
+          echo "📋 Verifying files exist:"
+          ls -la app-image.tar.gz
+          ls -la docker-compose.yml
+          echo "📏 File sizes:"
+          du -h app-image.tar.gz docker-compose.yml
+
+      - name: 📤 Copy to VPS
+        uses: appleboy/scp-action@v1.0.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          source: "app-image.tar.gz,docker-compose.yml"
+          target: "${{ vars.DEPLOY_PATH }}"
+
+      - name: 🚀 Deploy App Only
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT  }}
+          script: |
+            #!/bin/bash
+            set -e
+
+            echo "🔧 Starting deployment script..."
+            echo "📍 Current directory: $(pwd)"
+            echo "👤 Current user: $(whoami)"
+
+            # Navigate to deployment directory first
+            DEPLOY_PATH="${{ vars.DEPLOY_PATH }}"
+            echo "📁 Navigating to: $DEPLOY_PATH"
+            cd "$DEPLOY_PATH"
+
+            # Load new APP image
+            echo "🔄️ Loading new app image..."
+            gunzip -c app-image.tar.gz | docker load
+            NEW_APP_IMAGE="${{ needs.build-and-push.outputs.first-tag }}"
+
+            # � Verify .env file exists (created manually on VPS)
+            echo "� Checking for production .env file..."
+            if [ ! -f .env ]; then
+              echo "❌ Error: .env file not found!"
+              echo "💡 Please create .env file manually on VPS at: $DEPLOY_PATH/.env"
+              echo "📝 Use the .env.example from the repository as a template"
+              exit 1
+            fi
+            echo "✅ Production .env file found"
+
+            # 🔄 Save current APP image for rollback
+            OLD_APP_IMAGE=""
+            if docker compose config --services | grep -q "app"; then
+              OLD_APP_IMAGE=$(docker compose images app 2>/dev/null | tail -1 | awk '{print $2}' || true)
+              if [ -n "$OLD_APP_IMAGE" ]; then
+                echo "🔁 Saved rollback candidate (APP only): $OLD_APP_IMAGE"
+              fi
+            fi
+
+            # 🛠️ Update app and migration images in compose file
+            echo "📝 Updating images in docker-compose.yml..."
+            sed -i "s|^\(\s*\)image:\s*flight-mnm-backend:.*|\\1image: $NEW_APP_IMAGE|g" docker-compose.yml
+
+            # 🛑 Stop app container
+            echo "⏹️ Stopping app container..."
+            docker compose stop app 2>/dev/null || true
+
+            # 🔄 Run migration using migration service
+            echo "⏳ Running Flyway migrations..."
+            echo "🔍 Checking migration service exists..."
+            if docker compose config --services | grep -q "migration"; then
+              echo "✅ Migration service found"
+              docker compose --profile migration run --rm migration \
+                java -jar app.jar --spring.profiles.active=migration
+              echo "✅ Migration completed."
+            else
+              echo "⚠️ Migration service not found, skipping..."
+            fi
+
+            # 🚀 Start app container
+            echo "🚀 Starting app container..."
+            echo "🔍 Available services:"
+            docker compose config --services
+
+            set +e
+            docker compose up -d app
+            EXIT_CODE=$?
+            set -e
+
+            echo "📊 App container start exit code: $EXIT_CODE"
+
+            if [ $EXIT_CODE -ne 0 ]; then
+              echo "❌ App failed to start."
+
+                # 🔄 Rollback APP
+                if [ -n "$OLD_APP_IMAGE" ]; then
+                  echo "🔄 Rolling back APP to: $OLD_APP_IMAGE"
+                  sed -i "s|^\(\s*\)image:\s*[^[:space:]]*|\\1image: $OLD_APP_IMAGE|g" docker-compose.yml
+                  docker compose up -d app
+                  echo "✅ App rollback completed."
+                else
+                  echo "⚠️ No rollback candidate for app."
+                fi
+                exit $EXIT_CODE
+            fi
+
+            # 🔍 Verify deployment health
+            echo "🔍 Verifying deployment health..."
+            SERVER_PORT=${{ vars.SERVER_PORT || '8080' }}
+            HEALTH_CHECK_RETRIES=12
+            HEALTH_CHECK_INTERVAL=10
+            STARTUP_GRACE_PERIOD=30
+
+            echo "🔍 Checking app container status first..."
+            docker compose ps app
+
+            echo "🔍 Checking initial app logs..."
+            docker compose logs --tail=20 app
+
+            echo "⏳ Waiting for application startup (${STARTUP_GRACE_PERIOD}s grace period)..."
+            sleep $STARTUP_GRACE_PERIOD
+
+            echo "🩺 Starting health checks (${HEALTH_CHECK_RETRIES} attempts, ${HEALTH_CHECK_INTERVAL}s interval)..."
+            for i in $(seq 1 $HEALTH_CHECK_RETRIES); do
+              echo "⏳ Health check attempt $i/$HEALTH_CHECK_RETRIES..."
+
+              # Check if container is still running
+              if ! docker compose ps app | grep -q "Up"; then
+                echo "❌ App container is not running!"
+                echo "🔍 Container status:"
+                docker compose ps app
+                echo "🔍 Recent logs:"
+                docker compose logs --tail=50 app
+                exit 1
+              fi
+
+              # Try health check endpoint
+              echo "🩺 Checking health endpoint: http://localhost:${SERVER_PORT}/health"
+              set +e
+              HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://localhost:${SERVER_PORT}/health)
+              CURL_EXIT_CODE=$?
+              set -e
+
+              echo "📊 HTTP Status: $HTTP_STATUS, Curl exit code: $CURL_EXIT_CODE"
+
+              if [ $CURL_EXIT_CODE -eq 0 ] && [ "$HTTP_STATUS" = "200" ]; then
+                echo "✅ Application is healthy! (HTTP 200)"
+                # Get the actual response for logging
+                HEALTH_RESPONSE=$(curl -s --max-time 5 http://localhost:${SERVER_PORT}/health 2>/dev/null || echo "Could not fetch response")
+                echo "🩺 Health check response: $HEALTH_RESPONSE"
+                break
+              else
+                echo "⚠️ Health check failed - HTTP: $HTTP_STATUS, Curl: $CURL_EXIT_CODE"
+                if [ $CURL_EXIT_CODE -ne 0 ]; then
+                  echo "� Connection error - application may still be starting up"
+                fi
+              fi
+
+              if [ $i -eq $HEALTH_CHECK_RETRIES ]; then
+                TOTAL_WAIT_TIME=$((STARTUP_GRACE_PERIOD + HEALTH_CHECK_RETRIES * HEALTH_CHECK_INTERVAL))
+                echo "❌ Health check failed after $HEALTH_CHECK_RETRIES attempts (${TOTAL_WAIT_TIME}s total)"
+                echo "🔍 Final container status:"
+                docker compose ps app
+                echo "🔍 Final app logs:"
+                docker compose logs --tail=100 app
+                echo "🔍 System resources:"
+                df -h
+                free -m
+
+                echo "🩺 Manual health check attempts:"
+                echo "🔗 Testing health endpoint..."
+                curl -v http://localhost:${SERVER_PORT}/health || true
+                echo ""
+                echo "🔗 Testing root endpoint..."
+                curl -v http://localhost:${SERVER_PORT}/ || true
+                echo ""
+                echo "🔗 Port connectivity test..."
+                nc -zv localhost ${SERVER_PORT} || true
+
+                # Trigger rollback on health check failure
+                if [ -n "$OLD_APP_IMAGE" ]; then
+                  echo "🔄 Rolling back due to health check failure..."
+                  sed -i "s|^\(\s*\)image:\s*[^[:space:]]*|\\1image: $OLD_APP_IMAGE|g" docker-compose.yml
+                  docker compose up -d app
+                  echo "✅ Rollback completed due to health check failure."
+                fi
+                exit 1
+              fi
+
+              echo "⏳ Waiting for application to be ready... ($i/$HEALTH_CHECK_RETRIES)"
+              sleep $HEALTH_CHECK_INTERVAL
+            done
+
+            # 📊 Display final status
+            echo "📊 Deployment Status:"
+            docker compose ps app
+            echo "🌐 Application URL: http://localhost:${SERVER_PORT}"
+            echo "📋 Health Check: http://localhost:${SERVER_PORT}/health"
+
+            # 🧹 Cleanup old Docker images and containers
+            echo "🧹 Cleaning up Docker resources..."
+            # Remove old images (keep last 3 versions)
+            docker images --format "table {{.Repository}}:{{.Tag}}\t{{.CreatedAt}}" | \
+              grep "ghcr.io/tuandm21/backendquanlycanghangkhong" | \
+              tail -n +4 | \
+              awk '{print $1}' | \
+              xargs -r docker rmi || true
+
+            # Remove unused containers and networks
+            docker container prune -f
+            docker network prune -f
+
+            # Remove build cache older than 7 days
+            docker builder prune --filter until=168h -f
+
+            rm -f app-image.tar.gz
+
+            echo "✅ Deployment completed successfully."
+            echo "🎉 CI/CD Pipeline finished with SUCCESS status"
+
+            # Explicit success exit
+            exit 0

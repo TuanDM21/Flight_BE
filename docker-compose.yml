@@ -1,10 +1,6 @@
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        BUILDKIT_INLINE_CACHE: 1
+    image: flight-mnm-backend:latest
     container_name: flight-app-prod
     ports:
       - "${SERVER_PORT}:${SERVER_PORT}"
@@ -12,6 +8,18 @@ services:
       - .env
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "sh",
+          "-c",
+          "curl -f http://localhost:${SERVER_PORT}/actuator/health || curl -f http://localhost:${SERVER_PORT}/api/public/health",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
     networks:
       - airport-network
     depends_on:
@@ -19,14 +27,13 @@ services:
     restart: unless-stopped
 
   migration:
-    image: maven:3.9-eclipse-temurin-17
+    image: flight-mnm-backend:latest
     container_name: flight-migration-prod
     working_dir: /app
-    volumes:
-      - .:/app
-      - maven_cache_prod:/root/.m2
     env_file:
       - .env
+    environment:
+      - SPRING_PROFILES_ACTIVE=migration
     networks:
       - airport-network
     depends_on:

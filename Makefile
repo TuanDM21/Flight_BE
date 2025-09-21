@@ -55,7 +55,7 @@ build: ## Build all Docker images (alias)
 
 build-prod: ## Build production Docker images
 	@echo "🔨 Building production Docker images..."
-	@DOCKER_BUILDKIT=1 docker compose -f $(COMPOSE_FILE_PROD) build
+	@DOCKER_BUILDKIT=1 docker build --network=host --progress=plain -f Dockerfile -t flight-mnm-backend:latest .
 	@echo "✅ Production images built"
 
 build-dev: ## Build development Docker images
