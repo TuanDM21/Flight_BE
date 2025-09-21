@@ -3,9 +3,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        BUILDKIT_INLINE_CACHE: 1
     container_name: flight-app-prod
     ports:
-      - "8080:8080"
+      - "${SERVER_PORT}:${SERVER_PORT}"
     env_file:
       - .env
     environment:
@@ -13,8 +15,7 @@ services:
     networks:
       - airport-network
     depends_on:
-      mariadb:
-        condition: service_healthy
+      - mariadb
     restart: unless-stopped
 
   migration:
@@ -23,14 +24,13 @@ services:
     working_dir: /app
     volumes:
       - .:/app
-      - ~/.m2:/root/.m2
+      - maven_cache_prod:/root/.m2
     env_file:
       - .env
     networks:
       - airport-network
     depends_on:
-      mariadb:
-        condition: service_healthy
+      - mariadb
     profiles:
       - migration
 
@@ -40,21 +40,17 @@ services:
     env_file:
       - .env
     ports:
-      - "3306:3306"
+      - "${MYSQL_PORT}:${MYSQL_PORT}"
     volumes:
       - mariadb_data_prod:/var/lib/mysql
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --max_allowed_packet=256M
-    healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     networks:
       - airport-network
     restart: unless-stopped
 
 volumes:
   mariadb_data_prod:
+  maven_cache_prod:
 
 networks:
   airport-network:

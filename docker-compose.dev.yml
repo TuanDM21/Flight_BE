@@ -20,8 +20,7 @@ services:
     networks:
       - airport-network
     depends_on:
-      mariadb:
-        condition: service_healthy
+      - mariadb
 
   migration:
     image: maven:3.9-eclipse-temurin-17
@@ -29,14 +28,13 @@ services:
     working_dir: /app
     volumes:
       - .:/app
-      - ~/.m2:/root/.m2
+      - maven_cache_dev:/root/.m2
     env_file:
       - .env
     networks:
       - airport-network
     depends_on:
-      mariadb:
-        condition: service_healthy
+      - mariadb
     profiles:
       - migration
 
@@ -46,26 +44,18 @@ services:
     env_file:
       - .env
     environment:
-      MYSQL_ROOT_PASSWORD: "${SPRING_DATASOURCE_PASSWORD}"
-      MYSQL_DATABASE: "${MYSQL_DATABASE}"
-      MYSQL_USER: "${SPRING_DATASOURCE_USERNAME}"
-      MYSQL_PASSWORD: "${SPRING_DATASOURCE_PASSWORD}"
       MYSQL_ROOT_HOST: "%"
     ports:
       - "3306:3306"
     volumes:
       - mariadb_data_dev:/var/lib/mysql
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --max_allowed_packet=256M
-    healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     networks:
       - airport-network
 
 volumes:
   mariadb_data_dev:
+  maven_cache_dev:
 
 networks:
   airport-network:

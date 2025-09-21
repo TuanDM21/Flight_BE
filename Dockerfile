@@ -11,9 +11,12 @@ COPY mvnw .
 # Make mvnw executable
 RUN chmod +x ./mvnw
 
-# Copy source code and build (dependencies will be downloaded automatically)
+# Download dependencies (cached separately from source code)
+RUN --mount=type=cache,target=/root/.m2 ./mvnw dependency:go-offline -B
+
+# Copy source code and build
 COPY src ./src
-RUN ./mvnw clean package -DskipTests -Dspring.profiles.active=prod -B
+RUN --mount=type=cache,target=/root/.m2 ./mvnw clean package -DskipTests -Dspring.profiles.active=prod -B
 
 # Production runtime stage - use JRE instead of JDK
 FROM eclipse-temurin:17-jre AS production

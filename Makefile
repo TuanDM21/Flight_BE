@@ -5,7 +5,7 @@ COMPOSE_FILE_PROD = docker-compose.yml
 COMPOSE_FILE_DEV = docker-compose.dev.yml
 ENV_FILE = .env
 
-.PHONY: help build run-prod run-dev stop down clean logs status restart test mvn-clean mvn-compile mvn-test mvn-package mvn-install ssl-cert db-migrate db-info db-clean db-validate db-repair
+.PHONY: help build build-prod build-dev run-prod run-dev stop down down-prod down-dev clean logs status restart test mvn-clean mvn-compile mvn-test mvn-package mvn-install ssl-cert db-migrate db-info db-clean db-validate db-repair
 
 # Default target
 .DEFAULT_GOAL := help
@@ -14,11 +14,15 @@ help: ## Show this help message
 	@echo "Flight Management System Backend - Available Commands"
 	@echo ""
 	@echo "🚀 Docker Commands:"
-	@echo "  make build       - Build all Docker images"
+	@echo "  make build-prod  - Build production Docker images"
+	@echo "  make build-dev   - Build development Docker images"
+	@echo "  make build       - Build both prod and dev images (alias)"
 	@echo "  make run-prod    - Start production environment"
 	@echo "  make run-dev     - Start development environment"
 	@echo "  make stop        - Stop all containers"
-	@echo "  make down        - Stop and remove containers"
+	@echo "  make down-prod   - Stop and remove production containers"
+	@echo "  make down-dev    - Stop and remove development containers"
+	@echo "  make down        - Stop and remove both (alias)"
 	@echo "  make restart     - Restart all containers"
 	@echo "  make clean       - Clean up containers, images and volumes"
 	@echo "  make logs        - Show logs from all containers"
@@ -44,11 +48,20 @@ help: ## Show this help message
 	@echo ""
 
 # Docker Commands
-build: ## Build all Docker images
-	@echo "🔨 Building Docker images..."
-	@docker compose -f $(COMPOSE_FILE_PROD) build
-	@docker compose -f $(COMPOSE_FILE_DEV) build
+build: ## Build all Docker images (alias)
+	@$(MAKE) build-prod
+	@$(MAKE) build-dev
 	@echo "✅ Docker images built successfully"
+
+build-prod: ## Build production Docker images
+	@echo "🔨 Building production Docker images..."
+	@DOCKER_BUILDKIT=1 docker compose -f $(COMPOSE_FILE_PROD) build
+	@echo "✅ Production images built"
+
+build-dev: ## Build development Docker images
+	@echo "🔨 Building development Docker images..."
+	@docker compose -f $(COMPOSE_FILE_DEV) build
+	@echo "✅ Development images built"
 
 run-prod: ## Start production environment
 	@echo "🚀 Starting Production Environment..."
@@ -80,11 +93,20 @@ stop: ## Stop all containers
 	@docker compose -f $(COMPOSE_FILE_DEV) down
 	@echo "✅ All containers stopped"
 
-down: ## Stop and remove containers
-	@echo "⬇️  Stopping and removing containers..."
-	@docker compose -f $(COMPOSE_FILE_PROD) down --remove-orphans
-	@docker compose -f $(COMPOSE_FILE_DEV) down --remove-orphans
+down: ## Stop and remove containers (alias)
+	@$(MAKE) down-prod
+	@$(MAKE) down-dev
 	@echo "✅ Containers stopped and removed"
+
+down-prod: ## Stop and remove production containers
+	@echo "⬇️  Stopping and removing production containers..."
+	@docker compose -f $(COMPOSE_FILE_PROD) down --remove-orphans
+	@echo "✅ Production containers stopped and removed"
+
+down-dev: ## Stop and remove development containers
+	@echo "⬇️  Stopping and removing development containers..."
+	@docker compose -f $(COMPOSE_FILE_DEV) down --remove-orphans
+	@echo "✅ Development containers stopped and removed"
 
 restart: ## Restart all containers
 	@echo "🔄 Restarting containers..."
