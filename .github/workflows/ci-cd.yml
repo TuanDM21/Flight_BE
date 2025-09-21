@@ -1,0 +1,231 @@
+name: CI/CD Pipeline
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+concurrency:
+  group: main
+  cancel-in-progress: true
+jobs:
+  build-and-push:
+    name: Build and Push App Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      app-tag: ${{ steps.tag.outputs.custom_tag }}
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🏷️ Set custom tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "custom_tag=manual-$(date -u +%Y%m%d-%H%M%S)" >> "$GITHUB_OUTPUT"
+          else
+            echo "custom_tag=main-$(date -u +%Y%m%d)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: ⚙️ Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🔐 Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🧩 Extract metadata (App)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/tuandm21/flight_be
+          tags: |
+            type=raw,value=${{ steps.tag.outputs.custom_tag }}
+
+      - name: 🐳 Build and push APP image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          target: production
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    environment: production
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🗂️ Copy necessary files to VPS
+        uses: appleboy/scp-action@v1.0.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT != '' && secrets.VPS_PORT || 22 }}
+          source: "docker-compose.yml,Dockerfile.migration,scripts/,src/main/resources/db/migration/"
+          target: "${{ vars.DEPLOY_PATH }}"
+
+      - name: 🔧 Setup & Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT != '' && secrets.VPS_PORT || 22 }}
+          script: |
+            #!/bin/bash
+            set -e
+            cd ${{ vars.DEPLOY_PATH }}
+            trap 'docker logout ghcr.io 2>/dev/null || true' EXIT
+
+            # --- 1. Login to GHCR ---
+            echo "🔐 Logging in to GHCR..."
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            # --- 2. Verify & load .env ---
+            if [ ! -f .env ]; then
+              echo "❌ .env not found! Please create it manually at ${{ vars.DEPLOY_PATH }}/.env"
+              exit 1
+            fi
+            export $(grep -v '^#' .env | xargs)
+
+            # --- 3. Save rollback info ---
+            OLD_APP_IMAGE=""
+            if docker compose config --services | grep -q "app"; then
+              OLD_APP_IMAGE=$(docker compose images --format "{{.Repository}}:{{.Tag}}" app 2>/dev/null | head -n1 || true)
+              if [ -n "$OLD_APP_IMAGE" ]; then
+                echo "🔁 Saved rollback candidate: $OLD_APP_IMAGE"
+                echo "OLD_APP_IMAGE=$OLD_APP_IMAGE" > deployment.env
+              fi
+            fi
+
+            # --- 4. Pull new app image ---
+            NEW_IMAGE="ghcr.io/tuandm21/flight_be:${{ needs.build-and-push.outputs.app-tag }}"
+            echo "📥 Pulling new app image: $NEW_IMAGE"
+            docker pull "$NEW_IMAGE"
+
+            # --- 5. Update APP_IMAGE configuration ---
+            if grep -q '^APP_IMAGE=' .env; then
+              sed -i "s|^APP_IMAGE=.*|APP_IMAGE=$NEW_IMAGE|" .env
+            else
+              echo "APP_IMAGE=$NEW_IMAGE" >> .env
+            fi
+            export APP_IMAGE="$NEW_IMAGE"
+            echo "✅ Updated APP_IMAGE to: $NEW_IMAGE"
+
+            # --- 6. Start MariaDB ---
+            echo "🗄️ Starting MariaDB..."
+            docker compose up -d mariadb
+
+            echo "⏳ Waiting for MariaDB to become healthy..."
+            DB_STATUS="starting"
+            for i in {1..24}; do
+              DB_STATUS=$(docker inspect --format '{{.State.Health.Status}}' flight-mariadb-prod 2>/dev/null || echo "unknown")
+              if [ "$DB_STATUS" = "healthy" ]; then
+                echo "✅ MariaDB is healthy!"
+                break
+              fi
+              if [ "$DB_STATUS" = "unhealthy" ]; then
+                echo "❌ MariaDB reported unhealthy state"
+                docker compose logs --no-color --tail=200 mariadb || true
+                exit 1
+              fi
+              echo "⏳ MariaDB status: $DB_STATUS (attempt $i/24)"
+              sleep 5
+            done
+            if [ "$DB_STATUS" != "healthy" ]; then
+              echo "❌ MariaDB failed to reach healthy state in time"
+              docker compose logs --no-color --tail=200 mariadb || true
+              exit 1
+            fi
+
+            # --- 8. Deploy App ---
+            echo "🚀 Starting application..."
+            set +e
+            docker compose up -d app
+            EXIT_CODE=$?
+            set -e
+            if [ $EXIT_CODE -ne 0 ]; then
+              echo "❌ App failed to start"
+              docker compose logs --no-color --tail=200 app || true
+              if [ -f deployment.env ]; then
+                source deployment.env
+                if [ -n "$OLD_APP_IMAGE" ]; then
+                  echo "🔄 Rolling back to: $OLD_APP_IMAGE"
+                  if grep -q '^APP_IMAGE=' .env; then
+                    sed -i "s|^APP_IMAGE=.*|APP_IMAGE=$OLD_APP_IMAGE|" .env
+                  else
+                    echo "APP_IMAGE=$OLD_APP_IMAGE" >> .env
+                  fi
+                  export APP_IMAGE="$OLD_APP_IMAGE"
+                  docker compose up -d app
+                  echo "✅ Rollback completed"
+                fi
+              fi
+              exit 1
+            fi
+
+            # --- 9. Health Check (inside container) ---
+            echo "🩺 Starting health check..."
+            for i in {1..12}; do
+              echo "⏳ Health check attempt $i/12"
+              if docker compose exec -T app curl -sf --max-time 5 "http://localhost:${SERVER_PORT}/health"; then
+                echo "✅ Application is healthy!"
+                exit 0
+              fi
+              sleep 10
+            done
+            echo "❌ Health check failed after 12 attempts"
+            docker compose logs --no-color --tail=200 app || true
+            if [ -f deployment.env ]; then
+              source deployment.env
+              if [ -n "$OLD_APP_IMAGE" ]; then
+                echo "🔄 Rolling back due to health check failure..."
+                if grep -q '^APP_IMAGE=' .env; then
+                  sed -i "s|^APP_IMAGE=.*|APP_IMAGE=$OLD_APP_IMAGE|" .env
+                else
+                  echo "APP_IMAGE=$OLD_APP_IMAGE" >> .env
+                fi
+                export APP_IMAGE="$OLD_APP_IMAGE"
+                docker compose up -d app
+                echo "✅ Rollback completed"
+              fi
+            fi
+            exit 1
+
+      - name: 🧹 Cleanup old images (optional)
+        if: always()
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT != '' && secrets.VPS_PORT || 22 }}
+          script: |
+            #!/bin/bash
+            set -e
+            cd ${{ vars.DEPLOY_PATH }}
+            rm -f deployment.env
+
+            echo "🧹 Cleaning up old app images (keep latest 3)..."
+            docker images "ghcr.io/tuandm21/flight_be" --format "{{.ID}}" | tail -n +4 | xargs -r docker rmi || true
+
+            echo "🧹 Pruning unused Docker objects..."
+            docker container prune -f
+            docker volume prune -f
+            docker network prune -f
+            docker builder prune -af --filter "until=24h"
+            echo "✅ Cleanup completed"

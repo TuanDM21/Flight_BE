@@ -4,8 +4,8 @@ import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
@@ -13,15 +13,20 @@ import java.util.Date;
 
 @Slf4j
 @Component
+@ConditionalOnProperty(name = "spring.main.web-application-type", havingValue = "servlet", matchIfMissing = true)
 public class JwtTokenProvider {
 
-	@Value("${app.jwt-secret}")
+	@Value("${app.jwt-secret:}")
 	private String jwtSecret;
 
-	@Value("${app.jwt-expiration-milliseconds}")
+	@Value("${app.jwt-expiration-milliseconds:86400000}")
 	private int jwtExpirationInMs;
 
 	private Key getSigningKey() {
+		if (jwtSecret == null || jwtSecret.trim().isEmpty()) {
+			throw new IllegalStateException(
+					"JWT secret is not configured. Please set app.jwt-secret in your environment.");
+		}
 		byte[] keyBytes = jwtSecret.getBytes();
 		return Keys.hmacShaKeyFor(keyBytes);
 	}

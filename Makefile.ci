@@ -1,0 +1,193 @@
+# Makefile.ci - Mô phỏng CI/CD deployment steps để test local
+# Usage: make -f Makefile.ci deploy-local IMAGE_TAG=main-20250926
+
+# Variables
+IMAGE_TAG ?= main-$(shell date +%Y%m%d)
+GHCR_IMAGE = ghcr.io/tuandm21/flight_be:$(IMAGE_TAG)
+SERVER_PORT ?= 8080
+ENV_FILE = .env
+
+.PHONY: help build-local deploy-local test-health cleanup-local logs-local
+
+.DEFAULT_GOAL := help
+
+help: ## Show CI/CD simulation commands
+	@echo "🔧 CI/CD Local Simulation Commands"
+	@echo ""
+	@echo "Usage: make -f Makefile.ci <command> IMAGE_TAG=<tag>"
+	@echo ""
+	@echo "Commands:"
+	@echo "  build-local     - Build Docker image locally (simulates GitHub Actions build)"
+	@echo "  deploy-local    - Deploy locally (simulates production deployment)"
+	@echo "  test-health     - Test application health endpoint"
+	@echo "  logs-local      - Show application and database logs"
+	@echo "  cleanup-local   - Clean up local test environment"
+	@echo ""
+	@echo "Examples:"
+	@echo "  make -f Makefile.ci build-local IMAGE_TAG=test-123"
+	@echo "  make -f Makefile.ci deploy-local IMAGE_TAG=test-123"
+	@echo "  make -f Makefile.ci test-health"
+
+build-local: ## Build Docker image locally (simulates GitHub Actions build step)
+	@echo "🏗️  Building Docker image locally..."
+	@echo "📋 Image tag: $(GHCR_IMAGE)"
+
+	# Build for current platform (simulates GitHub runner)
+	docker buildx build \
+		-t $(GHCR_IMAGE) \
+		--target production \
+		--load \
+		.
+
+	@echo "✅ Local build completed: $(GHCR_IMAGE)"
+	@echo "📝 To simulate multi-arch build (like CI): docker buildx build --platform linux/amd64,linux/arm64 ..."
+
+deploy-local: ## Deploy locally (simulates production deployment)
+	@echo "🚀 Starting local deployment simulation..."
+	@echo "📋 Using image: $(GHCR_IMAGE)"
+
+	# Step 1: Verify .env exists
+	@if [ ! -f $(ENV_FILE) ]; then \
+		echo "❌ .env not found! Please create it from .env.example"; \
+		exit 1; \
+	fi
+
+	# Step 2: Load environment variables
+	@echo "🔧 Loading environment variables..."
+	@export $$(grep -v '^#' $(ENV_FILE) | xargs) && \
+	export APP_IMAGE=$(GHCR_IMAGE) && \
+	echo "✅ Environment loaded, APP_IMAGE set to: $$APP_IMAGE"
+
+	# Step 3: Save rollback info (simulate CI step)
+	@echo "💾 Saving rollback information..."
+	@OLD_APP_IMAGE=$$(docker compose images --format "{{.Repository}}:{{.Tag}}" app 2>/dev/null | head -n1 || true); \
+	if [ -n "$$OLD_APP_IMAGE" ]; then \
+		echo "🔁 Saved rollback candidate: $$OLD_APP_IMAGE"; \
+		echo "OLD_APP_IMAGE=$$OLD_APP_IMAGE" > deployment.env; \
+	fi
+
+	# Step 4: Update APP_IMAGE in .env (simulate CI step)
+	@echo "📝 Updating APP_IMAGE in .env..."
+	@if grep -q '^APP_IMAGE=' $(ENV_FILE); then \
+		sed -i.bak "s|^APP_IMAGE=.*|APP_IMAGE=$(GHCR_IMAGE)|" $(ENV_FILE); \
+	else \
+		echo "APP_IMAGE=$(GHCR_IMAGE)" >> $(ENV_FILE); \
+	fi
+	@echo "✅ Updated APP_IMAGE to: $(GHCR_IMAGE)"
+
+	# Step 5: Start MariaDB (simulate CI step)
+	@echo "🗄️  Starting MariaDB..."
+	docker compose up -d mariadb
+
+	# Step 6: Wait for MariaDB health (simulate CI step)
+	@echo "⏳ Waiting for MariaDB to become healthy..."
+	@for i in $$(seq 1 24); do \
+		DB_STATUS=$$(docker inspect --format '{{.State.Health.Status}}' flight-mariadb-prod 2>/dev/null || echo "unknown"); \
+		if [ "$$DB_STATUS" = "healthy" ]; then \
+			echo "✅ MariaDB is healthy!"; \
+			break; \
+		fi; \
+		if [ "$$DB_STATUS" = "unhealthy" ]; then \
+			echo "❌ MariaDB reported unhealthy state"; \
+			docker compose logs --no-color --tail=200 mariadb || true; \
+			exit 1; \
+		fi; \
+		echo "⏳ MariaDB status: $$DB_STATUS (attempt $$i/24)"; \
+		sleep 5; \
+	done
+
+	# Step 7: Deploy App (simulate CI step)
+	@echo "🚀 Starting application..."
+	@export APP_IMAGE=$(GHCR_IMAGE) && \
+	if ! docker compose up -d app; then \
+		echo "❌ App failed to start"; \
+		docker compose logs --no-color --tail=200 app || true; \
+		exit 1; \
+	fi
+
+	@echo "✅ Application deployment completed!"
+	@echo "🔗 Access application at: http://localhost:$(SERVER_PORT)"
+
+test-health: ## Test application health endpoint (simulates CI health check)
+	@echo "🩺 Starting health check simulation..."
+	@export $$(grep -v '^#' $(ENV_FILE) | xargs) && \
+	for i in $$(seq 1 12); do \
+		echo "⏳ Health check attempt $$i/12"; \
+		if docker compose exec -T app curl -sf --max-time 5 "http://localhost:$$SERVER_PORT/health"; then \
+			echo "✅ Application is healthy!"; \
+			exit 0; \
+		fi; \
+		sleep 10; \
+	done; \
+	echo "❌ Health check failed after 12 attempts"; \
+	docker compose logs --no-color --tail=200 app || true; \
+	exit 1
+
+logs-local: ## Show application and database logs
+	@echo "📋 Showing application logs..."
+	docker compose logs --tail=50 app || true
+	@echo ""
+	@echo "📋 Showing MariaDB logs..."
+	docker compose logs --tail=50 mariadb || true
+
+cleanup-local: ## Clean up local test environment
+	@echo "🧹 Cleaning up local test environment..."
+	docker compose down -v || true
+	rm -f deployment.env
+	@if [ -f $(ENV_FILE).bak ]; then \
+		mv $(ENV_FILE).bak $(ENV_FILE); \
+		echo "✅ Restored original .env file"; \
+	fi
+	@echo "✅ Cleanup completed"
+
+# Advanced CI simulation targets
+simulate-full-ci: build-local deploy-local test-health ## Run full CI/CD simulation
+	@echo "🎉 Full CI/CD simulation completed successfully!"
+
+simulate-rollback: ## Simulate rollback scenario
+	@echo "🔄 Simulating rollback scenario..."
+	@if [ -f deployment.env ]; then \
+		source deployment.env; \
+		if [ -n "$$OLD_APP_IMAGE" ]; then \
+			echo "🔄 Rolling back to: $$OLD_APP_IMAGE"; \
+			if grep -q '^APP_IMAGE=' $(ENV_FILE); then \
+				sed -i.bak "s|^APP_IMAGE=.*|APP_IMAGE=$$OLD_APP_IMAGE|" $(ENV_FILE); \
+			else \
+				echo "APP_IMAGE=$$OLD_APP_IMAGE" >> $(ENV_FILE); \
+			fi; \
+			export APP_IMAGE=$$OLD_APP_IMAGE; \
+			docker compose up -d app; \
+			echo "✅ Rollback completed"; \
+		fi; \
+	else \
+		echo "❌ No rollback information found"; \
+	fi
+
+# Debug targets
+debug-env: ## Show current environment configuration
+	@echo "🔍 Current environment configuration:"
+	@echo "IMAGE_TAG: $(IMAGE_TAG)"
+	@echo "GHCR_IMAGE: $(GHCR_IMAGE)"
+	@echo "SERVER_PORT: $(SERVER_PORT)"
+	@echo "ENV_FILE: $(ENV_FILE)"
+	@echo ""
+	@if [ -f $(ENV_FILE) ]; then \
+		echo "📋 .env file contents (filtered):"; \
+		grep -v '^#' $(ENV_FILE) | grep -E '^(SERVER_PORT|MYSQL_|SPRING_|APP_IMAGE)' || true; \
+	else \
+		echo "❌ .env file not found"; \
+	fi
+
+debug-containers: ## Show container status and health
+	@echo "🐳 Container status:"
+	docker ps -a --filter "name=flight-" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+	@echo ""
+	@echo "🏥 Health status:"
+	@for container in flight-mariadb-prod flight-app-prod; do \
+		if docker inspect $$container >/dev/null 2>&1; then \
+			HEALTH=$$(docker inspect --format '{{.State.Health.Status}}' $$container 2>/dev/null || echo "no-healthcheck"); \
+			echo "$$container: $$HEALTH"; \
+		else \
+			echo "$$container: not-found"; \
+		fi; \
+	done

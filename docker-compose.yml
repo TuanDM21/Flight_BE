@@ -1,33 +1,42 @@
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ${APP_IMAGE:-ghcr.io/tuandm21/flight_be:main-20250925}
     container_name: flight-app-prod
     ports:
-      - "8080:8080"
+      - "${SERVER_PORT}:${SERVER_PORT}"
     env_file:
       - .env
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+    healthcheck:
+      test:
+        ["CMD", "sh", "-c", "curl -f http://localhost:${SERVER_PORT}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
     networks:
-      - airport-network
+      - be_airport-network
     depends_on:
       mariadb:
         condition: service_healthy
     restart: unless-stopped
 
   migration:
-    image: maven:3.9-eclipse-temurin-17
+    build:
+      context: .
+      dockerfile: Dockerfile.migration
     container_name: flight-migration-prod
-    working_dir: /app
-    volumes:
-      - .:/app
-      - ~/.m2:/root/.m2
+    working_dir: /flyway
     env_file:
       - .env
+    environment:
+      - FLYWAY_URL=jdbc:mariadb://mariadb:${MYSQL_PORT}/${MYSQL_DATABASE}
+      - FLYWAY_USER=${FLYWAY_USER}
+      - FLYWAY_PASSWORD=${FLYWAY_PASSWORD}
+      - FLYWAY_BASELINE_ON_MIGRATE=true
     networks:
-      - airport-network
+      - be_airport-network
     depends_on:
       mariadb:
         condition: service_healthy
@@ -40,22 +49,42 @@ services:
     env_file:
       - .env
     ports:
-      - "3306:3306"
+      - "${MYSQL_PORT}:3306"
     volumes:
       - mariadb_data_prod:/var/lib/mysql
-    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --max_allowed_packet=256M
+      - ./scripts/init-mariadb.sh:/docker-entrypoint-initdb.d/init-mariadb.sh
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${SPRING_DATASOURCE_USERNAME}
+      - MYSQL_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --max_allowed_packet=256M --skip-log-bin --skip-log-slave-updates --innodb_flush_log_at_trx_commit=0
     healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test:
+        [
+          "CMD",
+          "mariadb-admin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-p${MYSQL_ROOT_PASSWORD}",
+          "--silent",
+        ]
+      start_period: 60s
+      interval: 15s
+      timeout: 10s
+      retries: 10
     networks:
-      - airport-network
+      - be_airport-network
     restart: unless-stopped
 
 volumes:
   mariadb_data_prod:
+    name: flight-mariadb-data-prod
 
 networks:
-  airport-network:
+  be_airport-network:
+    name: be_airport-network
     driver: bridge

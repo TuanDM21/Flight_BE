@@ -35,9 +35,6 @@ logs/
 # Backup files
 backup_*/
 
-# Scripts (nếu không cần trong container)
-scripts/
-
 # Environment files (sẽ được mount riêng)
 .env*
 
@@ -46,3 +43,6 @@ node_modules/
 
 # Maven local repository cache
 .m2/
+
+# Explicitly include scripts directory for migration
+!scripts/

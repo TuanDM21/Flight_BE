@@ -1,0 +1,9 @@
+FROM flyway/flyway:10-alpine
+
+WORKDIR /flyway
+
+# Copy migration files
+COPY src/main/resources/db/migration ./sql/
+
+# CMD migrate (baseline if needed via env)
+CMD ["migrate"]

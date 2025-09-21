@@ -34,6 +34,7 @@ public class SecurityConfig {
 
 	private final JwtAuthenticationFilter jwtAuthFilter;
 	private final UserDetailsService userDetailsService;
+	private final com.project.quanlycanghangkhong.security.JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
 	@Value("${app.cors.allowed-origins}")
 	private String allowedOrigins;
@@ -46,20 +47,18 @@ public class SecurityConfig {
 				.authorizeHttpRequests(auth -> auth
 						.requestMatchers(
 								"/",
+								"/health",
 								"/api/auth/**",
 								"/swagger-ui",
 								"/swagger-ui/**",
 								"/swagger-ui.html",
-								"/v3/api-docs/**",
-								"/swagger-resources/**",
-								"/swagger-resources",
-								"/webjars/**",
-								"/configuration/ui",
-								"/configuration/security")
+								"/v3/api-docs/**")
 						.permitAll()
 						.anyRequest().authenticated())
 				.sessionManagement(session -> session
 						.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+				.exceptionHandling(exceptions -> exceptions
+						.authenticationEntryPoint(jwtAuthenticationEntryPoint))
 				.authenticationProvider(authenticationProvider())
 				.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
