@@ -35,13 +35,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
 		String path = request.getRequestURI();
 
-		// Chỉ có API đăng nhập và đăng ký mới được bỏ qua việc kiểm tra token
-		return path.equals("/api/auth/login") ||
+		return path.equals("/") ||
+				path.equals("/api/auth/login") ||
 				path.equals("/api/auth/register") ||
+				path.equals("/swagger-ui") ||
 				path.startsWith("/swagger-ui/") ||
+				path.equals("/swagger-ui.html") ||
 				path.startsWith("/v3/api-docs") ||
 				path.startsWith("/webjars/") ||
-				path.startsWith("/swagger-resources");
+				path.startsWith("/swagger-resources") ||
+				path.equals("/swagger-resources");
 	}
 
 	@Override
