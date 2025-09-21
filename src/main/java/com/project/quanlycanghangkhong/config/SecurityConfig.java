@@ -2,6 +2,7 @@ package com.project.quanlycanghangkhong.config;
 
 import com.project.quanlycanghangkhong.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -34,6 +35,9 @@ public class SecurityConfig {
 	private final JwtAuthenticationFilter jwtAuthFilter;
 	private final UserDetailsService userDetailsService;
 
+	@Value("${app.cors.allowed-origins}")
+	private String allowedOrigins;
+
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		http
@@ -63,9 +67,21 @@ public class SecurityConfig {
 	@Bean
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration configuration = new CorsConfiguration();
-		configuration.addAllowedOriginPattern("*"); // Cho phép tất cả origin
+
+		// Sử dụng biến environment cho allowed origins
+		if (allowedOrigins != null && !allowedOrigins.trim().isEmpty()) {
+			String[] origins = allowedOrigins.split(",");
+			for (String origin : origins) {
+				configuration.addAllowedOrigin(origin.trim());
+			}
+		} else {
+			// Fallback cho development
+			configuration.addAllowedOriginPattern("http://localhost:*");
+			configuration.addAllowedOriginPattern("https://localhost:*");
+		}
+
 		configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-		configuration.setAllowedHeaders(List.of("*")); // Cho phép tất cả headers
+		configuration.setAllowedHeaders(List.of("*"));
 		configuration.setAllowCredentials(true);
 		configuration.setMaxAge(3600L);
 
