@@ -145,22 +145,68 @@ jobs:
               fi
             fi
 
-            # 🛠️ Update app and migration images in compose file
+            # 🛠️ Update all images in compose file (both app and migration)
             echo "📝 Updating images in docker-compose.yml..."
-            sed -i "s|^\(\s*\)image:\s*flight-mnm-backend:.*|\\1image: $NEW_APP_IMAGE|g" docker-compose.yml
+            echo "🔍 Previous image configuration:"
+            grep -n "image: flight-mnm-backend" docker-compose.yml || true
+
+            # Update both app and migration services to use the same new image
+            sed -i "s|image: flight-mnm-backend:.*|image: $NEW_APP_IMAGE|g" docker-compose.yml
+
+            echo "✅ Updated both app and migration services to use: $NEW_APP_IMAGE"
+            echo "🔍 New image configuration:"
+            grep -n "image: ghcr.io" docker-compose.yml || true
 
             # 🛑 Stop app container
             echo "⏹️ Stopping app container..."
             docker compose stop app 2>/dev/null || true
 
-            # 🔄 Run migration using migration service
+            # 🔄 Ensure MariaDB is running and ready for migration
+            echo "🗄️ Starting MariaDB for migration..."
+            docker compose up -d mariadb
+
+            # Wait for MariaDB to be ready
+            echo "⏳ Waiting for MariaDB to be ready..."
+            MARIADB_READY_RETRIES=30
+            for i in $(seq 1 $MARIADB_READY_RETRIES); do
+              if docker compose exec -T mariadb mysqladmin ping -h localhost --silent; then
+                echo "✅ MariaDB is ready!"
+                break
+              fi
+              if [ $i -eq $MARIADB_READY_RETRIES ]; then
+                echo "❌ MariaDB failed to become ready after $MARIADB_READY_RETRIES attempts"
+                docker compose logs mariadb
+                exit 1
+              fi
+              echo "⏳ Waiting for MariaDB... (attempt $i/$MARIADB_READY_RETRIES)"
+              sleep 2
+            done
+
+            # 🔄 Run migration using migration service with correct command
             echo "⏳ Running Flyway migrations..."
             echo "🔍 Checking migration service exists..."
             if docker compose config --services | grep -q "migration"; then
               echo "✅ Migration service found"
-              docker compose --profile migration run --rm migration \
-                java -jar app.jar --spring.profiles.active=migration
-              echo "✅ Migration completed."
+              echo "🔍 Migration service configuration:"
+              docker compose config migration
+
+              # Run migration with proper Flyway command
+              echo "🚀 Starting migration process..."
+              docker compose --profile migration run --rm migration mvn flyway:migrate -Dflyway.baselineOnMigrate=true
+              MIGRATION_EXIT_CODE=$?
+
+              if [ $MIGRATION_EXIT_CODE -eq 0 ]; then
+                echo "✅ Migration completed successfully."
+
+                # Show migration info for verification
+                echo "📊 Migration status after completion:"
+                docker compose --profile migration run --rm migration mvn flyway:info || true
+              else
+                echo "❌ Migration failed with exit code: $MIGRATION_EXIT_CODE"
+                echo "🔍 Migration logs:"
+                docker compose logs migration 2>/dev/null || true
+                exit $MIGRATION_EXIT_CODE
+              fi
             else
               echo "⚠️ Migration service not found, skipping..."
             fi
