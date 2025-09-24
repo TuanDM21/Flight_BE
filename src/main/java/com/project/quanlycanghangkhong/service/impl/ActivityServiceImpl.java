@@ -196,10 +196,64 @@ public class ActivityServiceImpl implements ActivityService {
     }
 
     @Override
-    public List<ActivityDTO> searchActivities(String name, String location) {
+    public List<ActivityDTO> searchActivities(String keyword, String participantType, Long participantId, java.time.LocalDateTime startTime, java.time.LocalDateTime endTime) {
+        // If searching by participant, use optimized repository query
+        if (participantType != null && participantId != null) {
+            return searchActivitiesByParticipant(keyword, participantType, participantId, startTime, endTime);
+        }
+        
+        // Standard search without participant filter
         return activityRepository.findAll().stream()
-                .filter(a -> (name == null || a.getName().toLowerCase().contains(name.toLowerCase()))
-                        && (location == null || a.getLocation().toLowerCase().contains(location.toLowerCase())))
+                .filter(a -> (keyword == null || 
+                        a.getName().toLowerCase().contains(keyword.toLowerCase()) ||
+                        (a.getNotes() != null && a.getNotes().toLowerCase().contains(keyword.toLowerCase())) ||
+                        a.getLocation().toLowerCase().contains(keyword.toLowerCase()))
+                        && (startTime == null || a.getStartTime().isAfter(startTime) || a.getStartTime().isEqual(startTime))
+                        && (endTime == null || a.getEndTime().isBefore(endTime) || a.getEndTime().isEqual(endTime)))
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+    }
+    
+    private List<ActivityDTO> searchActivitiesByParticipant(String keyword, String participantType, Long participantId, java.time.LocalDateTime startTime, java.time.LocalDateTime endTime) {
+        // Validate participant type
+        if (!participantType.equals("USER") && !participantType.equals("TEAM") && !participantType.equals("UNIT")) {
+            logger.warn("[searchActivitiesByParticipant] Invalid participantType: {}", participantType);
+            return new ArrayList<>();
+        }
+        
+        // Validate that the participant exists
+        boolean participantExists = false;
+        switch (participantType) {
+            case "USER" -> participantExists = userRepository.findById(participantId.intValue()).isPresent();
+            case "TEAM" -> participantExists = teamRepository.findById(participantId.intValue()).isPresent();
+            case "UNIT" -> participantExists = unitRepository.findById(participantId.intValue()).isPresent();
+        }
+        
+        if (!participantExists) {
+            logger.warn("[searchActivitiesByParticipant] Participant not found: type={}, id={}", participantType, participantId);
+            return new ArrayList<>();
+        }
+        
+        // Find activities that have this specific participant
+        List<ActivityParticipant> participants = activityParticipantRepository
+                .findByParticipantTypeAndParticipantId(participantType, participantId);
+        
+        if (participants.isEmpty()) {
+            return new ArrayList<>();
+        }
+        
+        Set<Long> activityIds = participants.stream()
+                .map(p -> p.getActivity().getId())
+                .collect(Collectors.toSet());
+        
+        // Get activities and apply remaining filters including keyword and time range
+        return activityRepository.findAllById(activityIds).stream()
+                .filter(a -> (keyword == null || 
+                        a.getName().toLowerCase().contains(keyword.toLowerCase()) ||
+                        (a.getNotes() != null && a.getNotes().toLowerCase().contains(keyword.toLowerCase())) ||
+                        a.getLocation().toLowerCase().contains(keyword.toLowerCase()))
+                        && (startTime == null || a.getStartTime().isAfter(startTime) || a.getStartTime().isEqual(startTime))
+                        && (endTime == null || a.getEndTime().isBefore(endTime) || a.getEndTime().isEqual(endTime)))
                 .map(this::toDTO)
                 .collect(Collectors.toList());
     }

@@ -10,4 +10,5 @@ import java.util.List;
 public interface ActivityParticipantRepository extends JpaRepository<ActivityParticipant, Long> {
     List<ActivityParticipant> findByActivityId(Long activityId);
     void deleteByActivityIdAndParticipantTypeAndParticipantId(Long activityId, String participantType, Long participantId);
+    List<ActivityParticipant> findByParticipantTypeAndParticipantId(String participantType, Long participantId);
 }
