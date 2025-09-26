@@ -1,0 +1,8 @@
+FROM mariadb:11.4
+
+# Copy initialization script and set proper permissions
+COPY scripts/init-mariadb.sh /docker-entrypoint-initdb.d/init-mariadb.sh
+RUN chmod +x /docker-entrypoint-initdb.d/init-mariadb.sh
+
+# Set proper ownership
+RUN chown mysql:mysql /docker-entrypoint-initdb.d/init-mariadb.sh

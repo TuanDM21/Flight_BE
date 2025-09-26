@@ -178,7 +178,7 @@ db-migrate: ## Run Flyway migrations based on ENV
 	@echo "🗄️  Running database migrations on $(ENV) environment..."
 	@if [ "$(shell docker compose -f $(COMPOSE_FILE) ps -q mariadb 2>/dev/null)" ]; then \
 		echo "📍 Using $(ENV) environment"; \
-		docker compose -f $(COMPOSE_FILE) --profile migration run --rm migration; \
+		docker compose -f $(COMPOSE_FILE) --profile migration run --rm migration mvn flyway:migrate; \
 	else \
 		echo "❌ No MariaDB container found for $(ENV) environment. Please start it first with 'make run ENV=$(ENV)'"; \
 		exit 1; \
@@ -189,7 +189,7 @@ db-info: ## Show migration status based on ENV
 	@echo "📊 Database migration status for $(ENV) environment:"
 	@if [ "$(shell docker compose -f $(COMPOSE_FILE) ps -q mariadb 2>/dev/null)" ]; then \
 		echo "📍 Using $(ENV) environment"; \
-		docker compose -f $(COMPOSE_FILE) --profile migration run --rm migration info; \
+		docker compose -f $(COMPOSE_FILE) --profile migration run --rm migration mvn flyway:info; \
 	else \
 		echo "❌ No MariaDB container found for $(ENV) environment. Please start it first with 'make run ENV=$(ENV)'"; \
 		exit 1; \
@@ -223,7 +223,7 @@ db-repair: ## Repair Flyway schema history based on ENV
 	@echo "🔧 Repairing Flyway schema history for $(ENV) environment..."
 	@if [ "$(shell docker compose -f $(COMPOSE_FILE) ps -q mariadb 2>/dev/null)" ]; then \
 		echo "📍 Using $(ENV) environment"; \
-		docker compose -f $(COMPOSE_FILE) --profile migration run --rm migration repair; \
+		docker compose -f $(COMPOSE_FILE) --profile migration run --rm migration mvn flyway:repair; \
 	else \
 		echo "❌ No MariaDB container found for $(ENV) environment. Please start it first"; \
 		exit 1; \
