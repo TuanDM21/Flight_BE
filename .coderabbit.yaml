@@ -1,0 +1,116 @@
+# CodeRabbit configuration for Java Spring Boot Airport Management System
+reviews:
+  profile: coderabbit
+  request_changes: author
+  auto_review:
+    enabled: true
+    drafts: false
+  # Security focused reviews
+  security:
+    enabled: true
+    patterns:
+      - "**/*Controller.java"
+      - "**/*Service*.java"
+      - "**/SecurityConfig.java"
+      - "**/config/*.java"
+  # Performance reviews
+  performance:
+    enabled: true
+    patterns:
+      - "**/*Repository.java"
+      - "**/*Entity.java"
+      - "**/*Service*.java"
+      - "**/scheduler/*.java"
+  # Code quality reviews
+  quality:
+    enabled: true
+    max_files: 50
+    max_lines: 500
+
+branches:
+  - develop
+
+language: java
+
+# Repository specific settings
+path_filters:
+  # Include only source code for review
+  include:
+    - "src/main/java/**/*.java"
+    - "src/test/java/**/*.java"
+    - "src/main/resources/**/*.properties"
+    - "src/main/resources/db/migration/*.sql"
+    - "pom.xml"
+    - "Dockerfile*"
+    - "docker-compose*.yml"
+
+  # Exclude generated/build files
+  exclude:
+    - "target/**"
+    - "*.class"
+    - "*.jar"
+    - "*.war"
+    - ".mvn/**"
+    - "mvnw*"
+    - "*.log"
+    - ".DS_Store"
+
+# Java/Spring Boot specific checks
+checks:
+  # Spring Boot patterns
+  spring_boot:
+    - "@RestController properly used"
+    - "@Service layer separation"
+    - "@Repository data access"
+    - "Exception handling patterns"
+    - "DTO/Entity separation"
+
+  # Security checks
+  security:
+    - "SQL injection prevention"
+    - "JWT token validation"
+    - "Input validation (@Valid)"
+    - "Authorization checks"
+    - "CORS configuration"
+
+  # Database checks
+  database:
+    - "JPA relationship efficiency"
+    - "Query optimization"
+    - "Transaction management"
+    - "Migration scripts"
+
+  # Architecture checks
+  architecture:
+    - "Layered architecture compliance"
+    - "Dependency injection"
+    - "Single responsibility principle"
+    - "API response consistency"
+
+# Review focus areas
+focus_areas:
+  - security_vulnerabilities
+  - performance_issues
+  - code_smells
+  - best_practices
+  - documentation
+  - error_handling
+  - testing_coverage
+
+# Skip review for specific patterns
+ignore_patterns:
+  - "**/*Test.java" # Skip basic test files unless complex logic
+  - "**/dto/*.java" # Skip simple DTOs unless business logic
+  - "**/model/*.java" # Skip entity getters/setters
+
+# Custom instructions for reviewers
+instructions: |
+  Focus on:
+  1. Spring Security implementation and JWT handling
+  2. Database query performance and N+1 problems
+  3. API response consistency using ApiResponseCustom<T>
+  4. Proper exception handling and error responses
+  5. Service layer business logic separation
+  6. Input validation and sanitization
+  7. Scheduled task efficiency
+  8. Docker configuration optimization
