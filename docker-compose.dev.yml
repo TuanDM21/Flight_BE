@@ -17,6 +17,13 @@ services:
       - ./src:/app/src
       - ./target:/app/target
       - ~/.m2:/root/.m2
+    healthcheck:
+      test:
+        ["CMD", "sh", "-c", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
     networks:
       - airport-network
     depends_on:
@@ -58,11 +65,9 @@ services:
       test:
         [
           "CMD",
-          "mariadb",
-          "-uroot",
-          "-p${MYSQL_ROOT_PASSWORD}",
-          "-e",
-          "SELECT 1",
+          "sh",
+          "-c",
+          "mariadb -uroot -p$$MYSQL_ROOT_PASSWORD -e 'SELECT 1' || exit 1",
         ]
       interval: 30s
       timeout: 10s
