@@ -55,7 +55,15 @@ services:
     networks:
       - airport-network
     healthcheck:
-      test: ["CMD", "mariadb", "-uroot", "-pabc123", "-e", "SELECT 1"]
+      test:
+        [
+          "CMD",
+          "mariadb",
+          "-uroot",
+          "-p${MYSQL_ROOT_PASSWORD}",
+          "-e",
+          "SELECT 1",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
