@@ -287,3 +287,11 @@ VALUES
 
 -- Nguyễn Thị Phương Thảo - Tổ trưởng
 ('Nguyễn Thị Phương Thảo', 'ThaoNTP@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', NULL, 5, 3, 8, NOW(), NOW());
+
+
+INSERT INTO `airportdb`.`users`
+(`name`, `email`, `password`, `expo_push_token`, `role_id`, `team_id`, `unit_id`, `created_at`, `updated_at`)
+VALUES
+('Đỗ Minh Tuấn', 'TuanDM@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', NULL, 2, 2, 1, NOW(), NOW()),
+('Nguyễn Danh Quang', 'QuangND@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', NULL, 2, 2, 1, NOW(), NOW()),
+('Nguyễn Tiến Đạt', 'DatNT@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', NULL, 2, 2, 1, NOW(), NOW());
