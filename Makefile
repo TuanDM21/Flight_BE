@@ -63,25 +63,14 @@ help: ## Show this help message
 	@echo "  make ssl-cert    - Generate SSL certificates"
 	@echo ""
 
-# Docker Commands
-build: ## Build Docker images based on ENV
-ifeq ($(ENV),prod)
-	@echo "🔨 Building production Docker images..."
-	@DOCKER_BUILDKIT=1 docker build --network=host --progress=plain -f Dockerfile -t flight-mnm-backend:latest .
-	@echo "✅ Production images built"
-else
-	@echo "🔨 Building development Docker images..."
-	@docker compose -f $(COMPOSE_FILE) build
-	@echo "✅ Development images built"
-endif
-
 run: ## Start environment based on ENV
 	@echo "🚀 Starting $(ENV) Environment..."
 	@if [ ! -f $(ENV_FILE) ]; then \
 		echo "❌ .env file not found! Please create one."; \
 		exit 1; \
 	fi
-	@docker compose -f $(COMPOSE_FILE) up -d
+	@docker compose -f $(COMPOSE_FILE) up --build -d
+
 ifeq ($(ENV),prod)
 	@echo "✅ Production environment started"
 	@echo "🌐 Application: http://localhost:8080"
