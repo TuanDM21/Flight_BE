@@ -77,11 +77,12 @@ public class ActivityServiceImpl implements ActivityService {
                     valid = unitRepository.findById(p.getParticipantId().intValue()).isPresent();
                     logger.info("[createActivity] UNIT tồn tại: {}", valid);
                 } else {
-                    logger.warn("[createActivity] participantType không hợp lệ: {}", p.getParticipantType());
+                    logger.error("[createActivity] participantType không hợp lệ: {}", p.getParticipantType());
+                    throw new IllegalArgumentException("Invalid participant type: " + p.getParticipantType() + ". Must be one of: USER, TEAM, UNIT");
                 }
                 if (!valid) {
-                    logger.warn("[createActivity] participantId không hợp lệ, bỏ qua: type={}, id={}", p.getParticipantType(), p.getParticipantId());
-                    continue;
+                    logger.error("[createActivity] participantId không tồn tại: type={}, id={}", p.getParticipantType(), p.getParticipantId());
+                    throw new IllegalArgumentException("Participant not found: " + p.getParticipantType() + " with ID " + p.getParticipantId());
                 }
                 ActivityParticipant entity = new ActivityParticipant();
                 entity.setActivity(saved);
@@ -161,8 +162,14 @@ public class ActivityServiceImpl implements ActivityService {
                     valid = teamRepository.findById(p.getParticipantId().intValue()).isPresent();
                 } else if ("UNIT".equals(p.getParticipantType())) {
                     valid = unitRepository.findById(p.getParticipantId().intValue()).isPresent();
+                } else {
+                    logger.error("[updateActivity] participantType không hợp lệ: {}", p.getParticipantType());
+                    throw new IllegalArgumentException("Invalid participant type: " + p.getParticipantType() + ". Must be one of: USER, TEAM, UNIT");
                 }
-                if (!valid) continue; // Bỏ qua participant không hợp lệ
+                if (!valid) {
+                    logger.error("[updateActivity] participantId không tồn tại: type={}, id={}", p.getParticipantType(), p.getParticipantId());
+                    throw new IllegalArgumentException("Participant not found: " + p.getParticipantType() + " with ID " + p.getParticipantId());
+                }
                 ActivityParticipant entity = new ActivityParticipant();
                 entity.setActivity(saved);
                 entity.setParticipantType(p.getParticipantType());
@@ -277,8 +284,14 @@ public class ActivityServiceImpl implements ActivityService {
                 valid = teamRepository.findById(dto.getParticipantId().intValue()).isPresent();
             } else if ("UNIT".equals(dto.getParticipantType())) {
                 valid = unitRepository.findById(dto.getParticipantId().intValue()).isPresent();
+            } else {
+                logger.error("[addParticipants] participantType không hợp lệ: {}", dto.getParticipantType());
+                throw new IllegalArgumentException("Invalid participant type: " + dto.getParticipantType() + ". Must be one of: USER, TEAM, UNIT");
             }
-            if (!valid) continue; // Bỏ qua participant không hợp lệ
+            if (!valid) {
+                logger.error("[addParticipants] participantId không tồn tại: type={}, id={}", dto.getParticipantType(), dto.getParticipantId());
+                throw new IllegalArgumentException("Participant not found: " + dto.getParticipantType() + " with ID " + dto.getParticipantId());
+            }
             ActivityParticipant entity = new ActivityParticipant();
             entity.setActivity(activity);
             entity.setParticipantType(dto.getParticipantType());
@@ -292,7 +305,20 @@ public class ActivityServiceImpl implements ActivityService {
     @Override
     @Transactional
     public void removeParticipant(Long activityId, String participantType, Long participantId) {
-        activityParticipantRepository.deleteByActivityIdAndParticipantTypeAndParticipantId(activityId, participantType, participantId);
+        logger.info("[removeParticipant] Attempting to delete participant - activityId: {}, type: {}, participantId: {}", 
+                   activityId, participantType, participantId);
+        
+        int deletedCount = activityParticipantRepository.deleteByActivityIdAndParticipantTypeAndParticipantId(
+            activityId, participantType, participantId);
+        
+        if (deletedCount == 0) {
+            logger.warn("[removeParticipant] No participant found to delete - activityId: {}, type: {}, participantId: {}", 
+                       activityId, participantType, participantId);
+            throw new RuntimeException("Không tìm thấy người tham gia với thông tin đã cung cấp");
+        }
+        
+        logger.info("[removeParticipant] Successfully deleted {} participants for activityId: {}, type: {}, participantId: {}", 
+                   deletedCount, activityId, participantType, participantId);
     }
 
     @Override
