@@ -2,6 +2,9 @@ package com.project.quanlycanghangkhong.controller;
 
 import com.project.quanlycanghangkhong.dto.ActivityDTO;
 import com.project.quanlycanghangkhong.dto.ActivityParticipantDTO;
+import com.project.quanlycanghangkhong.dto.CalendarDTO;
+import com.project.quanlycanghangkhong.dto.request.ActivityRequest;
+import com.project.quanlycanghangkhong.dto.request.ActivityParticipantRequest;
 import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
 import com.project.quanlycanghangkhong.dto.response.activity.ActivityApiResponse;
 import com.project.quanlycanghangkhong.dto.response.activity.ActivityListApiResponse;
@@ -24,8 +27,11 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,7 +55,8 @@ public class ActivityController {
             @ApiResponse(responseCode = "400", description = "Dữ liệu không hợp lệ", 
                 content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
-    public ResponseEntity<ApiResponseCustom<ActivityDTO>> createActivity(@Valid @RequestBody ActivityDTO dto) {
+    public ResponseEntity<ApiResponseCustom<ActivityDTO>> createActivity(@Valid @RequestBody ActivityRequest request) {
+        ActivityDTO dto = convertToActivityDTO(request);
         ActivityDTO created = activityService.createActivity(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponseCustom.created(created));
     }
@@ -66,7 +73,8 @@ public class ActivityController {
     })
     public ResponseEntity<ApiResponseCustom<ActivityDTO>> updateActivity(
             @Parameter(description = "ID của hoạt động", required = true) @PathVariable Long id, 
-            @Valid @RequestBody ActivityDTO dto) {
+            @Valid @RequestBody ActivityRequest request) {
+        ActivityDTO dto = convertToActivityDTO(request);
         ActivityDTO updated = activityService.updateActivity(id, dto);
         return ResponseEntity.ok(ApiResponseCustom.updated(updated));
     }
@@ -100,7 +108,7 @@ public class ActivityController {
     }
 
     @GetMapping
-    @Operation(summary = "Lấy danh sách hoạt động", description = "Lấy danh sách hoạt động theo loại hoặc tìm kiếm theo từ khóa (tên, ghi chú, địa điểm) và người tham gia. Hỗ trợ lọc theo khoảng ngày cho calendar view.")
+    @Operation(summary = "Lấy danh sách hoạt động cho calendar", description = "Lấy danh sách hoạt động theo loại hoặc tìm kiếm theo từ khóa (tên, ghi chú, địa điểm) và người tham gia. Hỗ trợ lọc theo khoảng ngày cho calendar view. Nếu không truyền type parameter thì trả về calendar trống.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Thành công", 
                 content = @Content(schema = @Schema(implementation = ActivityListApiResponse.class))),
@@ -109,7 +117,7 @@ public class ActivityController {
             @ApiResponse(responseCode = "401", description = "Không có quyền truy cập hoặc không tìm thấy người dùng", 
                 content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
-    public ResponseEntity<ApiResponseCustom<List<ActivityDTO>>> getAllActivities(
+    public ResponseEntity<ApiResponseCustom<CalendarDTO>> getAllActivities(
             @Parameter(description = "Từ khóa tìm kiếm (tìm trong tên, ghi chú, địa điểm)", example = "Họp định kỳ") 
             @RequestParam(required = false) String keyword,
             @Parameter(description = "Loại người tham gia", example = "USER", schema = @Schema(allowableValues = {"USER", "TEAM", "UNIT"})) 
@@ -120,9 +128,9 @@ public class ActivityController {
             @RequestParam(required = false) String startDate,
             @Parameter(description = "Ngày kết thúc để lọc (format: yyyy-MM-dd)", example = "2025-01-31") 
             @RequestParam(required = false) String endDate,
-            @Parameter(description = "Loại hoạt động: 'company' (toàn công ty - mặc định) hoặc 'my' (cá nhân)", 
+            @Parameter(description = "Loại hoạt động: 'company' (toàn công ty) hoặc 'my' (cá nhân). Nếu không truyền sẽ trả về empty list", 
                       example = "company", schema = @Schema(allowableValues = {"my", "company"}))
-            @RequestParam(defaultValue = "company") String type) {
+            @RequestParam(required = false) String type) {
         
         long requestStartTime = System.currentTimeMillis();
 
@@ -158,7 +166,31 @@ public class ActivityController {
         if (keyword != null || (participantType != null && participantId != null) || 
             startDateTime != null || endDateTime != null) {
             List<ActivityDTO> activities = activityService.searchActivities(keyword, participantType, participantId, startDateTime, endDateTime);
-            return ResponseEntity.ok(ApiResponseCustom.success(activities));
+            CalendarDTO calendar = CalendarDTO.builder()
+                .currentDate(LocalDate.now())
+                .activities(activities)
+                .metadata(CalendarDTO.CalendarMetadata.builder()
+                    .totalActivities(activities.size())
+                    .viewType("search")
+                    .message(activities.isEmpty() ? "Không tìm thấy hoạt động nào phù hợp" : "Kết quả tìm kiếm")
+                    .build())
+                .build();
+            return ResponseEntity.ok(ApiResponseCustom.success(calendar));
+        }
+
+        // If no type parameter is provided, return empty calendar
+        if (type == null || type.trim().isEmpty()) {
+            logger.info("[GET /api/activities] No type parameter provided, returning empty calendar");
+            CalendarDTO emptyCalendar = CalendarDTO.builder()
+                .currentDate(LocalDate.now())
+                .activities(new ArrayList<>())
+                .metadata(CalendarDTO.CalendarMetadata.builder()
+                    .totalActivities(0)
+                    .viewType("empty")
+                    .message("Lịch trống - chọn loại hoạt động để xem")
+                    .build())
+                .build();
+            return ResponseEntity.ok(ApiResponseCustom.success(emptyCalendar));
         }
 
         // Validate type parameter
@@ -183,15 +215,28 @@ public class ActivityController {
             Integer userId = userOpt.get().getId();
             activities = activityService.getActivitiesForUser(userId);
         } else {
-            // Default: get all company activities
+            // Get all company activities
             activities = activityService.getAllActivities();
         }
+
+        // Build calendar response
+        CalendarDTO calendar = CalendarDTO.builder()
+            .currentDate(LocalDate.now())
+            .activities(activities)
+            .metadata(CalendarDTO.CalendarMetadata.builder()
+                .totalActivities(activities.size())
+                .viewType(type)
+                .message(activities.isEmpty() ? 
+                    ("my".equals(type) ? "Bạn chưa có hoạt động nào" : "Công ty chưa có hoạt động nào") :
+                    ("my".equals(type) ? "Hoạt động cá nhân" : "Hoạt động công ty"))
+                .build())
+            .build();
 
         long duration = System.currentTimeMillis() - requestStartTime;
         logger.info("[GET /api/activities] Completed in {}ms for user: {}, type: {}, returned {} activities",
                 duration, email, type, activities.size());
 
-        return ResponseEntity.ok(ApiResponseCustom.success(activities));
+        return ResponseEntity.ok(ApiResponseCustom.success(calendar));
     }
 
     @GetMapping("/search")
@@ -270,7 +315,11 @@ public class ActivityController {
     })
     public ResponseEntity<ApiResponseCustom<List<ActivityParticipantDTO>>> addParticipants(
             @Parameter(description = "ID của hoạt động", required = true) @PathVariable Long id,
-            @RequestBody List<ActivityParticipantDTO> participants) {
+            @RequestBody List<ActivityParticipantRequest> participantRequests) {
+        // Convert requests to DTOs
+        List<ActivityParticipantDTO> participants = participantRequests.stream()
+            .map(this::convertToParticipantDTO)
+            .collect(Collectors.toList());
         List<ActivityParticipantDTO> addedParticipants = activityService.addParticipants(id, participants);
         return ResponseEntity.ok(ApiResponseCustom.success("Đã thêm người tham gia thành công", addedParticipants));
     }
@@ -324,5 +373,36 @@ public class ActivityController {
         long duration = System.currentTimeMillis() - start;
         logger.info("[GET /api/activities/pinned] Completed in {}ms, returned {} activities", duration, pinned.size());
         return ResponseEntity.ok(ApiResponseCustom.success(pinned));
+    }
+
+    // Helper method to convert ActivityRequest to ActivityDTO
+    private ActivityDTO convertToActivityDTO(ActivityRequest request) {
+        ActivityDTO dto = new ActivityDTO();
+        dto.setName(request.getName());
+        dto.setLocation(request.getLocation());
+        dto.setStartTime(request.getStartTime());
+        dto.setEndTime(request.getEndTime());
+        dto.setNotes(request.getNotes());
+        dto.setPinned(request.getPinned());
+        
+        // Convert participants
+        if (request.getParticipants() != null) {
+            List<ActivityParticipantDTO> participants = request.getParticipants().stream()
+                .map(this::convertToParticipantDTO)
+                .collect(Collectors.toList());
+            dto.setParticipants(participants);
+        }
+        
+        return dto;
+    }
+    
+    // Helper method to convert ActivityParticipantRequest to ActivityParticipantDTO
+    private ActivityParticipantDTO convertToParticipantDTO(ActivityParticipantRequest request) {
+        ActivityParticipantDTO dto = new ActivityParticipantDTO();
+        // Note: We don't set ID as it's not needed for requests and will be auto-generated
+        dto.setParticipantType(request.getParticipantType());
+        dto.setParticipantId(request.getParticipantId());
+        // Note: We don't set participantName as it will be set by service layer for responses
+        return dto;
     }
 }
