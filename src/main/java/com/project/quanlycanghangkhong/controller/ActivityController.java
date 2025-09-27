@@ -5,6 +5,8 @@ import com.project.quanlycanghangkhong.dto.ActivityParticipantDTO;
 import com.project.quanlycanghangkhong.dto.CalendarDTO;
 import com.project.quanlycanghangkhong.dto.request.ActivityRequest;
 import com.project.quanlycanghangkhong.dto.request.ActivityParticipantRequest;
+import com.project.quanlycanghangkhong.dto.request.ParticipantDeleteRequest;
+import com.project.quanlycanghangkhong.dto.request.ParticipantDeleteRequest;
 import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
 import com.project.quanlycanghangkhong.dto.response.activity.ActivityApiResponse;
 import com.project.quanlycanghangkhong.dto.response.activity.ActivityListApiResponse;
@@ -239,6 +241,93 @@ public class ActivityController {
         return ResponseEntity.ok(ApiResponseCustom.success(calendar));
     }
 
+    @GetMapping("/calendar")
+    @Operation(summary = "Lấy dữ liệu calendar view", description = "Lấy dữ liệu hoạt động theo định dạng calendar")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Thành công", 
+                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+            @ApiResponse(responseCode = "400", description = "Tham số không hợp lệ", 
+                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
+    })
+    public ResponseEntity<ApiResponseCustom<CalendarDTO>> getCalendarView(
+            @Parameter(description = "Ngày bắt đầu (format: yyyy-MM-dd)", example = "2025-03-01") 
+            @RequestParam(required = false) String startDate,
+            @Parameter(description = "Ngày kết thúc (format: yyyy-MM-dd)", example = "2025-03-31") 
+            @RequestParam(required = false) String endDate,
+            @Parameter(description = "Loại hoạt động", example = "my") 
+            @RequestParam(required = false, defaultValue = "company") String type) {
+        
+        long requestStartTime = System.currentTimeMillis();
+        
+        // Validate type parameter
+        if (!"my".equals(type) && !"company".equals(type)) {
+            logger.warn("[GET /api/activities/calendar] Invalid type parameter: {}", type);
+            return ResponseEntity.badRequest().body(ApiResponseCustom.error("Tham số type không hợp lệ. Chỉ chấp nhận 'my' hoặc 'company'"));
+        }
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+        logger.info("[GET /api/activities/calendar] Starting request for user: {}, type: {}, startDate: {}, endDate: {}", 
+                email, type, startDate, endDate);
+
+        List<ActivityDTO> activities;
+        
+        // If no date parameters provided, return empty calendar structure
+        if (startDate == null && endDate == null) {
+            activities = new ArrayList<>();
+            logger.info("[GET /api/activities/calendar] No date parameters provided, returning empty calendar");
+        } else {
+            try {
+                java.time.LocalDate start = startDate != null ? java.time.LocalDate.parse(startDate) : null;
+                java.time.LocalDate end = endDate != null ? java.time.LocalDate.parse(endDate) : null;
+                
+                if (start != null && end != null && start.isAfter(end)) {
+                    return ResponseEntity.badRequest().body(ApiResponseCustom.error("Ngày bắt đầu không thể sau ngày kết thúc"));
+                }
+                
+                if ("my".equals(type)) {
+                    // Get user's personal activities in date range
+                    Optional<User> userOpt = userRepository.findByEmail(email);
+                    if (userOpt.isEmpty()) {
+                        logger.warn("[GET /api/activities/calendar] User not found with email: {}", email);
+                        return ResponseEntity.status(401).body(ApiResponseCustom.unauthorized("Không tìm thấy người dùng"));
+                    }
+                    Integer userId = userOpt.get().getId();
+                    // For now, get user activities and filter by date range
+                    activities = activityService.getActivitiesForUser(userId);
+                } else {
+                    // Get all company activities and filter by date range
+                    activities = activityService.getAllActivities();
+                }
+            } catch (Exception e) {
+                logger.error("[GET /api/activities/calendar] Error parsing dates: {}", e.getMessage());
+                return ResponseEntity.badRequest().body(ApiResponseCustom.error("Định dạng ngày không hợp lệ. Sử dụng format: yyyy-MM-dd"));
+            }
+        }
+
+        // Build calendar response
+        CalendarDTO calendar = CalendarDTO.builder()
+            .currentDate(LocalDate.now())
+            .activities(activities)
+            .metadata(CalendarDTO.CalendarMetadata.builder()
+                .totalActivities(activities.size())
+                .viewType(type)
+                .message(activities.isEmpty() ? 
+                    (startDate == null && endDate == null ? "Vui lòng chọn khoảng thời gian để xem hoạt động" :
+                    ("my".equals(type) ? "Trong khoảng " + startDate + " đến " + endDate + " bạn chưa có hoạt động nào" : 
+                     "Trong khoảng " + startDate + " đến " + endDate + " công ty chưa có hoạt động nào")) :
+                    ("my".equals(type) ? "Hoạt động cá nhân từ " + startDate + " đến " + endDate : 
+                     "Hoạt động công ty từ " + startDate + " đến " + endDate))
+                .build())
+            .build();
+
+        long duration = System.currentTimeMillis() - requestStartTime;
+        logger.info("[GET /api/activities/calendar] Completed in {}ms for user: {}, type: {}, returned {} activities",
+                duration, email, type, activities.size());
+
+        return ResponseEntity.ok(ApiResponseCustom.success(calendar));
+    }
+
     @GetMapping("/search")
     @Operation(summary = "Tìm kiếm hoạt động theo tháng/năm", description = "Lấy danh sách hoạt động trong tháng và năm cụ thể")
     @ApiResponses(value = {
@@ -316,9 +405,9 @@ public class ActivityController {
     public ResponseEntity<ApiResponseCustom<List<ActivityParticipantDTO>>> addParticipants(
             @Parameter(description = "ID của hoạt động", required = true) @PathVariable Long id,
             @RequestBody List<ActivityParticipantRequest> participantRequests) {
-        // Convert requests to DTOs
+        // Convert requests to DTOs - flatten the list since each request can contain multiple IDs
         List<ActivityParticipantDTO> participants = participantRequests.stream()
-            .map(this::convertToParticipantDTO)
+            .flatMap(request -> convertToParticipantDTOs(request).stream())
             .collect(Collectors.toList());
         List<ActivityParticipantDTO> addedParticipants = activityService.addParticipants(id, participants);
         return ResponseEntity.ok(ApiResponseCustom.success("Đã thêm người tham gia thành công", addedParticipants));
@@ -340,8 +429,57 @@ public class ActivityController {
             @RequestParam String participantType,
             @Parameter(description = "ID của người tham gia", required = true) 
             @RequestParam Long participantId) {
+        
+        // Check if activity exists and get current participants count
+        ActivityDTO currentActivity = activityService.getActivity(id);
+        if (currentActivity.getParticipants().size() <= 1) {
+            return ResponseEntity.badRequest().body(
+                ApiResponseCustom.error("Không thể xóa người tham gia cuối cùng. Activity phải có ít nhất một người tham gia.")
+            );
+        }
+        
         activityService.removeParticipant(id, participantType, participantId);
         return ResponseEntity.ok(ApiResponseCustom.success("Đã xóa người tham gia thành công", null));
+    }
+
+    @DeleteMapping("/{id}/participants/batch")
+    @Operation(summary = "Xóa nhiều người tham gia", description = "Xóa nhiều người tham gia khỏi hoạt động cùng một lúc")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Xóa người tham gia thành công", 
+                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+            @ApiResponse(responseCode = "404", description = "Không tìm thấy hoạt động", 
+                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+            @ApiResponse(responseCode = "400", description = "Tham số không hợp lệ hoặc không thể xóa hết participants", 
+                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
+    })
+    public ResponseEntity<ApiResponseCustom<String>> removeMultipleParticipants(
+            @Parameter(description = "ID của hoạt động", required = true) @PathVariable Long id,
+            @RequestBody List<ParticipantDeleteRequest> deleteRequests) {
+        
+        // Check if activity exists and get current participants count
+        ActivityDTO currentActivity = activityService.getActivity(id);
+        int currentParticipantCount = currentActivity.getParticipants().size();
+        
+        if (currentParticipantCount <= deleteRequests.size()) {
+            return ResponseEntity.badRequest().body(
+                ApiResponseCustom.error("Không thể xóa tất cả người tham gia. Activity phải có ít nhất một người tham gia.")
+            );
+        }
+        
+        int deletedCount = 0;
+        for (ParticipantDeleteRequest request : deleteRequests) {
+            try {
+                activityService.removeParticipant(id, request.getParticipantType(), request.getParticipantId());
+                deletedCount++;
+            } catch (Exception e) {
+                logger.warn("[removeMultipleParticipants] Failed to delete participant: type={}, id={}. Error: {}", 
+                           request.getParticipantType(), request.getParticipantId(), e.getMessage());
+            }
+        }
+        
+        return ResponseEntity.ok(ApiResponseCustom.success(
+            String.format("Đã xóa thành công %d/%d người tham gia", deletedCount, deleteRequests.size()), 
+            String.valueOf(deletedCount)));
     }
 
     @PutMapping("/{id}/pin")
@@ -375,6 +513,40 @@ public class ActivityController {
         return ResponseEntity.ok(ApiResponseCustom.success(pinned));
     }
 
+    @DeleteMapping("/batch")
+    @Operation(summary = "Xóa nhiều hoạt động", description = "Xóa nhiều hoạt động cùng một lúc theo danh sách ID")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Xóa hoạt động thành công", 
+                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+            @ApiResponse(responseCode = "400", description = "Danh sách ID không hợp lệ", 
+                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
+    })
+    public ResponseEntity<ApiResponseCustom<String>> deleteMultipleActivities(
+            @Parameter(description = "Danh sách ID các hoạt động cần xóa", required = true)
+            @RequestBody List<Long> activityIds) {
+        
+        if (activityIds.isEmpty()) {
+            return ResponseEntity.badRequest().body(
+                ApiResponseCustom.error("Danh sách ID hoạt động không được rỗng")
+            );
+        }
+        
+        int deletedCount = 0;
+        for (Long activityId : activityIds) {
+            try {
+                activityService.deleteActivity(activityId);
+                deletedCount++;
+            } catch (Exception e) {
+                logger.warn("[deleteMultipleActivities] Failed to delete activity with ID: {}. Error: {}", 
+                           activityId, e.getMessage());
+            }
+        }
+        
+        return ResponseEntity.ok(ApiResponseCustom.success(
+            String.format("Đã xóa thành công %d/%d hoạt động", deletedCount, activityIds.size()),
+            String.valueOf(deletedCount)));
+    }
+
     // Helper method to convert ActivityRequest to ActivityDTO
     private ActivityDTO convertToActivityDTO(ActivityRequest request) {
         ActivityDTO dto = new ActivityDTO();
@@ -385,24 +557,44 @@ public class ActivityController {
         dto.setNotes(request.getNotes());
         dto.setPinned(request.getPinned());
         
-        // Convert participants
+        // Convert participants - flatten the list since each request can contain multiple IDs
         if (request.getParticipants() != null) {
+            // Validate that participants array is not empty
+            if (request.getParticipants().isEmpty()) {
+                throw new IllegalArgumentException("Activity phải có ít nhất một người tham gia. Không thể tạo/cập nhật activity với danh sách participants rỗng.");
+            }
+            
             List<ActivityParticipantDTO> participants = request.getParticipants().stream()
-                .map(this::convertToParticipantDTO)
+                .flatMap(participantRequest -> convertToParticipantDTOs(participantRequest).stream())
                 .collect(Collectors.toList());
             dto.setParticipants(participants);
+        } else {
+            // Null participants is also not allowed for strict validation
+            throw new IllegalArgumentException("Activity phải có ít nhất một người tham gia. Trường participants là bắt buộc.");
         }
         
         return dto;
     }
     
     // Helper method to convert ActivityParticipantRequest to ActivityParticipantDTO
-    private ActivityParticipantDTO convertToParticipantDTO(ActivityParticipantRequest request) {
-        ActivityParticipantDTO dto = new ActivityParticipantDTO();
-        // Note: We don't set ID as it's not needed for requests and will be auto-generated
-        dto.setParticipantType(request.getParticipantType());
-        dto.setParticipantId(request.getParticipantId());
-        // Note: We don't set participantName as it will be set by service layer for responses
-        return dto;
+    private List<ActivityParticipantDTO> convertToParticipantDTOs(ActivityParticipantRequest request) {
+        // Validate that participantIds is not empty
+        if (request.getParticipantIds() == null || request.getParticipantIds().isEmpty()) {
+            throw new IllegalArgumentException("Participant IDs cannot be null or empty. At least one participant ID is required.");
+        }
+        
+        // Convert each ID in the array to a separate ActivityParticipantDTO
+        return request.getParticipantIds().stream()
+            .map(participantId -> {
+                ActivityParticipantDTO dto = new ActivityParticipantDTO();
+                // Note: We don't set ID as it's not needed for requests and will be auto-generated
+                dto.setParticipantType(request.getParticipantType());
+                dto.setParticipantId(participantId);
+                // Note: We don't set participantName as it will be set by service layer for responses
+                return dto;
+            })
+            .collect(java.util.stream.Collectors.toList());
     }
+    
+
 }

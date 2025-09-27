@@ -3,6 +3,7 @@ package com.project.quanlycanghangkhong.dto.request;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
@@ -33,8 +34,10 @@ public class ActivityRequest {
     @Size(max = 1000, message = "Notes must not exceed 1000 characters")
     private String notes;
     
-    @Schema(description = "List of participants (without redundant id and participantName fields)")
+    @Schema(description = "List of participants (required - activity must have at least one participant)", required = true)
     @Valid
+    @NotNull(message = "Participants list is required")
+    @NotEmpty(message = "Activity must have at least one participant")
     private List<ActivityParticipantRequest> participants;
     
     @Schema(description = "Whether the activity is pinned", example = "false")
