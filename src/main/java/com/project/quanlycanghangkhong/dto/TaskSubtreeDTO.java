@@ -48,6 +48,10 @@ public class TaskSubtreeDTO {
     @Schema(description = "List of attached files")
     private List<AttachmentDTO> attachments; // Quan hệ task-attachment trực tiếp
 
+    // TaskType support - chỉ parent tasks có taskType, subtasks null
+    @Schema(description = "Task type information (null for subtasks)")
+    private TaskTypeDTO taskType;
+
     public Integer getId() {
         return id;
     }
@@ -150,5 +154,13 @@ public class TaskSubtreeDTO {
 
     public void setAttachments(List<AttachmentDTO> attachments) {
         this.attachments = attachments;
+    }
+
+    public TaskTypeDTO getTaskType() {
+        return taskType;
+    }
+
+    public void setTaskType(TaskTypeDTO taskType) {
+        this.taskType = taskType;
     }
 }

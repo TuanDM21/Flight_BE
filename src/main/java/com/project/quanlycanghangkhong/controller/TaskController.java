@@ -194,6 +194,8 @@ public class TaskController {
 
             @Parameter(description = "Danh sách Unit IDs để filter tasks giao cho units (chỉ cho assigned)", example = "1,2") @RequestParam(required = false) List<Integer> unitIds,
 
+            @Parameter(description = "Danh sách Task Type IDs để filter theo loại công việc", example = "1,2,3") @RequestParam(required = false) List<Integer> taskTypeIds,
+
             @Parameter(description = "Số trang (bắt đầu từ 1)", example = "1") @RequestParam(required = false, defaultValue = "1") Integer page,
 
             @Parameter(description = "Số items per page (max 100)", example = "20") @RequestParam(required = false, defaultValue = "20") Integer size) {
@@ -252,6 +254,7 @@ public class TaskController {
         boolean hasKeywordTimeOrPriority = keyword != null || startTime != null || endTime != null ||
                 (priorities != null && !priorities.isEmpty());
         boolean hasRecipientSearch = !recipientTypes.isEmpty();
+        boolean hasTaskTypeSearch = taskTypeIds != null && !taskTypeIds.isEmpty();
 
         // Validate status values
         if (status != null && !status.matches("IN_PROGRESS|COMPLETED|OVERDUE")) {
@@ -270,12 +273,12 @@ public class TaskController {
         }
 
         MyTasksData response;
-        boolean hasAdvancedSearch = hasKeywordTimeOrPriority || hasRecipientSearch;
+        boolean hasAdvancedSearch = hasKeywordTimeOrPriority || hasRecipientSearch || hasTaskTypeSearch;
 
         if (hasAdvancedSearch) {
             // Sử dụng advanced search cho tất cả type với các feature được hỗ trợ
             response = taskService.getMyTasksWithAdvancedSearchAndPaginationOptimized(type, status, keyword,
-                    startTime, endTime, priorities, recipientTypes, recipientIds, page, size);
+                    startTime, endTime, priorities, recipientTypes, recipientIds, taskTypeIds, page, size);
         } else if (page != null || size != null) {
             // Sử dụng search thông thường với pagination tối ưu (DATABASE-LEVEL)
             response = taskService.getMyTasksWithCountStandardizedAndPaginationOptimized(type, status, page, size);
@@ -333,6 +336,8 @@ public class TaskController {
 
             @Parameter(description = "Danh sách Unit IDs để filter tasks giao cho units", example = "1,2") @RequestParam(required = false) List<Integer> unitIds,
 
+            @Parameter(description = "Danh sách Task Type IDs để filter theo loại công việc", example = "1,2,3") @RequestParam(required = false) List<Integer> taskTypeIds,
+
             @Parameter(description = "Số trang (bắt đầu từ 1)", example = "1") @RequestParam(required = false, defaultValue = "1") Integer page,
 
             @Parameter(description = "Số items per page (max 100)", example = "20") @RequestParam(required = false, defaultValue = "20") Integer size) {
@@ -383,13 +388,14 @@ public class TaskController {
 
         MyTasksData response;
         boolean hasRecipientSearch = !recipientTypes.isEmpty();
+        boolean hasTaskTypeSearch = taskTypeIds != null && !taskTypeIds.isEmpty();
         boolean hasAdvancedSearch = keyword != null || startTime != null || endTime != null ||
-                (priorities != null && !priorities.isEmpty()) || hasRecipientSearch;
+                (priorities != null && !priorities.isEmpty()) || hasRecipientSearch || hasTaskTypeSearch;
 
         if (hasAdvancedSearch) {
             // Sử dụng advanced search với role-based permissions và recipient search
             response = taskService.getCompanyTasksWithAdvancedSearchAndPagination(status, keyword,
-                    startTime, endTime, priorities, recipientTypes, recipientIds, page, size);
+                    startTime, endTime, priorities, recipientTypes, recipientIds, taskTypeIds, page, size);
         } else if (page != null || size != null) {
             // Sử dụng pagination với role-based permissions
             response = taskService.getUnitTasksWithPagination(status, page, size);
