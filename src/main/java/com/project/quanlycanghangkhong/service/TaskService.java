@@ -187,7 +187,7 @@ public interface TaskService {
     com.project.quanlycanghangkhong.dto.MyTasksData getMyTasksWithAdvancedSearchAndPaginationOptimized(
         String type, String status, String keyword, String startTime, String endTime,
         java.util.List<String> priorities, java.util.List<String> recipientTypes, java.util.List<Integer> recipientIds,
-        Integer page, Integer size);
+        java.util.List<Integer> taskTypeIds, Integer page, Integer size);
 
     // ============== UNIT TASKS METHODS (ROLE-BASED PERMISSIONS) ==============
     
@@ -240,5 +240,5 @@ public interface TaskService {
     com.project.quanlycanghangkhong.dto.MyTasksData getCompanyTasksWithAdvancedSearchAndPagination(
         String status, String keyword, String startTime, String endTime, 
         java.util.List<String> priorities, java.util.List<String> recipientTypes, 
-        java.util.List<Integer> recipientIds, Integer page, Integer size);
+        java.util.List<Integer> recipientIds, java.util.List<Integer> taskTypeIds, Integer page, Integer size);
 }

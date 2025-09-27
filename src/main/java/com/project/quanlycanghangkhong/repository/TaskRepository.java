@@ -388,14 +388,16 @@ public interface TaskRepository extends JpaRepository<Task, Integer> {
            "AND (:endTime IS NULL OR a.task.createdAt <= :endTime) " +
            "AND (:#{#priorities.isEmpty()} = true OR a.task.priority IN :priorities) " +
            "AND (:#{#recipientTypes.isEmpty()} = true OR " +
-           "     (a.recipientType IN :recipientTypes AND a.recipientId IN :recipientIds))")
+           "     (a.recipientType IN :recipientTypes AND a.recipientId IN :recipientIds)) " +
+           "AND (:#{#taskTypeIds.isEmpty()} = true OR (a.task.taskType IS NOT NULL AND a.task.taskType.id IN :taskTypeIds))")
     long countAssignedTasksWithAdvancedSearchMulti(@Param("userId") Integer userId,
                                                    @Param("keyword") String keyword,
                                                    @Param("startTime") java.time.LocalDateTime startTime,
                                                    @Param("endTime") java.time.LocalDateTime endTime,
                                                    @Param("priorities") List<com.project.quanlycanghangkhong.model.TaskPriority> priorities,
                                                    @Param("recipientTypes") List<String> recipientTypes,
-                                                   @Param("recipientIds") List<Integer> recipientIds);
+                                                   @Param("recipientIds") List<Integer> recipientIds,
+                                                   @Param("taskTypeIds") List<Integer> taskTypeIds);
 
     // ============== ULTRA OPTIMIZED NATIVE QUERIES ==============
     
@@ -553,6 +555,7 @@ public interface TaskRepository extends JpaRepository<Task, Integer> {
            "AND (:#{#priorities.isEmpty()} = true OR a.task.priority IN :priorities) " +
            "AND (:#{#recipientTypes.isEmpty()} = true OR " +
            "     (a.recipientType IN :recipientTypes AND a.recipientId IN :recipientIds)) " +
+           "AND (:#{#taskTypeIds.isEmpty()} = true OR (a.task.taskType IS NOT NULL AND a.task.taskType.id IN :taskTypeIds)) " +
            "ORDER BY a.task.updatedAt DESC, a.task.createdAt DESC")
     List<Task> findAssignedTasksWithAdvancedSearchAndPagination(@Param("userId") Integer userId,
                                                                @Param("keyword") String keyword,
@@ -561,6 +564,7 @@ public interface TaskRepository extends JpaRepository<Task, Integer> {
                                                                @Param("priorities") List<com.project.quanlycanghangkhong.model.TaskPriority> priorities,
                                                                @Param("recipientTypes") List<String> recipientTypes,
                                                                @Param("recipientIds") List<Integer> recipientIds,
+                                                               @Param("taskTypeIds") List<Integer> taskTypeIds,
                                                                org.springframework.data.domain.Pageable pageable);
 
     // ============== UNIT TASKS METHODS (ROLE-BASED PERMISSIONS) ==============
