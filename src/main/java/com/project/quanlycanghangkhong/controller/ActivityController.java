@@ -2,6 +2,11 @@ package com.project.quanlycanghangkhong.controller;
 
 import com.project.quanlycanghangkhong.dto.ActivityDTO;
 import com.project.quanlycanghangkhong.dto.ActivityParticipantDTO;
+import com.project.quanlycanghangkhong.dto.CalendarDTO;
+import com.project.quanlycanghangkhong.dto.request.ActivityRequest;
+import com.project.quanlycanghangkhong.dto.request.ActivityParticipantRequest;
+import com.project.quanlycanghangkhong.dto.request.ParticipantDeleteRequest;
+import com.project.quanlycanghangkhong.dto.request.ParticipantDeleteRequest;
 import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
 import com.project.quanlycanghangkhong.dto.response.activity.ActivityApiResponse;
 import com.project.quanlycanghangkhong.dto.response.activity.ActivityListApiResponse;
@@ -61,7 +66,8 @@ public class ActivityController {
             @ApiResponse(responseCode = "400", description = "Dữ liệu không hợp lệ", 
                 content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
-    public ResponseEntity<ApiResponseCustom<ActivityDTO>> createActivity(@Valid @RequestBody ActivityDTO dto) {
+    public ResponseEntity<ApiResponseCustom<ActivityDTO>> createActivity(@Valid @RequestBody ActivityRequest request) {
+        ActivityDTO dto = convertToActivityDTO(request);
         ActivityDTO created = activityService.createActivity(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponseCustom.created(created));
     }
@@ -78,7 +84,8 @@ public class ActivityController {
     })
     public ResponseEntity<ApiResponseCustom<ActivityDTO>> updateActivity(
             @Parameter(description = "ID của hoạt động", required = true) @PathVariable Long id, 
-            @Valid @RequestBody ActivityDTO dto) {
+            @Valid @RequestBody ActivityRequest request) {
+        ActivityDTO dto = convertToActivityDTO(request);
         ActivityDTO updated = activityService.updateActivity(id, dto);
         return ResponseEntity.ok(ApiResponseCustom.updated(updated));
     }
@@ -133,7 +140,7 @@ public class ActivityController {
     }
 
     @GetMapping
-    @Operation(summary = "Lấy danh sách hoạt động", description = "Lấy danh sách hoạt động theo loại hoặc tìm kiếm theo từ khóa (tên, ghi chú, địa điểm) và người tham gia. Hỗ trợ lọc theo khoảng ngày cho calendar view.")
+    @Operation(summary = "Lấy danh sách hoạt động cho calendar", description = "Lấy danh sách hoạt động theo loại hoặc tìm kiếm theo từ khóa (tên, ghi chú, địa điểm) và người tham gia. Hỗ trợ lọc theo khoảng ngày cho calendar view. Nếu không truyền type parameter thì trả về calendar trống.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Thành công", 
                 content = @Content(schema = @Schema(implementation = ActivityListApiResponse.class))),
@@ -142,7 +149,7 @@ public class ActivityController {
             @ApiResponse(responseCode = "401", description = "Không có quyền truy cập hoặc không tìm thấy người dùng", 
                 content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
-    public ResponseEntity<ApiResponseCustom<List<ActivityDTO>>> getAllActivities(
+    public ResponseEntity<ApiResponseCustom<CalendarDTO>> getAllActivities(
             @Parameter(description = "Từ khóa tìm kiếm (tìm trong tên, ghi chú, địa điểm)", example = "Họp định kỳ") 
             @RequestParam(required = false) String keyword,
             @Parameter(description = "Loại người tham gia", example = "USER", schema = @Schema(allowableValues = {"USER", "TEAM", "UNIT"})) 
@@ -153,9 +160,9 @@ public class ActivityController {
             @RequestParam(required = false) String startDate,
             @Parameter(description = "Ngày kết thúc để lọc (format: yyyy-MM-dd)", example = "2025-01-31") 
             @RequestParam(required = false) String endDate,
-            @Parameter(description = "Loại hoạt động: 'company' (toàn công ty - mặc định) hoặc 'my' (cá nhân)", 
+            @Parameter(description = "Loại hoạt động: 'company' (toàn công ty) hoặc 'my' (cá nhân). Nếu không truyền sẽ trả về empty list", 
                       example = "company", schema = @Schema(allowableValues = {"my", "company"}))
-            @RequestParam(defaultValue = "company") String type) {
+            @RequestParam(required = false) String type) {
         
         long requestStartTime = System.currentTimeMillis();
 
@@ -191,7 +198,31 @@ public class ActivityController {
         if (keyword != null || (participantType != null && participantId != null) || 
             startDateTime != null || endDateTime != null) {
             List<ActivityDTO> activities = activityService.searchActivities(keyword, participantType, participantId, startDateTime, endDateTime);
-            return ResponseEntity.ok(ApiResponseCustom.success(activities));
+            CalendarDTO calendar = CalendarDTO.builder()
+                .currentDate(LocalDate.now())
+                .activities(activities)
+                .metadata(CalendarDTO.CalendarMetadata.builder()
+                    .totalActivities(activities.size())
+                    .viewType("search")
+                    .message(activities.isEmpty() ? "Không tìm thấy hoạt động nào phù hợp" : "Kết quả tìm kiếm")
+                    .build())
+                .build();
+            return ResponseEntity.ok(ApiResponseCustom.success(calendar));
+        }
+
+        // If no type parameter is provided, return empty calendar
+        if (type == null || type.trim().isEmpty()) {
+            logger.info("[GET /api/activities] No type parameter provided, returning empty calendar");
+            CalendarDTO emptyCalendar = CalendarDTO.builder()
+                .currentDate(LocalDate.now())
+                .activities(new ArrayList<>())
+                .metadata(CalendarDTO.CalendarMetadata.builder()
+                    .totalActivities(0)
+                    .viewType("empty")
+                    .message("Lịch trống - chọn loại hoạt động để xem")
+                    .build())
+                .build();
+            return ResponseEntity.ok(ApiResponseCustom.success(emptyCalendar));
         }
 
         // Validate type parameter
@@ -216,15 +247,115 @@ public class ActivityController {
             Integer userId = userOpt.get().getId();
             activities = activityService.getActivitiesForUser(userId);
         } else {
-            // Default: get all company activities
+            // Get all company activities
             activities = activityService.getAllActivities();
         }
+
+        // Build calendar response
+        CalendarDTO calendar = CalendarDTO.builder()
+            .currentDate(LocalDate.now())
+            .activities(activities)
+            .metadata(CalendarDTO.CalendarMetadata.builder()
+                .totalActivities(activities.size())
+                .viewType(type)
+                .message(activities.isEmpty() ? 
+                    ("my".equals(type) ? "Bạn chưa có hoạt động nào" : "Công ty chưa có hoạt động nào") :
+                    ("my".equals(type) ? "Hoạt động cá nhân" : "Hoạt động công ty"))
+                .build())
+            .build();
 
         long duration = System.currentTimeMillis() - requestStartTime;
         logger.info("[GET /api/activities] Completed in {}ms for user: {}, type: {}, returned {} activities",
                 duration, email, type, activities.size());
 
-        return ResponseEntity.ok(ApiResponseCustom.success(activities));
+        return ResponseEntity.ok(ApiResponseCustom.success(calendar));
+    }
+
+    @GetMapping("/calendar")
+    @Operation(summary = "Lấy dữ liệu calendar view", description = "Lấy dữ liệu hoạt động theo định dạng calendar")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Thành công", 
+                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+            @ApiResponse(responseCode = "400", description = "Tham số không hợp lệ", 
+                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
+    })
+    public ResponseEntity<ApiResponseCustom<CalendarDTO>> getCalendarView(
+            @Parameter(description = "Ngày bắt đầu (format: yyyy-MM-dd)", example = "2025-03-01") 
+            @RequestParam(required = false) String startDate,
+            @Parameter(description = "Ngày kết thúc (format: yyyy-MM-dd)", example = "2025-03-31") 
+            @RequestParam(required = false) String endDate,
+            @Parameter(description = "Loại hoạt động", example = "my") 
+            @RequestParam(required = false, defaultValue = "company") String type) {
+        
+        long requestStartTime = System.currentTimeMillis();
+        
+        // Validate type parameter
+        if (!"my".equals(type) && !"company".equals(type)) {
+            logger.warn("[GET /api/activities/calendar] Invalid type parameter: {}", type);
+            return ResponseEntity.badRequest().body(ApiResponseCustom.error("Tham số type không hợp lệ. Chỉ chấp nhận 'my' hoặc 'company'"));
+        }
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+        logger.info("[GET /api/activities/calendar] Starting request for user: {}, type: {}, startDate: {}, endDate: {}", 
+                email, type, startDate, endDate);
+
+        List<ActivityDTO> activities;
+        
+        // If no date parameters provided, return empty calendar structure
+        if (startDate == null && endDate == null) {
+            activities = new ArrayList<>();
+            logger.info("[GET /api/activities/calendar] No date parameters provided, returning empty calendar");
+        } else {
+            try {
+                java.time.LocalDate start = startDate != null ? java.time.LocalDate.parse(startDate) : null;
+                java.time.LocalDate end = endDate != null ? java.time.LocalDate.parse(endDate) : null;
+                
+                if (start != null && end != null && start.isAfter(end)) {
+                    return ResponseEntity.badRequest().body(ApiResponseCustom.error("Ngày bắt đầu không thể sau ngày kết thúc"));
+                }
+                
+                if ("my".equals(type)) {
+                    // Get user's personal activities in date range
+                    Optional<User> userOpt = userRepository.findByEmail(email);
+                    if (userOpt.isEmpty()) {
+                        logger.warn("[GET /api/activities/calendar] User not found with email: {}", email);
+                        return ResponseEntity.status(401).body(ApiResponseCustom.unauthorized("Không tìm thấy người dùng"));
+                    }
+                    Integer userId = userOpt.get().getId();
+                    // For now, get user activities and filter by date range
+                    activities = activityService.getActivitiesForUser(userId);
+                } else {
+                    // Get all company activities and filter by date range
+                    activities = activityService.getAllActivities();
+                }
+            } catch (Exception e) {
+                logger.error("[GET /api/activities/calendar] Error parsing dates: {}", e.getMessage());
+                return ResponseEntity.badRequest().body(ApiResponseCustom.error("Định dạng ngày không hợp lệ. Sử dụng format: yyyy-MM-dd"));
+            }
+        }
+
+        // Build calendar response
+        CalendarDTO calendar = CalendarDTO.builder()
+            .currentDate(LocalDate.now())
+            .activities(activities)
+            .metadata(CalendarDTO.CalendarMetadata.builder()
+                .totalActivities(activities.size())
+                .viewType(type)
+                .message(activities.isEmpty() ? 
+                    (startDate == null && endDate == null ? "Vui lòng chọn khoảng thời gian để xem hoạt động" :
+                    ("my".equals(type) ? "Trong khoảng " + startDate + " đến " + endDate + " bạn chưa có hoạt động nào" : 
+                     "Trong khoảng " + startDate + " đến " + endDate + " công ty chưa có hoạt động nào")) :
+                    ("my".equals(type) ? "Hoạt động cá nhân từ " + startDate + " đến " + endDate : 
+                     "Hoạt động công ty từ " + startDate + " đến " + endDate))
+                .build())
+            .build();
+
+        long duration = System.currentTimeMillis() - requestStartTime;
+        logger.info("[GET /api/activities/calendar] Completed in {}ms for user: {}, type: {}, returned {} activities",
+                duration, email, type, activities.size());
+
+        return ResponseEntity.ok(ApiResponseCustom.success(calendar));
     }
 
     @GetMapping("/search")
@@ -357,7 +488,11 @@ public class ActivityController {
     })
     public ResponseEntity<ApiResponseCustom<List<ActivityParticipantDTO>>> addParticipants(
             @Parameter(description = "ID của hoạt động", required = true) @PathVariable Long id,
-            @RequestBody List<ActivityParticipantDTO> participants) {
+            @RequestBody List<ActivityParticipantRequest> participantRequests) {
+        // Convert requests to DTOs - flatten the list since each request can contain multiple IDs
+        List<ActivityParticipantDTO> participants = participantRequests.stream()
+            .flatMap(request -> convertToParticipantDTOs(request).stream())
+            .collect(Collectors.toList());
         List<ActivityParticipantDTO> addedParticipants = activityService.addParticipants(id, participants);
         return ResponseEntity.ok(ApiResponseCustom.success("Đã thêm người tham gia thành công", addedParticipants));
     }
@@ -402,6 +537,46 @@ public class ActivityController {
         
         activityService.removeParticipant(id, participantType, participantId);
         return ResponseEntity.ok(ApiResponseCustom.success("Đã xóa người tham gia thành công", null));
+    }
+
+    @DeleteMapping("/{id}/participants/batch")
+    @Operation(summary = "Xóa nhiều người tham gia", description = "Xóa nhiều người tham gia khỏi hoạt động cùng một lúc")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Xóa người tham gia thành công", 
+                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+            @ApiResponse(responseCode = "404", description = "Không tìm thấy hoạt động", 
+                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+            @ApiResponse(responseCode = "400", description = "Tham số không hợp lệ hoặc không thể xóa hết participants", 
+                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
+    })
+    public ResponseEntity<ApiResponseCustom<String>> removeMultipleParticipants(
+            @Parameter(description = "ID của hoạt động", required = true) @PathVariable Long id,
+            @RequestBody List<ParticipantDeleteRequest> deleteRequests) {
+        
+        // Check if activity exists and get current participants count
+        ActivityDTO currentActivity = activityService.getActivity(id);
+        int currentParticipantCount = currentActivity.getParticipants().size();
+        
+        if (currentParticipantCount <= deleteRequests.size()) {
+            return ResponseEntity.badRequest().body(
+                ApiResponseCustom.error("Không thể xóa tất cả người tham gia. Activity phải có ít nhất một người tham gia.")
+            );
+        }
+        
+        int deletedCount = 0;
+        for (ParticipantDeleteRequest request : deleteRequests) {
+            try {
+                activityService.removeParticipant(id, request.getParticipantType(), request.getParticipantId());
+                deletedCount++;
+            } catch (Exception e) {
+                logger.warn("[removeMultipleParticipants] Failed to delete participant: type={}, id={}. Error: {}", 
+                           request.getParticipantType(), request.getParticipantId(), e.getMessage());
+            }
+        }
+        
+        return ResponseEntity.ok(ApiResponseCustom.success(
+            String.format("Đã xóa thành công %d/%d người tham gia", deletedCount, deleteRequests.size()), 
+            String.valueOf(deletedCount)));
     }
 
     @PutMapping("/{id}/pin")
