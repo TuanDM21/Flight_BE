@@ -54,6 +54,10 @@ public class TaskTreeDTO {
     @Schema(description = "List of attached files")
     private List<AttachmentDTO> attachments = new ArrayList<>();
 
+    // TaskType support - chỉ parent tasks có taskType, subtasks null
+    @Schema(description = "Task type information (null for subtasks)")
+    private TaskTypeDTO taskType;
+
     // Nested structure - chứa trực tiếp các subtask
     @Schema(description = "List of nested subtasks")
     private List<TaskTreeDTO> subtasks = new ArrayList<>();
@@ -82,10 +86,14 @@ public class TaskTreeDTO {
         this.parentId = taskDetail.getParentId();
         this.level = level;
 
-        // Copy user, assignments, attachments
+        // Copy user, assignments, attachments, taskType
         this.createdByUser = taskDetail.getCreatedByUser();
         this.assignments = taskDetail.getAssignments() != null ? taskDetail.getAssignments() : new ArrayList<>();
         this.attachments = taskDetail.getAttachments() != null ? taskDetail.getAttachments() : new ArrayList<>();
+        
+        // Copy taskType - tất cả tasks trong tree đều có taskType nếu có
+        // Logic để đặt null cho subtasks sẽ được xử lý ở service layer
+        this.taskType = taskDetail.getTaskType();
 
         this.subtasks = new ArrayList<>();
         this.hasSubtasks = false;
@@ -155,6 +163,14 @@ public class TaskTreeDTO {
 
     public void setAttachments(List<AttachmentDTO> attachments) {
         this.attachments = attachments;
+    }
+
+    public TaskTypeDTO getTaskType() {
+        return taskType;
+    }
+
+    public void setTaskType(TaskTypeDTO taskType) {
+        this.taskType = taskType;
     }
 
     public String getPriority() {

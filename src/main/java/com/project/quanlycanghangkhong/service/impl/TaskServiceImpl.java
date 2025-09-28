@@ -56,6 +56,9 @@ public class TaskServiceImpl implements TaskService {
     @Autowired
     private com.project.quanlycanghangkhong.repository.UnitRepository unitRepository;
 
+    @Autowired
+    private TaskTypeRepository taskTypeRepository;
+
     private TaskDTO convertToDTO(Task task) {
         TaskDTO dto = new TaskDTO();
         dto.setId(task.getId());
@@ -68,6 +71,15 @@ public class TaskServiceImpl implements TaskService {
         dto.setCreatedBy(task.getCreatedBy() != null ? task.getCreatedBy().getId() : null);
         dto.setStatus(task.getStatus());
         dto.setPriority(task.getPriority());
+        
+        // Convert TaskType to TaskTypeDTO
+        if (task.getTaskType() != null) {
+            TaskTypeDTO taskTypeDTO = new TaskTypeDTO();
+            taskTypeDTO.setId(task.getTaskType().getId());
+            taskTypeDTO.setName(task.getTaskType().getName());
+            dto.setTaskType(taskTypeDTO);
+        }
+        
         return dto;
     }
 
@@ -82,12 +94,20 @@ public class TaskServiceImpl implements TaskService {
         task.setUpdatedAt(dto.getUpdatedAt());
         task.setStatus(dto.getStatus());
         task.setPriority(dto.getPriority());
+        
         if (dto.getCreatedBy() != null) {
             Optional<User> userOpt = userRepository.findById(dto.getCreatedBy());
             userOpt.ifPresent(task::setCreatedBy);
         } else {
             task.setCreatedBy(null);
         }
+        
+        // Convert TaskTypeDTO to TaskType
+        if (dto.getTaskType() != null && dto.getTaskType().getId() != null) {
+            Optional<TaskType> taskTypeOpt = taskTypeRepository.findById(dto.getTaskType().getId());
+            taskTypeOpt.ifPresent(task::setTaskType);
+        }
+        
         return task;
     }
 
@@ -123,6 +143,13 @@ public class TaskServiceImpl implements TaskService {
         task.setCreatedAt(LocalDateTime.now());
         task.setUpdatedAt(LocalDateTime.now());
         if (creator != null) task.setCreatedBy(creator);
+        
+        // Set TaskType nếu có
+        if (request.getTaskTypeId() != null) {
+            Optional<TaskType> taskTypeOpt = taskTypeRepository.findById(request.getTaskTypeId());
+            taskTypeOpt.ifPresent(task::setTaskType);
+        }
+        
         Task savedTask = taskRepository.save(task);
 
         // MỚI: Gán attachment trực tiếp vào task (THAY THẾ hoàn toàn logic document)
@@ -182,6 +209,17 @@ public class TaskServiceImpl implements TaskService {
             if (updateTaskDTO.getPriority() != null) {
                 task.setPriority(updateTaskDTO.getPriority());
             }
+            
+            // Cập nhật TaskType nếu có
+            if (updateTaskDTO.getTaskTypeId() != null) {
+                Optional<TaskType> taskTypeOpt = taskTypeRepository.findById(updateTaskDTO.getTaskTypeId());
+                if (taskTypeOpt.isPresent()) {
+                    task.setTaskType(taskTypeOpt.get());
+                } else {
+                    task.setTaskType(null); // Remove TaskType if ID not found
+                }
+            }
+            
             task.setUpdatedAt(LocalDateTime.now());
             
             Task updated = taskRepository.save(task);
@@ -246,6 +284,14 @@ public class TaskServiceImpl implements TaskService {
         dto.setUpdatedAt(task.getUpdatedAt());
         dto.setStatus(task.getStatus());
         dto.setPriority(task.getPriority());
+        
+        // Set TaskType
+        if (task.getTaskType() != null) {
+            TaskTypeDTO taskTypeDTO = new TaskTypeDTO();
+            taskTypeDTO.setId(task.getTaskType().getId());
+            taskTypeDTO.setName(task.getTaskType().getName());
+            dto.setTaskType(taskTypeDTO);
+        }
         
         // Keep parentId for reference only (no nesting)
         if (task.getParent() != null) {
@@ -625,6 +671,8 @@ public class TaskServiceImpl implements TaskService {
             TaskDetailDTO subtaskDetail = getTaskDetailById(subtask.getId());
             if (subtaskDetail != null) {
                 TaskSubtreeDTO subtaskSubtreeDTO = convertTaskDetailToSubtreeDTO(subtaskDetail);
+                // Subtasks không có taskType - đặt về null
+                subtaskSubtreeDTO.setTaskType(null);
                 result.add(subtaskSubtreeDTO);
                 // Recursively lấy subtask của subtask này
                 collectSubtasksAsSubtreeDTO(subtask.getId(), result);
@@ -658,6 +706,10 @@ public class TaskServiceImpl implements TaskService {
         dto.setCreatedByUser(taskDetailDTO.getCreatedByUser());
         dto.setAssignments(taskDetailDTO.getAssignments());
         dto.setAttachments(taskDetailDTO.getAttachments());
+        
+        // Copy taskType - subtasks sẽ có taskType null theo business logic
+        // (logic này được handle ở level cao hơn trong buildTaskTree)
+        dto.setTaskType(taskDetailDTO.getTaskType());
         
         return dto;
     }
@@ -696,6 +748,9 @@ public class TaskServiceImpl implements TaskService {
                 // Tạo TaskTreeDTO cho subtask
                 com.project.quanlycanghangkhong.dto.TaskTreeDTO subtaskTreeDTO = 
                     new com.project.quanlycanghangkhong.dto.TaskTreeDTO(subtaskDetail, level);
+                
+                // Subtasks không có taskType - đặt về null
+                subtaskTreeDTO.setTaskType(null);
                 
                 // Thêm vào parent
                 parentTreeTask.addSubtask(subtaskTreeDTO);
@@ -1182,6 +1237,14 @@ public class TaskServiceImpl implements TaskService {
         dto.setStatus(task.getStatus());
         dto.setPriority(task.getPriority());
         
+        // Set TaskType
+        if (task.getTaskType() != null) {
+            TaskTypeDTO taskTypeDTO = new TaskTypeDTO();
+            taskTypeDTO.setId(task.getTaskType().getId());
+            taskTypeDTO.setName(task.getTaskType().getName());
+            dto.setTaskType(taskTypeDTO);
+        }
+        
         if (task.getParent() != null) {
             dto.setParentId(task.getParent().getId());
         }
@@ -1542,7 +1605,7 @@ public class TaskServiceImpl implements TaskService {
     public com.project.quanlycanghangkhong.dto.MyTasksData getMyTasksWithAdvancedSearchAndPaginationOptimized(
             String type, String status, String keyword, String startTime, String endTime,
             java.util.List<String> priorities, java.util.List<String> recipientTypes, java.util.List<Integer> recipientIds,
-            Integer page, Integer size) {
+            java.util.List<Integer> taskTypeIds, Integer page, Integer size) {
         
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String email = authentication != null ? authentication.getName() : null;
@@ -1611,11 +1674,13 @@ public class TaskServiceImpl implements TaskService {
                 userId, keyword, finalStartDateTime, finalEndDateTime, priorityEnums, 
                 recipientTypes != null ? recipientTypes : List.of(), 
                 recipientIds != null ? recipientIds : List.of(), 
+                taskTypeIds != null ? taskTypeIds : List.of(),
                 pageable);
             totalCount = taskRepository.countAssignedTasksWithAdvancedSearchMulti(
                 userId, keyword, finalStartDateTime, finalEndDateTime, priorityEnums,
                 recipientTypes != null ? recipientTypes : List.of(), 
-                recipientIds != null ? recipientIds : List.of());
+                recipientIds != null ? recipientIds : List.of(),
+                taskTypeIds != null ? taskTypeIds : List.of());
         } else if ("received".equals(type.toLowerCase())) {
             // ✅ IMPLEMENT ADVANCED SEARCH FOR RECEIVED TYPE
             Integer teamId = (currentUser.getRole() != null && 
@@ -1650,6 +1715,13 @@ public class TaskServiceImpl implements TaskService {
                     
                     // Priority filter
                     if (!priorityEnums.isEmpty() && !priorityEnums.contains(task.getPriority())) return false;
+                    
+                    // TaskType filter
+                    if (taskTypeIds != null && !taskTypeIds.isEmpty()) {
+                        if (task.getTaskType() == null || !taskTypeIds.contains(task.getTaskType().getId())) {
+                            return false;
+                        }
+                    }
                     
                     return true;
                 })
@@ -1686,6 +1758,13 @@ public class TaskServiceImpl implements TaskService {
                     
                     // Priority filter
                     if (!priorityEnums.isEmpty() && !priorityEnums.contains(task.getPriority())) return false;
+                    
+                    // TaskType filter
+                    if (taskTypeIds != null && !taskTypeIds.isEmpty()) {
+                        if (task.getTaskType() == null || !taskTypeIds.contains(task.getTaskType().getId())) {
+                            return false;
+                        }
+                    }
                     
                     return true;
                 })
@@ -1730,7 +1809,7 @@ public class TaskServiceImpl implements TaskService {
     public com.project.quanlycanghangkhong.dto.MyTasksData getCompanyTasksWithAdvancedSearchAndPagination(
             String status, String keyword, String startTime, String endTime, 
             java.util.List<String> priorities, java.util.List<String> recipientTypes, 
-            java.util.List<Integer> recipientIds, Integer page, Integer size) {
+            java.util.List<Integer> recipientIds, java.util.List<Integer> taskTypeIds, Integer page, Integer size) {
         
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String email = authentication != null ? authentication.getName() : null;
@@ -1805,6 +1884,13 @@ public class TaskServiceImpl implements TaskService {
                 
                 // Priority filter
                 if (!priorityEnums.isEmpty() && !priorityEnums.contains(task.getPriority())) return false;
+                
+                // TaskType filter
+                if (taskTypeIds != null && !taskTypeIds.isEmpty()) {
+                    if (task.getTaskType() == null || !taskTypeIds.contains(task.getTaskType().getId())) {
+                        return false;
+                    }
+                }
                 
                 // Recipient filter (similar to assigned type in /my API)
                 if (recipientTypes != null && !recipientTypes.isEmpty() && recipientIds != null && !recipientIds.isEmpty()) {
