@@ -44,6 +44,16 @@ public interface AssignmentRepository extends JpaRepository<Assignment, Integer>
     @Query("SELECT a FROM Assignment a WHERE a.task.id IN :taskIds ORDER BY a.assignedAt DESC")
     List<Assignment> findByTaskIdInOptimized(@Param("taskIds") List<Integer> taskIds);
     
+    // ============== REPORT QUERIES ==============
+    
+    /**
+     * 🟢 REPORT: Find assignments created between dates for reports
+     * @param startDate Start date
+     * @param endDate End date
+     * @return List of assignments
+     */
+    List<Assignment> findByAssignedAtBetween(LocalDateTime startDate, LocalDateTime endDate);
+    
     // ============== OVERDUE SUPPORT METHODS ==============
     
     /**

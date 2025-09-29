@@ -62,6 +62,11 @@ public class ResponseInterceptor implements ResponseBodyAdvice<Object> {
 			return body;
 		}
 
+		// Nếu là export endpoints hoặc file downloads, trả về nguyên vẹn
+		if (path.contains("/export/") || path.contains("/test/")) {
+			return body;
+		}
+
 		// Nếu body là null, trả về ApiResponseCustom với data là null
 		if (body == null) {
 			return ApiResponseCustom.success(null);

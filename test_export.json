@@ -1,0 +1,35 @@
+{
+  "reportType": "TASK_REPORT",
+  "reportName": "Báo cáo công việc theo TaskType",
+  "summary": {
+    "totalRecords": 0,
+    "totalGroups": 0,
+    "generatedAt": "29/09/2025 16:06:34",
+    "processingTime": 35
+  },
+  "columns": [
+    {
+      "field": "task.title",
+      "label": "Tiêu đề",
+      "dataType": "STRING",
+      "sortable": true,
+      "width": "auto"
+    },
+    {
+      "field": "task.status",
+      "label": "Trạng thái",
+      "dataType": "ENUM",
+      "sortable": true,
+      "width": "auto"
+    },
+    {
+      "field": "task.priority",
+      "label": "Độ ưu tiên",
+      "dataType": "ENUM",
+      "sortable": true,
+      "width": "auto"
+    }
+  ],
+  "groups": [],
+  "percentageStats": {}
+}

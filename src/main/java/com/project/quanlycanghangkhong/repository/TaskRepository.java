@@ -45,6 +45,16 @@ public interface TaskRepository extends JpaRepository<Task, Integer> {
     @Query("SELECT t.parent.id, COUNT(t) FROM Task t WHERE t.parent.id IN :parentIds AND t.deleted = false GROUP BY t.parent.id")
     List<Object[]> countSubtasksByParentIds(@Param("parentIds") List<Integer> parentIds);
     
+    // ============== REPORT QUERIES ==============
+    
+    /**
+     * 🟢 REPORT: Find tasks created between dates for reports
+     * @param startDate Start date
+     * @param endDate End date
+     * @return List of tasks
+     */
+    List<Task> findByCreatedAtBetween(java.time.LocalDateTime startDate, java.time.LocalDateTime endDate);
+    
     // ============== COUNT ROOT TASKS ONLY (FOR MY TASKS API) ==============
     
     /**
