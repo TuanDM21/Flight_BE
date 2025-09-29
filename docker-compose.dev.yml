@@ -17,10 +17,18 @@ services:
       - ./src:/app/src
       - ./target:/app/target
       - ~/.m2:/root/.m2
+    healthcheck:
+      test:
+        ["CMD", "sh", "-c", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
     networks:
-      - airport-network
+      - flight-dev-network
     depends_on:
-      - mariadb
+      mariadb:
+        condition: service_healthy
 
   migration:
     image: maven:3.9-eclipse-temurin-17
@@ -32,14 +40,16 @@ services:
     env_file:
       - .env
     networks:
-      - airport-network
+      - flight-dev-network
     depends_on:
       - mariadb
     profiles:
       - migration
 
   mariadb:
-    image: mariadb:11.4
+    build:
+      context: .
+      dockerfile: Dockerfile.mariadb
     container_name: flight-mariadb-dev
     env_file:
       - .env
@@ -51,12 +61,25 @@ services:
       - mariadb_data_dev:/var/lib/mysql
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --max_allowed_packet=256M
     networks:
-      - airport-network
+      - flight-dev-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "sh",
+          "-c",
+          "mariadb -uroot -p$$MYSQL_ROOT_PASSWORD -e 'SELECT 1' || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
 volumes:
   mariadb_data_dev:
   maven_cache_dev:
 
 networks:
-  airport-network:
+  flight-dev-network:
+    name: flight-dev-network
     driver: bridge

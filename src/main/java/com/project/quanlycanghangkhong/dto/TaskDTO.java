@@ -28,6 +28,9 @@ public class TaskDTO {
     @Schema(description = "Task priority", example = "HIGH")
     private TaskPriority priority;
 
+    @Schema(description = "Task type information")
+    private TaskTypeDTO taskType;
+
     @Schema(description = "Creation timestamp", example = "2025-09-04T10:30:00")
     private LocalDateTime createdAt;
 
@@ -116,5 +119,13 @@ public class TaskDTO {
 
     public void setPriority(TaskPriority priority) {
         this.priority = priority;
+    }
+
+    public TaskTypeDTO getTaskType() {
+        return taskType;
+    }
+
+    public void setTaskType(TaskTypeDTO taskType) {
+        this.taskType = taskType;
     }
 }

@@ -10,7 +10,7 @@ public interface ActivityService {
     ActivityDTO updateActivity(Long id, ActivityDTO dto);
     void deleteActivity(Long id);
     ActivityDTO getActivity(Long id);
-    List<ActivityDTO> searchActivities(String name, String location);
+    List<ActivityDTO> searchActivities(String keyword, String participantType, Long participantId, java.time.LocalDateTime startTime, java.time.LocalDateTime endTime);
     List<ActivityDTO> getAllActivities();
     List<ActivityDTO> searchActivitiesByMonthYear(int month, int year);
     List<ActivityDTO> getActivitiesByDate(java.time.LocalDate date);

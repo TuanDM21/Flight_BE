@@ -61,6 +61,11 @@ public class Task {
     @Column(name = "priority", nullable = false)
     private TaskPriority priority = TaskPriority.NORMAL;
 
+    // Quan hệ với TaskType để phân loại task
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "task_type_id")
+    private TaskType taskType;
+
     // MÔ HÌNH ADJACENCY LIST: Quan hệ cha-con cho task phân cấp
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id") // Khóa ngoại tự tham chiếu
@@ -165,6 +170,14 @@ public class Task {
 
     public void setPriority(TaskPriority priority) {
         this.priority = priority;
+    }
+
+    public TaskType getTaskType() {
+        return taskType;
+    }
+
+    public void setTaskType(TaskType taskType) {
+        this.taskType = taskType;
     }
 
     /**

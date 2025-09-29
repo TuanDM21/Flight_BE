@@ -17,3 +17,4 @@ FLUSH PRIVILEGES;
 APP_EOF
 
 echo "✅ Spring Boot user '${MYSQL_USER}' configured successfully."
+echo "🎉 Database initialization completed!"

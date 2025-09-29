@@ -75,7 +75,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT != '' && secrets.VPS_PORT || 22 }}
-          source: "docker-compose.yml,Dockerfile.migration,scripts/,src/main/resources/db/migration/"
+          source: "docker-compose.yml,Dockerfile.migration,Dockerfile.mariadb,scripts/,src/main/resources/db/migration/"
           target: "${{ vars.DEPLOY_PATH }}"
 
       - name: 🔧 Setup & Deploy via SSH

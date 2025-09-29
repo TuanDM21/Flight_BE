@@ -10,13 +10,18 @@ services:
       - SPRING_PROFILES_ACTIVE=prod
     healthcheck:
       test:
-        ["CMD", "sh", "-c", "curl -f http://localhost:${SERVER_PORT}/health"]
+        [
+          "CMD",
+          "sh",
+          "-c",
+          "curl -f http://localhost:$$SERVER_PORT/health || exit 1",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 120s
     networks:
-      - be_airport-network
+      - flight-prod-network
     depends_on:
       mariadb:
         condition: service_healthy
@@ -35,8 +40,9 @@ services:
       - FLYWAY_USER=${FLYWAY_USER}
       - FLYWAY_PASSWORD=${FLYWAY_PASSWORD}
       - FLYWAY_BASELINE_ON_MIGRATE=true
+      - FLYWAY_CLEAN_DISABLED=false
     networks:
-      - be_airport-network
+      - flight-prod-network
     depends_on:
       mariadb:
         condition: service_healthy
@@ -44,7 +50,9 @@ services:
       - migration
 
   mariadb:
-    image: mariadb:11.4
+    build:
+      context: .
+      dockerfile: Dockerfile.mariadb
     container_name: flight-mariadb-prod
     env_file:
       - .env
@@ -52,7 +60,6 @@ services:
       - "${MYSQL_PORT}:3306"
     volumes:
       - mariadb_data_prod:/var/lib/mysql
-      - ./scripts/init-mariadb.sh:/docker-entrypoint-initdb.d/init-mariadb.sh
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
       - MYSQL_DATABASE=${MYSQL_DATABASE}
@@ -63,21 +70,16 @@ services:
       test:
         [
           "CMD",
-          "mariadb-admin",
-          "ping",
-          "-h",
-          "localhost",
-          "-u",
-          "root",
-          "-p${MYSQL_ROOT_PASSWORD}",
-          "--silent",
+          "sh",
+          "-c",
+          "mariadb -uroot -p$$MYSQL_ROOT_PASSWORD -e 'SELECT 1' || exit 1",
         ]
       start_period: 60s
       interval: 15s
       timeout: 10s
       retries: 10
     networks:
-      - be_airport-network
+      - flight-prod-network
     restart: unless-stopped
 
 volumes:
@@ -85,6 +87,6 @@ volumes:
     name: flight-mariadb-data-prod
 
 networks:
-  be_airport-network:
-    name: be_airport-network
+  flight-prod-network:
+    name: flight-prod-network
     driver: bridge

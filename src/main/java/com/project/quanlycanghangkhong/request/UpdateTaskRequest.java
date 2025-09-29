@@ -2,24 +2,17 @@ package com.project.quanlycanghangkhong.request;
 
 import java.util.List;
 import com.project.quanlycanghangkhong.model.TaskPriority;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.swagger.v3.oas.annotations.media.Schema;
 
-@Schema(description = "Request to create a new task")
+@Schema(description = "Request to update an existing task")
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class CreateTaskRequest {
+public class UpdateTaskRequest {
 
-    // Constructor mặc định cần thiết cho Jackson
-    public CreateTaskRequest() {
+    public UpdateTaskRequest() {
     }
 
-    public CreateTaskRequest(String title, String content) {
-        this.title = title;
-        this.content = content;
-    }
-
-    @Schema(description = "Task title", example = "Kiểm tra hành lý", required = true)
+    @Schema(description = "Task title", example = "Kiểm tra hành lý")
     private String title;
 
     @Schema(description = "Task content/description", example = "Kiểm tra hành lý khách hàng")
@@ -40,9 +33,8 @@ public class CreateTaskRequest {
     @Schema(description = "List of task assignments")
     private List<AssignmentRequest> assignments;
 
-    // MỚI: Chỉ hỗ trợ attachment trực tiếp (thay thế hoàn toàn documents)
     @Schema(description = "List of attachment IDs to assign to this task", example = "[1, 2, 3]")
-    private List<Integer> attachmentIds; // Gán attachment trực tiếp vào task
+    private List<Integer> attachmentIds;
 
     // Getters and setters
     public String getTitle() {
@@ -101,38 +93,25 @@ public class CreateTaskRequest {
         this.assignments = assignments;
     }
 
-    /**
-     * Lấy danh sách ID attachment để gán trực tiếp vào task
-     * THAY ĐỔI LOGIC NGHIỆP VỤ: Thay thế cách tiếp cận dựa trên document bằng việc
-     * gán attachment trực tiếp
-     * 
-     * @return Danh sách ID attachment để gán vào task
-     */
     public List<Integer> getAttachmentIds() {
         return attachmentIds;
     }
 
-    /**
-     * Đặt danh sách ID attachment để gán trực tiếp vào task
-     * THAY ĐỔI LOGIC NGHIỆP VỤ: Thay thế cách tiếp cận documentIds và newDocuments
-     * cũ
-     * 
-     * @param attachmentIds Danh sách ID attachment hiện có để gán vào task
-     */
     public void setAttachmentIds(List<Integer> attachmentIds) {
         this.attachmentIds = attachmentIds;
     }
 
     @Override
     public String toString() {
-        return "CreateTaskRequest{" +
+        return "UpdateTaskRequest{" +
                 "title='" + title + '\'' +
                 ", content='" + content + '\'' +
                 ", instructions='" + instructions + '\'' +
                 ", notes='" + notes + '\'' +
                 ", priority=" + priority +
-                ", assignments=" + (assignments != null ? assignments.size() + " assignments" : "null") +
-                ", attachmentIds=" + (attachmentIds != null ? attachmentIds.size() + " attachments" : "null") +
+                ", taskTypeId=" + taskTypeId +
+                ", assignments=" + assignments +
+                ", attachmentIds=" + attachmentIds +
                 '}';
     }
 }

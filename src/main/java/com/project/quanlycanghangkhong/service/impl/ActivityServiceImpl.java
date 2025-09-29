@@ -77,11 +77,12 @@ public class ActivityServiceImpl implements ActivityService {
                     valid = unitRepository.findById(p.getParticipantId().intValue()).isPresent();
                     logger.info("[createActivity] UNIT tồn tại: {}", valid);
                 } else {
-                    logger.warn("[createActivity] participantType không hợp lệ: {}", p.getParticipantType());
+                    logger.error("[createActivity] participantType không hợp lệ: {}", p.getParticipantType());
+                    throw new IllegalArgumentException("Invalid participant type: " + p.getParticipantType() + ". Must be one of: USER, TEAM, UNIT");
                 }
                 if (!valid) {
-                    logger.warn("[createActivity] participantId không hợp lệ, bỏ qua: type={}, id={}", p.getParticipantType(), p.getParticipantId());
-                    continue;
+                    logger.error("[createActivity] participantId không tồn tại: type={}, id={}", p.getParticipantType(), p.getParticipantId());
+                    throw new IllegalArgumentException("Participant not found: " + p.getParticipantType() + " with ID " + p.getParticipantId());
                 }
                 ActivityParticipant entity = new ActivityParticipant();
                 entity.setActivity(saved);
@@ -161,8 +162,14 @@ public class ActivityServiceImpl implements ActivityService {
                     valid = teamRepository.findById(p.getParticipantId().intValue()).isPresent();
                 } else if ("UNIT".equals(p.getParticipantType())) {
                     valid = unitRepository.findById(p.getParticipantId().intValue()).isPresent();
+                } else {
+                    logger.error("[updateActivity] participantType không hợp lệ: {}", p.getParticipantType());
+                    throw new IllegalArgumentException("Invalid participant type: " + p.getParticipantType() + ". Must be one of: USER, TEAM, UNIT");
                 }
-                if (!valid) continue; // Bỏ qua participant không hợp lệ
+                if (!valid) {
+                    logger.error("[updateActivity] participantId không tồn tại: type={}, id={}", p.getParticipantType(), p.getParticipantId());
+                    throw new IllegalArgumentException("Participant not found: " + p.getParticipantType() + " with ID " + p.getParticipantId());
+                }
                 ActivityParticipant entity = new ActivityParticipant();
                 entity.setActivity(saved);
                 entity.setParticipantType(p.getParticipantType());
@@ -196,10 +203,64 @@ public class ActivityServiceImpl implements ActivityService {
     }
 
     @Override
-    public List<ActivityDTO> searchActivities(String name, String location) {
+    public List<ActivityDTO> searchActivities(String keyword, String participantType, Long participantId, java.time.LocalDateTime startTime, java.time.LocalDateTime endTime) {
+        // If searching by participant, use optimized repository query
+        if (participantType != null && participantId != null) {
+            return searchActivitiesByParticipant(keyword, participantType, participantId, startTime, endTime);
+        }
+        
+        // Standard search without participant filter
         return activityRepository.findAll().stream()
-                .filter(a -> (name == null || a.getName().toLowerCase().contains(name.toLowerCase()))
-                        && (location == null || a.getLocation().toLowerCase().contains(location.toLowerCase())))
+                .filter(a -> (keyword == null || 
+                        a.getName().toLowerCase().contains(keyword.toLowerCase()) ||
+                        (a.getNotes() != null && a.getNotes().toLowerCase().contains(keyword.toLowerCase())) ||
+                        a.getLocation().toLowerCase().contains(keyword.toLowerCase()))
+                        && (startTime == null || a.getStartTime().isAfter(startTime) || a.getStartTime().isEqual(startTime))
+                        && (endTime == null || a.getEndTime().isBefore(endTime) || a.getEndTime().isEqual(endTime)))
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+    }
+    
+    private List<ActivityDTO> searchActivitiesByParticipant(String keyword, String participantType, Long participantId, java.time.LocalDateTime startTime, java.time.LocalDateTime endTime) {
+        // Validate participant type
+        if (!participantType.equals("USER") && !participantType.equals("TEAM") && !participantType.equals("UNIT")) {
+            logger.warn("[searchActivitiesByParticipant] Invalid participantType: {}", participantType);
+            return new ArrayList<>();
+        }
+        
+        // Validate that the participant exists
+        boolean participantExists = false;
+        switch (participantType) {
+            case "USER" -> participantExists = userRepository.findById(participantId.intValue()).isPresent();
+            case "TEAM" -> participantExists = teamRepository.findById(participantId.intValue()).isPresent();
+            case "UNIT" -> participantExists = unitRepository.findById(participantId.intValue()).isPresent();
+        }
+        
+        if (!participantExists) {
+            logger.warn("[searchActivitiesByParticipant] Participant not found: type={}, id={}", participantType, participantId);
+            return new ArrayList<>();
+        }
+        
+        // Find activities that have this specific participant
+        List<ActivityParticipant> participants = activityParticipantRepository
+                .findByParticipantTypeAndParticipantId(participantType, participantId);
+        
+        if (participants.isEmpty()) {
+            return new ArrayList<>();
+        }
+        
+        Set<Long> activityIds = participants.stream()
+                .map(p -> p.getActivity().getId())
+                .collect(Collectors.toSet());
+        
+        // Get activities and apply remaining filters including keyword and time range
+        return activityRepository.findAllById(activityIds).stream()
+                .filter(a -> (keyword == null || 
+                        a.getName().toLowerCase().contains(keyword.toLowerCase()) ||
+                        (a.getNotes() != null && a.getNotes().toLowerCase().contains(keyword.toLowerCase())) ||
+                        a.getLocation().toLowerCase().contains(keyword.toLowerCase()))
+                        && (startTime == null || a.getStartTime().isAfter(startTime) || a.getStartTime().isEqual(startTime))
+                        && (endTime == null || a.getEndTime().isBefore(endTime) || a.getEndTime().isEqual(endTime)))
                 .map(this::toDTO)
                 .collect(Collectors.toList());
     }
@@ -223,8 +284,14 @@ public class ActivityServiceImpl implements ActivityService {
                 valid = teamRepository.findById(dto.getParticipantId().intValue()).isPresent();
             } else if ("UNIT".equals(dto.getParticipantType())) {
                 valid = unitRepository.findById(dto.getParticipantId().intValue()).isPresent();
+            } else {
+                logger.error("[addParticipants] participantType không hợp lệ: {}", dto.getParticipantType());
+                throw new IllegalArgumentException("Invalid participant type: " + dto.getParticipantType() + ". Must be one of: USER, TEAM, UNIT");
             }
-            if (!valid) continue; // Bỏ qua participant không hợp lệ
+            if (!valid) {
+                logger.error("[addParticipants] participantId không tồn tại: type={}, id={}", dto.getParticipantType(), dto.getParticipantId());
+                throw new IllegalArgumentException("Participant not found: " + dto.getParticipantType() + " with ID " + dto.getParticipantId());
+            }
             ActivityParticipant entity = new ActivityParticipant();
             entity.setActivity(activity);
             entity.setParticipantType(dto.getParticipantType());
@@ -238,7 +305,20 @@ public class ActivityServiceImpl implements ActivityService {
     @Override
     @Transactional
     public void removeParticipant(Long activityId, String participantType, Long participantId) {
-        activityParticipantRepository.deleteByActivityIdAndParticipantTypeAndParticipantId(activityId, participantType, participantId);
+        logger.info("[removeParticipant] Attempting to delete participant - activityId: {}, type: {}, participantId: {}", 
+                   activityId, participantType, participantId);
+        
+        int deletedCount = activityParticipantRepository.deleteByActivityIdAndParticipantTypeAndParticipantId(
+            activityId, participantType, participantId);
+        
+        if (deletedCount == 0) {
+            logger.warn("[removeParticipant] No participant found to delete - activityId: {}, type: {}, participantId: {}", 
+                       activityId, participantType, participantId);
+            throw new RuntimeException("Không tìm thấy người tham gia với thông tin đã cung cấp");
+        }
+        
+        logger.info("[removeParticipant] Successfully deleted {} participants for activityId: {}, type: {}, participantId: {}", 
+                   deletedCount, activityId, participantType, participantId);
     }
 
     @Override

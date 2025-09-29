@@ -23,6 +23,9 @@ public class UpdateTaskDTO {
     @Schema(description = "Task priority", example = "URGENT")
     private TaskPriority priority;
 
+    @Schema(description = "Task type ID", example = "1")
+    private Integer taskTypeId;
+
     public Integer getId() {
         return id;
     }
@@ -69,5 +72,13 @@ public class UpdateTaskDTO {
 
     public void setPriority(TaskPriority priority) {
         this.priority = priority;
+    }
+
+    public Integer getTaskTypeId() {
+        return taskTypeId;
+    }
+
+    public void setTaskTypeId(Integer taskTypeId) {
+        this.taskTypeId = taskTypeId;
     }
 }

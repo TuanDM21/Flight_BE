@@ -1,13 +1,27 @@
 # Makefile for Flight Management System Backend
 
 # Variables
-ENV ?= dev
 COMPOSE_FILE_PROD = docker-compose.yml
 COMPOSE_FILE_DEV = docker-compose.dev.yml
-COMPOSE_FILE = $(if $(filter prod,$(ENV)),$(COMPOSE_FILE_PROD),$(COMPOSE_FILE_DEV))
 ENV_FILE = .env
 
-.PHONY: help build run stop down clean logs status restart test mvn-clean mvn-compile mvn-test mvn-package mvn-install ssl-cert db-migrate db-info db-clean db-validate db-repair
+.PHONY: help run-dev run-prod build-dev build-prod stop-dev stop-prod down-dev down-prod clean-dev clean-prod logs-dev logs-prod status restart-dev restart-prod test mvn-clean mvn-compile mvn-test mvn-package mvn-install ssl-cert db-migrate-dev db-migrate-prod db-info-dev db-info-prod db-clean-dev db-clean-prod db-validate-dev db-validate-prod db-repair-dev db-repair-prod
+
+# Default target
+.DEFAULT_GOAL := help
+
+help: ## Show this help message
+	@echo "⚠️  WARNING: This will DROP ALL database objects in development environment!"
+	@read -p "Are you sure? Type 'yes' to continue: " confirm && [ "$$confirm" = "yes" ] || exit 1
+	@echo "🧹 Cleaning development database..."
+	@if [ "$(shell docker compose -f $(COMPOSE_FILE_DEV) ps -q mariadb 2>/dev/null)" ]; then \
+		echo "📍 Using development environment"; \
+		docker compose -f $(COMPOSE_FILE_DEV) --profile migration run --rm migration clean; \
+	else \
+		echo "❌ No MariaDB container found for development environment. Please start it first with 'make run-dev'"; \
+		exit 1; \
+	fi
+	@echo "✅ Development database cleaned" clean-prod logs-dev logs-prod status restart-dev restart-prod test mvn-clean mvn-compile mvn-test mvn-package mvn-install ssl-cert db-migrate-dev db-migrate-prod db-info-dev db-info-prod db-clean-dev db-clean-prod db-validate-dev db-validate-prod db-repair-dev db-repair-prod
 
 # Default target
 .DEFAULT_GOAL := help
@@ -15,25 +29,24 @@ ENV_FILE = .env
 help: ## Show this help message
 	@echo "Flight Management System Backend - Available Commands"
 	@echo ""
-	@echo "Usage: make <command> ENV=<dev|prod>"
-	@echo "Default ENV=dev if not specified"
+	@echo "🚀 Development Environment Commands:"
+	@echo "  make run-dev     - Start development environment"
+	@echo "  make build-dev   - Build development Docker images"
+	@echo "  make stop-dev    - Stop development containers"
+	@echo "  make down-dev    - Stop and remove development containers"
+	@echo "  make restart-dev - Restart development containers"
+	@echo "  make clean-dev   - Clean up development containers, images and volumes"
+	@echo "  make logs-dev    - Show logs from development containers"
 	@echo ""
-	@echo "🚀 Docker Commands:"
-	@echo "  make build ENV=dev   - Build development Docker images"
-	@echo "  make build ENV=prod  - Build production Docker images"
-	@echo "  make run ENV=dev     - Start development environment"
-	@echo "  make run ENV=prod    - Start production environment"
-	@echo "  make stop ENV=dev    - Stop development containers"
-	@echo "  make stop ENV=prod   - Stop production containers"
-	@echo "  make down ENV=dev    - Stop and remove development containers"
-	@echo "  make down ENV=prod   - Stop and remove production containers"
-	@echo "  make restart ENV=dev - Restart development containers"
-	@echo "  make restart ENV=prod- Restart production containers"
-	@echo "  make clean ENV=dev   - Clean up development containers, images and volumes"
-	@echo "  make clean ENV=prod  - Clean up production containers, images and volumes"
-	@echo "  make logs ENV=dev    - Show logs from development containers"
-	@echo "  make logs ENV=prod   - Show logs from production containers"
-	@echo "  make status          - Show status of all containers"
+	@echo "🚀 Production Environment Commands:"
+	@echo "  make run-prod     - Start production environment"
+	@echo "  make build-prod   - Build production Docker images"
+	@echo "  make stop-prod    - Stop production containers"
+	@echo "  make down-prod    - Stop and remove production containers"
+	@echo "  make restart-prod - Restart production containers"
+	@echo "  make clean-prod   - Clean up production containers, images and volumes"
+	@echo "  make logs-prod    - Show logs from production containers"
+	@echo "  make status       - Show status of all containers"
 	@echo ""
 	@echo "🛠️  Maven Commands:"
 	@echo "  make mvn-clean   - Clean Maven build artifacts"
@@ -43,90 +56,120 @@ help: ## Show this help message
 	@echo "  make mvn-install - Install dependencies and build"
 	@echo "  make test        - Run tests (alias for mvn-test)"
 	@echo ""
-	@echo "� CI/CD Commands:"
-	@echo "  make run-ci ENV=prod     - Start with database wait for CI/CD"
-	@echo "  make deploy-ci ENV=prod  - Full CI/CD deployment with migration"
+	@echo "🗄️  Development Database Commands:"
+	@echo "  make db-migrate-dev  - Run Flyway migrations on development"
+	@echo "  make db-info-dev     - Show development migration status"
+	@echo "  make db-clean-dev    - Clean development database (DANGEROUS)"
+	@echo "  make db-validate-dev - Validate development migrations"
+	@echo "  make db-repair-dev   - Repair development Flyway schema history"
 	@echo ""
-	@echo "�🗄️  Database Migration Commands:"
-	@echo "  make db-migrate ENV=dev  - Run Flyway migrations on development"
-	@echo "  make db-migrate ENV=prod - Run Flyway migrations on production"
-	@echo "  make db-info ENV=dev     - Show development migration status"
-	@echo "  make db-info ENV=prod    - Show production migration status"
-	@echo "  make db-clean ENV=dev    - Clean development database (DANGEROUS)"
-	@echo "  make db-clean ENV=prod   - Clean production database (DANGEROUS)"
-	@echo "  make db-validate ENV=dev - Validate development migrations"
-	@echo "  make db-validate ENV=prod- Validate production migrations"
-	@echo "  make db-repair ENV=dev   - Repair development Flyway schema history"
-	@echo "  make db-repair ENV=prod  - Repair production Flyway schema history"
+	@echo "🗄️  Production Database Commands:"
+	@echo "  make db-migrate-prod  - Run Flyway migrations on production"
+	@echo "  make db-info-prod     - Show production migration status"
+	@echo "  make db-clean-prod    - Clean production database (DANGEROUS)"
+	@echo "  make db-validate-prod - Validate production migrations"
+	@echo "  make db-repair-prod   - Repair production Flyway schema history"
 	@echo ""
 	@echo "🔐 SSL Commands:"
 	@echo "  make ssl-cert    - Generate SSL certificates"
 	@echo ""
 
-# Docker Commands
-build: ## Build Docker images based on ENV
-ifeq ($(ENV),prod)
-	@echo "🔨 Building production Docker images..."
-	@DOCKER_BUILDKIT=1 docker build --network=host --progress=plain -f Dockerfile -t flight-mnm-backend:latest .
-	@echo "✅ Production images built"
-else
-	@echo "🔨 Building development Docker images..."
-	@docker compose -f $(COMPOSE_FILE) build
-	@echo "✅ Development images built"
-endif
-
-run: ## Start environment based on ENV
-	@echo "🚀 Starting $(ENV) Environment..."
+run-dev: ## Start development environment
+	@echo "🚀 Starting Development Environment..."
 	@if [ ! -f $(ENV_FILE) ]; then \
 		echo "❌ .env file not found! Please create one."; \
 		exit 1; \
 	fi
-	@docker compose -f $(COMPOSE_FILE) up -d
-ifeq ($(ENV),prod)
-	@echo "✅ Production environment started"
-	@echo "🌐 Application: http://localhost:8080"
-	@echo "🌐 HTTPS: https://localhost:8443"
-	@echo "🗄️  MySQL: localhost:3306"
-else
+	@docker compose -f $(COMPOSE_FILE_DEV) up --build -d
 	@echo "✅ Development environment started"
 	@echo "🌐 Application: http://localhost:8080"
 	@echo "🔄 LiveReload: http://localhost:35729"
 	@echo "🗄️  MySQL: localhost:3306"
-endif
+
+run-prod: ## Start production environment
+	@echo "🚀 Starting Production Environment..."
+	@if [ ! -f $(ENV_FILE) ]; then \
+		echo "❌ .env file not found! Please create one."; \
+		exit 1; \
+	fi
+	@docker compose -f $(COMPOSE_FILE_PROD) up --build -d
+	@echo "✅ Production environment started"
+	@echo "🌐 Application: http://localhost:8080"
+	@echo "🌐 HTTPS: https://localhost:8443"
+	@echo "🗄️  MySQL: localhost:3306"
+
+build-dev: ## Build development Docker images
+	@echo "🔨 Building development Docker images..."
+	@docker compose -f $(COMPOSE_FILE_DEV) build
+	@echo "✅ Development images built"
+
+build-prod: ## Build production Docker images
+	@echo "🔨 Building production Docker images..."
+	@docker compose -f $(COMPOSE_FILE_PROD) build
+	@echo "✅ Production images built"
 
 
-stop: ## Stop containers based on ENV
-	@echo "🛑 Stopping $(ENV) containers..."
-	@docker compose -f $(COMPOSE_FILE) stop
-	@echo "✅ $(ENV) containers stopped"
+stop-dev: ## Stop development containers
+	@echo "🛑 Stopping development containers..."
+	@docker compose -f $(COMPOSE_FILE_DEV) stop
+	@echo "✅ Development containers stopped"
 
-down: ## Stop and remove containers based on ENV
-	@echo "⬇️  Stopping and removing $(ENV) containers..."
-	@docker compose -f $(COMPOSE_FILE) down --remove-orphans
-	@echo "✅ $(ENV) containers stopped and removed"
+stop-prod: ## Stop production containers
+	@echo "🛑 Stopping production containers..."
+	@docker compose -f $(COMPOSE_FILE_PROD) stop
+	@echo "✅ Production containers stopped"
 
-restart: ## Restart containers based on ENV
-	@echo "🔄 Restarting $(ENV) containers..."
-	@$(MAKE) stop ENV=$(ENV)
-	@$(MAKE) run ENV=$(ENV)
-	@echo "✅ $(ENV) containers restarted"
+down-dev: ## Stop and remove development containers
+	@echo "⬇️  Stopping and removing development containers..."
+	@docker compose -f $(COMPOSE_FILE_DEV) down --remove-orphans
+	@echo "✅ Development containers stopped and removed"
 
-clean: ## Clean up containers, images and volumes for specific ENV
-	@echo "🧹 Cleaning up $(ENV) environment..."
-	@docker compose -f $(COMPOSE_FILE) down -v --remove-orphans
-ifeq ($(ENV),prod)
-	@docker image rm flight-mnm-backend:latest 2>/dev/null || true
-endif
+down-prod: ## Stop and remove production containers
+	@echo "⬇️  Stopping and removing production containers..."
+	@docker compose -f $(COMPOSE_FILE_PROD) down --remove-orphans
+	@echo "✅ Production containers stopped and removed"
+
+restart-dev: ## Restart development containers
+	@echo "🔄 Restarting development containers..."
+	@$(MAKE) stop-dev
+	@$(MAKE) run-dev
+	@echo "✅ Development containers restarted"
+
+restart-prod: ## Restart production containers
+	@echo "🔄 Restarting production containers..."
+	@$(MAKE) stop-prod
+	@$(MAKE) run-prod
+	@echo "✅ Production containers restarted"
+
+clean-dev: ## Clean up development containers, images and volumes
+	@echo "🧹 Cleaning up development environment..."
+	@docker compose -f $(COMPOSE_FILE_DEV) down -v --remove-orphans
 	@docker system prune -f
 	@docker volume prune -f
-	@echo "✅ $(ENV) cleanup completed"
+	@echo "✅ Development cleanup completed"
 
-logs: ## Show logs from containers based on ENV
-	@echo "📋 Showing $(ENV) container logs..."
-	@if [ "$(shell docker compose -f $(COMPOSE_FILE) ps -q 2>/dev/null)" ]; then \
-		docker compose -f $(COMPOSE_FILE) logs -f --tail=100; \
+clean-prod: ## Clean up production containers, images and volumes
+	@echo "🧹 Cleaning up production environment..."
+	@docker compose -f $(COMPOSE_FILE_PROD) down -v --remove-orphans
+	@docker image rm flight-mnm-backend:latest 2>/dev/null || true
+	@docker system prune -f
+	@docker volume prune -f
+	@echo "✅ Production cleanup completed"
+
+logs-dev: ## Show logs from development containers
+	@echo "📋 Showing development container logs..."
+	@if [ "$(shell docker compose -f $(COMPOSE_FILE_DEV) ps -q 2>/dev/null)" ]; then \
+		docker compose -f $(COMPOSE_FILE_DEV) logs -f --tail=100; \
 	else \
-		echo "❌ No running $(ENV) containers found"; \
+		echo "❌ No running development containers found"; \
+	fi
+
+logs-prod: ## Show logs from production containers
+	@echo "📋 Showing production container logs..."
+	@if [ "$(shell docker compose -f $(COMPOSE_FILE_PROD) ps -q 2>/dev/null)" ]; then \
+		docker compose -f $(COMPOSE_FILE_PROD) logs -f --tail=100; \
+	else \
+		echo "❌ No running production containers found"; \
 	fi
 
 status: ## Show status of all containers
@@ -174,58 +217,114 @@ ssl-cert: ## Generate SSL certificates
 	@echo "✅ SSL certificates generated"
 
 # Database Migration Commands
-db-migrate: ## Run Flyway migrations based on ENV
-	@echo "🗄️  Running database migrations on $(ENV) environment..."
-	@if [ "$(shell docker compose -f $(COMPOSE_FILE) ps -q mariadb 2>/dev/null)" ]; then \
-		echo "📍 Using $(ENV) environment"; \
-		docker compose -f $(COMPOSE_FILE) --profile migration run --rm migration; \
+db-migrate-dev: ## Run Flyway migrations on development environment
+	@echo "🗄️  Running database migrations on development environment..."
+	@if [ "$(shell docker compose -f $(COMPOSE_FILE_DEV) ps -q mariadb 2>/dev/null)" ]; then \
+		echo "📍 Using development environment"; \
+		docker compose -f $(COMPOSE_FILE_DEV) --profile migration run --rm migration migrate; \
 	else \
-		echo "❌ No MariaDB container found for $(ENV) environment. Please start it first with 'make run ENV=$(ENV)'"; \
+		echo "❌ No MariaDB container found for development environment. Please start it first with 'make run-dev'"; \
 		exit 1; \
 	fi
-	@echo "✅ $(ENV) migrations completed"
+	@echo "✅ Development migrations completed"
 
-db-info: ## Show migration status based on ENV
-	@echo "📊 Database migration status for $(ENV) environment:"
-	@if [ "$(shell docker compose -f $(COMPOSE_FILE) ps -q mariadb 2>/dev/null)" ]; then \
-		echo "📍 Using $(ENV) environment"; \
-		docker compose -f $(COMPOSE_FILE) --profile migration run --rm migration info; \
+db-migrate-prod: ## Run Flyway migrations on production environment
+	@echo "🗄️  Running database migrations on production environment..."
+	@if [ "$(shell docker compose -f $(COMPOSE_FILE_PROD) ps -q mariadb 2>/dev/null)" ]; then \
+		echo "📍 Using production environment"; \
+		docker compose -f $(COMPOSE_FILE_PROD) --profile migration run --rm migration migrate; \
 	else \
-		echo "❌ No MariaDB container found for $(ENV) environment. Please start it first with 'make run ENV=$(ENV)'"; \
+		echo "❌ No MariaDB container found for production environment. Please start it first with 'make run-prod'"; \
+		exit 1; \
+	fi
+	@echo "✅ Production migrations completed"
+
+db-info-dev: ## Show migration status for development environment
+	@echo "📊 Database migration status for development environment:"
+	@if [ "$(shell docker compose -f $(COMPOSE_FILE_DEV) ps -q mariadb 2>/dev/null)" ]; then \
+		echo "📍 Using development environment"; \
+		docker compose -f $(COMPOSE_FILE_DEV) --profile migration run --rm migration info; \
+	else \
+		echo "❌ No MariaDB container found for development environment. Please start it first with 'make run-dev'"; \
 		exit 1; \
 	fi
 
-db-clean: ## Clean database (DANGEROUS - will drop all objects) based on ENV
-	@echo "⚠️  WARNING: This will DROP ALL database objects in $(ENV) environment!"
+db-info-prod: ## Show migration status for production environment
+	@echo "📊 Database migration status for production environment:"
+	@if [ "$(shell docker compose -f $(COMPOSE_FILE_PROD) ps -q mariadb 2>/dev/null)" ]; then \
+		echo "📍 Using production environment"; \
+		docker compose -f $(COMPOSE_FILE_PROD) --profile migration run --rm migration info; \
+	else \
+		echo "❌ No MariaDB container found for production environment. Please start it first with 'make run-prod'"; \
+		exit 1; \
+	fi
+
+db-clean-dev: ## Clean development database (DANGEROUS - will drop all objects)
+	@echo "⚠️  WARNING: This will DROP ALL database objects in development environment!"
 	@read -p "Are you sure? Type 'yes' to continue: " confirm && [ "$$confirm" = "yes" ] || exit 1
-	@echo "🧹 Cleaning $(ENV) database..."
-	@if [ "$(shell docker compose -f $(COMPOSE_FILE) ps -q mariadb 2>/dev/null)" ]; then \
-		echo "📍 Using $(ENV) environment"; \
-		docker compose -f $(COMPOSE_FILE) --profile migration run --rm migration mvn flyway:clean; \
+	@echo "🧹 Cleaning development database..."
+	@if [ "$(shell docker compose -f $(COMPOSE_FILE_DEV) ps -q mariadb 2>/dev/null)" ]; then \
+		echo "📍 Using development environment"; \
+		docker compose -f $(COMPOSE_FILE_DEV) --profile migration run --rm migration clean; \
 	else \
-		echo "❌ No MariaDB container found for $(ENV) environment. Please start it first"; \
+		echo "❌ No MariaDB container found for development environment. Please start it first"; \
 		exit 1; \
 	fi
-	@echo "✅ $(ENV) database cleaned"
+	@echo "✅ Development database cleaned"
 
-db-validate: ## Validate migrations based on ENV
-	@echo "✅ Validating $(ENV) migrations..."
-	@if [ "$(shell docker compose -f $(COMPOSE_FILE) ps -q mariadb 2>/dev/null)" ]; then \
-		echo "📍 Using $(ENV) environment"; \
-		docker compose -f $(COMPOSE_FILE) --profile migration run --rm migration mvn flyway:validate; \
+db-clean-prod: ## Clean production database (DANGEROUS - will drop all objects)
+	@echo "⚠️  WARNING: This will DROP ALL database objects in production environment!"
+	@read -p "Are you sure? Type 'yes' to continue: " confirm && [ "$$confirm" = "yes" ] || exit 1
+	@echo "🧹 Cleaning production database..."
+	@if [ "$(shell docker compose -f $(COMPOSE_FILE_PROD) ps -q mariadb 2>/dev/null)" ]; then \
+		echo "📍 Using production environment"; \
+		docker compose -f $(COMPOSE_FILE_PROD) --profile migration run --rm migration clean; \
 	else \
-		echo "❌ No MariaDB container found for $(ENV) environment. Please start it first"; \
+		echo "❌ No MariaDB container found for production environment. Please start it first"; \
 		exit 1; \
 	fi
-	@echo "✅ $(ENV) validation completed"
+	@echo "✅ Production database cleaned"
 
-db-repair: ## Repair Flyway schema history based on ENV
-	@echo "🔧 Repairing Flyway schema history for $(ENV) environment..."
-	@if [ "$(shell docker compose -f $(COMPOSE_FILE) ps -q mariadb 2>/dev/null)" ]; then \
-		echo "📍 Using $(ENV) environment"; \
-		docker compose -f $(COMPOSE_FILE) --profile migration run --rm migration repair; \
+db-validate-dev: ## Validate development migrations
+	@echo "✅ Validating development migrations..."
+	@if [ "$(shell docker compose -f $(COMPOSE_FILE_DEV) ps -q mariadb 2>/dev/null)" ]; then \
+		echo "📍 Using development environment"; \
+		docker compose -f $(COMPOSE_FILE_DEV) --profile migration run --rm migration validate; \
 	else \
-		echo "❌ No MariaDB container found for $(ENV) environment. Please start it first"; \
+		echo "❌ No MariaDB container found for development environment. Please start it first"; \
 		exit 1; \
 	fi
-	@echo "✅ $(ENV) repair completed"
+	@echo "✅ Development validation completed"
+
+db-validate-prod: ## Validate production migrations
+	@echo "✅ Validating production migrations..."
+	@if [ "$(shell docker compose -f $(COMPOSE_FILE_PROD) ps -q mariadb 2>/dev/null)" ]; then \
+		echo "📍 Using production environment"; \
+		docker compose -f $(COMPOSE_FILE_PROD) --profile migration run --rm migration validate; \
+	else \
+		echo "❌ No MariaDB container found for production environment. Please start it first"; \
+		exit 1; \
+	fi
+	@echo "✅ Production validation completed"
+
+db-repair-dev: ## Repair Flyway schema history for development environment
+	@echo "🔧 Repairing Flyway schema history for development environment..."
+	@if [ "$(shell docker compose -f $(COMPOSE_FILE_DEV) ps -q mariadb 2>/dev/null)" ]; then \
+		echo "📍 Using development environment"; \
+		docker compose -f $(COMPOSE_FILE_DEV) --profile migration run --rm migration repair; \
+	else \
+		echo "❌ No MariaDB container found for development environment. Please start it first"; \
+		exit 1; \
+	fi
+	@echo "✅ Development repair completed"
+
+db-repair-prod: ## Repair Flyway schema history for production environment
+	@echo "🔧 Repairing Flyway schema history for production environment..."
+	@if [ "$(shell docker compose -f $(COMPOSE_FILE_PROD) ps -q mariadb 2>/dev/null)" ]; then \
+		echo "📍 Using production environment"; \
+		docker compose -f $(COMPOSE_FILE_PROD) --profile migration run --rm migration repair; \
+	else \
+		echo "❌ No MariaDB container found for production environment. Please start it first"; \
+		exit 1; \
+	fi
+	@echo "✅ Production repair completed"

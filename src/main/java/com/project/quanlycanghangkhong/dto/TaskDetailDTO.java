@@ -52,6 +52,10 @@ public class TaskDetailDTO {
     @Schema(description = "List of attached files")
     private List<AttachmentDTO> attachments; // Quan hệ task-attachment trực tiếp
 
+    // TaskType field
+    @Schema(description = "Task type information")
+    private TaskTypeDTO taskType;
+
     public Integer getId() {
         return id;
     }
@@ -195,6 +199,14 @@ public class TaskDetailDTO {
      */
     public void setAttachments(List<AttachmentDTO> attachments) {
         this.attachments = attachments;
+    }
+
+    public TaskTypeDTO getTaskType() {
+        return taskType;
+    }
+
+    public void setTaskType(TaskTypeDTO taskType) {
+        this.taskType = taskType;
     }
 
     @Override
