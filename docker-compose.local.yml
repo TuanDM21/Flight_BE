@@ -2,15 +2,15 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile.dev
-    container_name: flight-app-dev
+      dockerfile: Dockerfile.local
+    container_name: backend-app-local
     ports:
       - "8080:8080"
       - "35729:35729"
     env_file:
       - .env
     environment:
-      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_PROFILES_ACTIVE=local
       - SPRING_DEVTOOLS_RESTART_ENABLED=true
       - SPRING_DEVTOOLS_LIVERELOAD_ENABLED=true
     volumes:

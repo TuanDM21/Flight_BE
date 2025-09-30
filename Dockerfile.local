@@ -10,4 +10,4 @@ EXPOSE 8080
 EXPOSE 35729
 
 # Run Spring Boot in development mode with DevTools (dependencies will be downloaded when needed)
-CMD ["mvn", "spring-boot:run", "-Dspring-boot.run.jvmArguments=-Dspring.devtools.restart.enabled=true -Dspring.devtools.livereload.enabled=true -Dspring.profiles.active=dev"]
+CMD ["mvn", "spring-boot:run", "-Dspring-boot.run.jvmArguments=-Dspring.devtools.restart.enabled=true -Dspring.devtools.livereload.enabled=true -Dspring.profiles.active=local"]

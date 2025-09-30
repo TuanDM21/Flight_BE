@@ -64,7 +64,7 @@
 		<dependency>
 			<groupId>org.mariadb.jdbc</groupId>
 			<artifactId>mariadb-java-client</artifactId>
-			<version>3.1.4</version>
+			<version>3.4.1</version>
 			<scope>runtime</scope>
 		</dependency>
 		<dependency>
@@ -177,12 +177,12 @@
 			<plugin>
 				<groupId>org.flywaydb</groupId>
 				<artifactId>flyway-maven-plugin</artifactId>
-				<version>9.22.3</version>
+				<version>10.19.0</version>
 				<dependencies>
 					<dependency>
 						<groupId>org.flywaydb</groupId>
 						<artifactId>flyway-mysql</artifactId>
-						<version>9.22.3</version>
+						<version>10.19.0</version>
 					</dependency>
 					<dependency>
 						<groupId>com.mysql</groupId>
@@ -192,7 +192,7 @@
 					<dependency>
 						<groupId>org.mariadb.jdbc</groupId>
 						<artifactId>mariadb-java-client</artifactId>
-						<version>3.1.4</version>
+						<version>3.4.1</version>
 					</dependency>
 				</dependencies>
 				<configuration>
