@@ -1,9 +1,9 @@
-FROM flyway/flyway:latest-alpine
+FROM flyway/flyway:11.13.2-alpine
 
 WORKDIR /flyway
 
 # Copy migration files
-COPY src/main/resources/db/migration ./sql/
+COPY src/main/resources/db/migration ./db/migration/
 
 # CMD migrate (baseline if needed via env)
 CMD ["migrate"]
