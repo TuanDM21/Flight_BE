@@ -167,9 +167,13 @@ mvn-compile: ## Compile the project
 # Database Migration Commands
 db-migrate-local: ## Run Flyway migrations on development environment
 	@echo "🗄️  Running database migrations on development environment..."
+	@if [ ! -f $(ENV_FILE) ]; then \
+		echo "❌ .env file not found! Please create one (see .env.example)."; \
+		exit 1; \
+	fi
 	@if [ "$(shell docker compose -f $(COMPOSE_FILE_LOCAL) ps -q mariadb 2>/dev/null)" ]; then \
-		echo "📍 Using development environment with local Maven"; \
-		SPRING_PROFILES_ACTIVE=dev ./mvnw flyway:migrate; \
+		echo "📍 Using development environment"; \
+		docker compose -f $(COMPOSE_FILE_LOCAL) --profile migration run --rm migration migrate; \
 	else \
 		echo "❌ No MariaDB container found for development environment. Please start it first with 'make up-local'"; \
 		exit 1; \
@@ -189,9 +193,13 @@ db-migrate: ## Run Flyway migrations on production environment
 
 db-info-local: ## Show migration status for development environment
 	@echo "📊 Database migration status for development environment:"
+	@if [ ! -f $(ENV_FILE) ]; then \
+		echo "❌ .env file not found! Please create one (see .env.example)."; \
+		exit 1; \
+	fi
 	@if [ "$(shell docker compose -f $(COMPOSE_FILE_LOCAL) ps -q mariadb 2>/dev/null)" ]; then \
-		echo "📍 Using development environment with local Maven"; \
-		SPRING_PROFILES_ACTIVE=dev ./mvnw flyway:info; \
+		echo "📍 Using development environment"; \
+		docker compose -f $(COMPOSE_FILE_LOCAL) --profile migration run --rm migration info; \
 	else \
 		echo "❌ No MariaDB container found for development environment. Please start it first with 'make up-local'"; \
 		exit 1; \
@@ -211,9 +219,13 @@ db-clean-local: ## Clean development database (DANGEROUS - will drop all objects
 	@echo "⚠️  WARNING: This will DROP ALL database objects in development environment!"
 	@read -p "Are you sure? Type 'yes' to continue: " confirm && [ "$$confirm" = "yes" ] || exit 1
 	@echo "🧹 Cleaning development database..."
+	@if [ ! -f $(ENV_FILE) ]; then \
+		echo "❌ .env file not found! Please create one (see .env.example)."; \
+		exit 1; \
+	fi
 	@if [ "$(shell docker compose -f $(COMPOSE_FILE_LOCAL) ps -q mariadb 2>/dev/null)" ]; then \
-		echo "📍 Using development environment with local Maven"; \
-		SPRING_PROFILES_ACTIVE=dev ./mvnw flyway:clean; \
+		echo "📍 Using development environment"; \
+		docker compose -f $(COMPOSE_FILE_LOCAL) --profile migration run --rm migration clean; \
 	else \
 		echo "❌ No MariaDB container found for development environment. Please start it first"; \
 		exit 1; \
@@ -235,9 +247,13 @@ db-clean: ## Clean production database (DANGEROUS - will drop all objects)
 
 db-validate-local: ## Validate development migrations
 	@echo "✅ Validating development migrations..."
+	@if [ ! -f $(ENV_FILE) ]; then \
+		echo "❌ .env file not found! Please create one (see .env.example)."; \
+		exit 1; \
+	fi
 	@if [ "$(shell docker compose -f $(COMPOSE_FILE_LOCAL) ps -q mariadb 2>/dev/null)" ]; then \
-		echo "📍 Using development environment with local Maven"; \
-		SPRING_PROFILES_ACTIVE=dev ./mvnw flyway:validate; \
+		echo "📍 Using development environment"; \
+		docker compose -f $(COMPOSE_FILE_LOCAL) --profile migration run --rm migration validate; \
 	else \
 		echo "❌ No MariaDB container found for development environment. Please start it first"; \
 		exit 1; \
@@ -257,9 +273,13 @@ db-validate: ## Validate production migrations
 
 db-repair-local: ## Repair Flyway schema history for development environment
 	@echo "🔧 Repairing Flyway schema history for development environment..."
+	@if [ ! -f $(ENV_FILE) ]; then \
+		echo "❌ .env file not found! Please create one (see .env.example)."; \
+		exit 1; \
+	fi
 	@if [ "$(shell docker compose -f $(COMPOSE_FILE_LOCAL) ps -q mariadb 2>/dev/null)" ]; then \
-		echo "📍 Using development environment with local Maven"; \
-		SPRING_PROFILES_ACTIVE=dev ./mvnw flyway:repair; \
+		echo "📍 Using development environment"; \
+		docker compose -f $(COMPOSE_FILE_LOCAL) --profile migration run --rm migration repair; \
 	else \
 		echo "❌ No MariaDB container found for development environment. Please start it first"; \
 		exit 1; \

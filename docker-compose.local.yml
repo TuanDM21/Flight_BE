@@ -31,18 +31,24 @@ services:
         condition: service_healthy
 
   migration:
-    image: maven:3.9-eclipse-temurin-17
+    build:
+      context: .
+      dockerfile: Dockerfile.migration
     container_name: flight-migration-dev
-    working_dir: /app
-    volumes:
-      - .:/app
-      - maven_cache_dev:/root/.m2
+    working_dir: /flyway
     env_file:
       - .env
+    environment:
+      - FLYWAY_URL=jdbc:mariadb://mariadb:${MYSQL_PORT}/${MYSQL_DATABASE}
+      - FLYWAY_USER=${FLYWAY_USER}
+      - FLYWAY_PASSWORD=${FLYWAY_PASSWORD}
+      - FLYWAY_BASELINE_ON_MIGRATE=true
+      - FLYWAY_CLEAN_DISABLED=false
     networks:
       - flight-dev-network
     depends_on:
-      - mariadb
+      mariadb:
+        condition: service_healthy
     profiles:
       - migration
 
@@ -77,7 +83,6 @@ services:
 
 volumes:
   mariadb_data_dev:
-  maven_cache_dev:
 
 networks:
   flight-dev-network:
