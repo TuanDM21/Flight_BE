@@ -8,7 +8,6 @@ import com.project.quanlycanghangkhong.dto.request.ActivityParticipantRequest;
 import com.project.quanlycanghangkhong.dto.request.ParticipantDeleteRequest;
 import com.project.quanlycanghangkhong.dto.request.ParticipantDeleteRequest;
 import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
-import com.project.quanlycanghangkhong.dto.response.activity.ActivityApiResponse;
 import com.project.quanlycanghangkhong.dto.response.activity.ActivityListApiResponse;
 import com.project.quanlycanghangkhong.dto.response.activity.ActivityParticipantsApiResponse;
 import com.project.quanlycanghangkhong.model.User;
@@ -62,7 +61,7 @@ public class ActivityController {
     @Operation(summary = "Tạo hoạt động mới", description = "Tạo mới một hoạt động/sự kiện")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Tạo thành công", 
-                content = @Content(schema = @Schema(implementation = ActivityApiResponse.class))),
+                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
             @ApiResponse(responseCode = "400", description = "Dữ liệu không hợp lệ", 
                 content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
@@ -76,7 +75,7 @@ public class ActivityController {
     @Operation(summary = "Cập nhật hoạt động", description = "Cập nhật thông tin hoạt động theo ID")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Cập nhật thành công", 
-                content = @Content(schema = @Schema(implementation = ActivityApiResponse.class))),
+                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
             @ApiResponse(responseCode = "404", description = "Không tìm thấy hoạt động", 
                 content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
             @ApiResponse(responseCode = "400", description = "Dữ liệu không hợp lệ", 
@@ -118,7 +117,7 @@ public class ActivityController {
     @Operation(summary = "Lấy chi tiết hoạt động", description = "Lấy thông tin chi tiết hoạt động theo ID")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Thành công", 
-                content = @Content(schema = @Schema(implementation = ActivityApiResponse.class))),
+                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
             @ApiResponse(responseCode = "404", description = "Không tìm thấy hoạt động", 
                 content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
