@@ -19,16 +19,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -46,7 +38,6 @@ import org.slf4j.LoggerFactory;
 @RestController
 @RequestMapping("/api/activities")
 @CrossOrigin(origins = "*")
-@Tag(name = "Activity Management", description = "APIs for managing activities and events")
 @Tag(name = "Activity Management", description = "APIs for managing activities and events")
 public class ActivityController {
     private static final Logger logger = LoggerFactory.getLogger(ActivityController.class);
@@ -98,17 +89,7 @@ public class ActivityController {
     })
     public ResponseEntity<ApiResponseCustom<Void>> deleteActivity(
             @Parameter(description = "ID của hoạt động", required = true) @PathVariable Long id) {
-    @Operation(summary = "Xóa hoạt động", description = "Xóa hoạt động theo ID")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Xóa thành công", 
-                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
-            @ApiResponse(responseCode = "404", description = "Không tìm thấy hoạt động", 
-                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
-    })
-    public ResponseEntity<ApiResponseCustom<Void>> deleteActivity(
-            @Parameter(description = "ID của hoạt động", required = true) @PathVariable Long id) {
         activityService.deleteActivity(id);
-        return ResponseEntity.ok(ApiResponseCustom.deleted());
         return ResponseEntity.ok(ApiResponseCustom.deleted());
     }
 
@@ -117,17 +98,6 @@ public class ActivityController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Thành công", 
                 content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
-            @ApiResponse(responseCode = "404", description = "Không tìm thấy hoạt động", 
-                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
-    })
-    public ResponseEntity<ApiResponseCustom<ActivityDTO>> getActivity(
-            @Parameter(description = "ID của hoạt động", required = true) @PathVariable Long id) {
-        ActivityDTO activity = activityService.getActivity(id);
-        return ResponseEntity.ok(ApiResponseCustom.success(activity));
-    @Operation(summary = "Lấy chi tiết hoạt động", description = "Lấy thông tin chi tiết hoạt động theo ID")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Thành công", 
-                content = @Content(schema = @Schema(implementation = ActivityApiResponse.class))),
             @ApiResponse(responseCode = "404", description = "Không tìm thấy hoạt động", 
                 content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
@@ -343,19 +313,6 @@ public class ActivityController {
         logger.info("[GET /api/activities/search] Searching activities for month: {}, year: {}", month, year);
         List<ActivityDTO> activities = activityService.searchActivitiesByMonthYear(month, year);
         return ResponseEntity.ok(ApiResponseCustom.success(activities));
-    @Operation(summary = "Tìm kiếm hoạt động theo tháng/năm", description = "Lấy danh sách hoạt động trong tháng và năm cụ thể")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Thành công", 
-                content = @Content(schema = @Schema(implementation = ActivityListApiResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Tham số không hợp lệ", 
-                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
-    })
-    public ResponseEntity<ApiResponseCustom<List<ActivityDTO>>> searchActivitiesByMonthYear(
-            @Parameter(description = "Tháng (1-12)", example = "3", required = true) @RequestParam int month,
-            @Parameter(description = "Năm", example = "2025", required = true) @RequestParam int year) {
-        logger.info("[GET /api/activities/search] Searching activities for month: {}, year: {}", month, year);
-        List<ActivityDTO> activities = activityService.searchActivitiesByMonthYear(month, year);
-        return ResponseEntity.ok(ApiResponseCustom.success(activities));
     }
 
     @GetMapping("/search-by-date")
@@ -363,23 +320,6 @@ public class ActivityController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Thành công", 
                 content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
-            @ApiResponse(responseCode = "400", description = "Định dạng ngày không hợp lệ", 
-                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
-    })
-    public ResponseEntity<ApiResponseCustom<List<ActivityDTO>>> getActivitiesByDate(
-            @Parameter(description = "Ngày cần tìm (format: yyyy-MM-dd)", example = "2025-03-15", required = true) 
-            @RequestParam String date) {
-        try {
-            java.time.LocalDate localDate = java.time.LocalDate.parse(date);
-            List<ActivityDTO> activities = activityService.getActivitiesByDate(localDate);
-            return ResponseEntity.ok(ApiResponseCustom.success(activities));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponseCustom.error("Định dạng ngày không hợp lệ. Sử dụng format: yyyy-MM-dd"));
-        }
-    @Operation(summary = "Lấy hoạt động theo ngày", description = "Lấy danh sách hoạt động trong ngày cụ thể")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Thành công", 
-                content = @Content(schema = @Schema(implementation = ActivityListApiResponse.class))),
             @ApiResponse(responseCode = "400", description = "Định dạng ngày không hợp lệ", 
                 content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
@@ -407,31 +347,7 @@ public class ActivityController {
             @Parameter(description = "Ngày bắt đầu (format: yyyy-MM-dd)", example = "2025-03-01", required = true) 
             @RequestParam String startDate,
             @Parameter(description = "Ngày kết thúc (format: yyyy-MM-dd)", example = "2025-03-31", required = true) 
-    @Operation(summary = "Lấy hoạt động theo khoảng thời gian", description = "Lấy danh sách hoạt động trong khoảng thời gian từ ngày bắt đầu đến ngày kết thúc")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Thành công", 
-                content = @Content(schema = @Schema(implementation = ActivityListApiResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Định dạng ngày không hợp lệ hoặc khoảng thời gian không hợp lệ", 
-                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
-    })
-    public ResponseEntity<ApiResponseCustom<List<ActivityDTO>>> getActivitiesByDateRange(
-            @Parameter(description = "Ngày bắt đầu (format: yyyy-MM-dd)", example = "2025-03-01", required = true) 
-            @RequestParam String startDate,
-            @Parameter(description = "Ngày kết thúc (format: yyyy-MM-dd)", example = "2025-03-31", required = true) 
             @RequestParam String endDate) {
-        try {
-            java.time.LocalDate start = java.time.LocalDate.parse(startDate);
-            java.time.LocalDate end = java.time.LocalDate.parse(endDate);
-            
-            if (start.isAfter(end)) {
-                return ResponseEntity.badRequest().body(ApiResponseCustom.error("Ngày bắt đầu không thể sau ngày kết thúc"));
-            }
-            
-            List<ActivityDTO> activities = activityService.getActivitiesByDateRange(start, end);
-            return ResponseEntity.ok(ApiResponseCustom.success(activities));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponseCustom.error("Định dạng ngày không hợp lệ. Sử dụng format: yyyy-MM-dd"));
-        }
         try {
             java.time.LocalDate start = java.time.LocalDate.parse(startDate);
             java.time.LocalDate end = java.time.LocalDate.parse(endDate);
@@ -481,20 +397,7 @@ public class ActivityController {
     public ResponseEntity<ApiResponseCustom<Void>> removeParticipant(
             @Parameter(description = "ID của hoạt động", required = true) @PathVariable Long id,
             @Parameter(description = "Loại người tham gia", example = "USER", required = true) 
-    @Operation(summary = "Xóa người tham gia", description = "Xóa một người tham gia khỏi hoạt động")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Xóa người tham gia thành công", 
-                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
-            @ApiResponse(responseCode = "404", description = "Không tìm thấy hoạt động hoặc người tham gia", 
-                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
-            @ApiResponse(responseCode = "400", description = "Tham số không hợp lệ", 
-                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
-    })
-    public ResponseEntity<ApiResponseCustom<Void>> removeParticipant(
-            @Parameter(description = "ID của hoạt động", required = true) @PathVariable Long id,
-            @Parameter(description = "Loại người tham gia", example = "USER", required = true) 
             @RequestParam String participantType,
-            @Parameter(description = "ID của người tham gia", required = true) 
             @Parameter(description = "ID của người tham gia", required = true) 
             @RequestParam Long participantId) {
         
@@ -562,20 +465,7 @@ public class ActivityController {
             @Parameter(description = "ID của hoạt động", required = true) @PathVariable Long id, 
             @Parameter(description = "Trạng thái ghim (true: ghim, false: bỏ ghim)", required = true) 
             @RequestParam boolean pinned) {
-    @Operation(summary = "Ghim/bỏ ghim hoạt động", description = "Ghim hoặc bỏ ghim hoạt động để ưu tiên hiển thị")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Cập nhật trạng thái ghim thành công", 
-                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
-            @ApiResponse(responseCode = "404", description = "Không tìm thấy hoạt động", 
-                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
-    })
-    public ResponseEntity<ApiResponseCustom<Void>> pinActivity(
-            @Parameter(description = "ID của hoạt động", required = true) @PathVariable Long id, 
-            @Parameter(description = "Trạng thái ghim (true: ghim, false: bỏ ghim)", required = true) 
-            @RequestParam boolean pinned) {
         activityService.pinActivity(id, pinned);
-        String message = pinned ? "Đã ghim hoạt động thành công" : "Đã bỏ ghim hoạt động thành công";
-        return ResponseEntity.ok(ApiResponseCustom.success(message, null));
         String message = pinned ? "Đã ghim hoạt động thành công" : "Đã bỏ ghim hoạt động thành công";
         return ResponseEntity.ok(ApiResponseCustom.success(message, null));
     }
@@ -587,17 +477,10 @@ public class ActivityController {
                 content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
     public ResponseEntity<ApiResponseCustom<List<ActivityDTO>>> getPinnedActivities() {
-    @Operation(summary = "Lấy hoạt động đã ghim", description = "Lấy danh sách tất cả hoạt động đã được ghim")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Thành công", 
-                content = @Content(schema = @Schema(implementation = ActivityListApiResponse.class)))
-    })
-    public ResponseEntity<ApiResponseCustom<List<ActivityDTO>>> getPinnedActivities() {
         long start = System.currentTimeMillis();
         List<ActivityDTO> pinned = activityService.getPinnedActivities();
         long duration = System.currentTimeMillis() - start;
         logger.info("[GET /api/activities/pinned] Completed in {}ms, returned {} activities", duration, pinned.size());
-        return ResponseEntity.ok(ApiResponseCustom.success(pinned));
         return ResponseEntity.ok(ApiResponseCustom.success(pinned));
     }
 
