@@ -6,9 +6,8 @@ import com.project.quanlycanghangkhong.dto.CalendarDTO;
 import com.project.quanlycanghangkhong.dto.request.ActivityRequest;
 import com.project.quanlycanghangkhong.dto.request.ActivityParticipantRequest;
 import com.project.quanlycanghangkhong.dto.request.ParticipantDeleteRequest;
-import com.project.quanlycanghangkhong.dto.request.ParticipantDeleteRequest;
 import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
-import com.project.quanlycanghangkhong.dto.response.activity.ActivityListApiResponse;
+import com.project.quanlycanghangkhong.dto.response.activity.CalendarApiResponse;
 import com.project.quanlycanghangkhong.dto.response.activity.ActivityParticipantsApiResponse;
 import com.project.quanlycanghangkhong.model.User;
 import com.project.quanlycanghangkhong.repository.UserRepository;
@@ -142,7 +141,7 @@ public class ActivityController {
     @Operation(summary = "Lấy danh sách hoạt động cho calendar", description = "Lấy danh sách hoạt động theo loại hoặc tìm kiếm theo từ khóa (tên, ghi chú, địa điểm) và người tham gia. Hỗ trợ lọc theo khoảng ngày cho calendar view. Nếu không truyền type parameter thì trả về calendar trống.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Thành công", 
-                content = @Content(schema = @Schema(implementation = ActivityListApiResponse.class))),
+                content = @Content(schema = @Schema(implementation = CalendarApiResponse.class))),
             @ApiResponse(responseCode = "400", description = "Tham số không hợp lệ", 
                 content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
             @ApiResponse(responseCode = "401", description = "Không có quyền truy cập hoặc không tìm thấy người dùng", 
@@ -361,7 +360,7 @@ public class ActivityController {
     @Operation(summary = "Tìm kiếm hoạt động theo tháng/năm", description = "Lấy danh sách hoạt động trong tháng và năm cụ thể")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Thành công", 
-                content = @Content(schema = @Schema(implementation = ActivityListApiResponse.class))),
+                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
             @ApiResponse(responseCode = "400", description = "Tham số không hợp lệ", 
                 content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
@@ -390,7 +389,7 @@ public class ActivityController {
     @Operation(summary = "Lấy hoạt động theo ngày", description = "Lấy danh sách hoạt động trong ngày cụ thể")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Thành công", 
-                content = @Content(schema = @Schema(implementation = ActivityListApiResponse.class))),
+                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
             @ApiResponse(responseCode = "400", description = "Định dạng ngày không hợp lệ", 
                 content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
@@ -427,7 +426,7 @@ public class ActivityController {
     @Operation(summary = "Lấy hoạt động theo khoảng thời gian", description = "Lấy danh sách hoạt động trong khoảng thời gian từ ngày bắt đầu đến ngày kết thúc")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Thành công", 
-                content = @Content(schema = @Schema(implementation = ActivityListApiResponse.class))),
+                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
             @ApiResponse(responseCode = "400", description = "Định dạng ngày không hợp lệ hoặc khoảng thời gian không hợp lệ", 
                 content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
@@ -612,7 +611,7 @@ public class ActivityController {
     @Operation(summary = "Lấy hoạt động đã ghim", description = "Lấy danh sách tất cả hoạt động đã được ghim")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Thành công", 
-                content = @Content(schema = @Schema(implementation = ActivityListApiResponse.class)))
+                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
     public ResponseEntity<ApiResponseCustom<List<ActivityDTO>>> getPinnedActivities() {
     @Operation(summary = "Lấy hoạt động đã ghim", description = "Lấy danh sách tất cả hoạt động đã được ghim")
