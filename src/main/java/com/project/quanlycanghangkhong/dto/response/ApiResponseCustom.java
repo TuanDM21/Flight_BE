@@ -13,7 +13,44 @@ import org.springframework.http.HttpStatus;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@Schema(name = "ApiResponseCustom", description = "Response chuẩn cho tất cả API")
+@Schema(name = "ApiResponseCustom", description = "Response chuẩn cho tất cả API", example = """
+{
+  "message": "Thành công",
+  "statusCode": 200,
+  "data": {
+    "id": 101,
+    "name": "Họp định kỳ tuần",
+    "location": "Phòng họp A1",
+    "startTime": "2025-10-01T13:59:01.290Z",
+    "endTime": "2025-10-01T15:00:00.000Z",
+    "notes": "Thảo luận về kế hoạch Q4",
+    "participants": [
+      {
+        "id": 201,
+        "participantType": "USER",
+        "participantId": 1,
+        "participantName": "Nguyễn Văn A"
+      },
+      {
+        "id": 202,
+        "participantType": "USER",
+        "participantId": 2,
+        "participantName": "Trần Thị B"
+      },
+      {
+        "id": 203,
+        "participantType": "USER",
+        "participantId": 3,
+        "participantName": "Lê Văn C"
+      }
+    ],
+    "createdAt": "2025-10-01T14:00:00.000Z",
+    "updatedAt": "2025-10-01T14:00:00.000Z",
+    "pinned": false
+  },
+  "success": true
+}
+""")
 public class ApiResponseCustom<T> {
 	@Schema(description = "Thông báo kết quả", example = "Thành công")
 	private String message;

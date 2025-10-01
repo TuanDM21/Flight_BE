@@ -6,10 +6,8 @@ import com.project.quanlycanghangkhong.dto.CalendarDTO;
 import com.project.quanlycanghangkhong.dto.request.ActivityRequest;
 import com.project.quanlycanghangkhong.dto.request.ActivityParticipantRequest;
 import com.project.quanlycanghangkhong.dto.request.ParticipantDeleteRequest;
-import com.project.quanlycanghangkhong.dto.request.ParticipantDeleteRequest;
 import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
-import com.project.quanlycanghangkhong.dto.response.activity.ActivityApiResponse;
-import com.project.quanlycanghangkhong.dto.response.activity.ActivityListApiResponse;
+import com.project.quanlycanghangkhong.dto.response.activity.CalendarApiResponse;
 import com.project.quanlycanghangkhong.dto.response.activity.ActivityParticipantsApiResponse;
 import com.project.quanlycanghangkhong.model.User;
 import com.project.quanlycanghangkhong.repository.UserRepository;
@@ -53,7 +51,7 @@ public class ActivityController {
     @Operation(summary = "Tạo hoạt động mới", description = "Tạo mới một hoạt động/sự kiện")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Tạo thành công", 
-                content = @Content(schema = @Schema(implementation = ActivityApiResponse.class))),
+                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
             @ApiResponse(responseCode = "400", description = "Dữ liệu không hợp lệ", 
                 content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
@@ -67,7 +65,7 @@ public class ActivityController {
     @Operation(summary = "Cập nhật hoạt động", description = "Cập nhật thông tin hoạt động theo ID")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Cập nhật thành công", 
-                content = @Content(schema = @Schema(implementation = ActivityApiResponse.class))),
+                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
             @ApiResponse(responseCode = "404", description = "Không tìm thấy hoạt động", 
                 content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
             @ApiResponse(responseCode = "400", description = "Dữ liệu không hợp lệ", 
@@ -99,7 +97,7 @@ public class ActivityController {
     @Operation(summary = "Lấy chi tiết hoạt động", description = "Lấy thông tin chi tiết hoạt động theo ID")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Thành công", 
-                content = @Content(schema = @Schema(implementation = ActivityApiResponse.class))),
+                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
             @ApiResponse(responseCode = "404", description = "Không tìm thấy hoạt động", 
                 content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
@@ -113,7 +111,7 @@ public class ActivityController {
     @Operation(summary = "Lấy danh sách hoạt động cho calendar", description = "Lấy danh sách hoạt động theo loại hoặc tìm kiếm theo từ khóa (tên, ghi chú, địa điểm) và người tham gia. Hỗ trợ lọc theo khoảng ngày cho calendar view. Nếu không truyền type parameter thì trả về calendar trống.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Thành công", 
-                content = @Content(schema = @Schema(implementation = ActivityListApiResponse.class))),
+                content = @Content(schema = @Schema(implementation = CalendarApiResponse.class))),
             @ApiResponse(responseCode = "400", description = "Tham số không hợp lệ", 
                 content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
             @ApiResponse(responseCode = "401", description = "Không có quyền truy cập hoặc không tìm thấy người dùng", 
@@ -171,11 +169,6 @@ public class ActivityController {
             CalendarDTO calendar = CalendarDTO.builder()
                 .currentDate(LocalDate.now())
                 .activities(activities)
-                .metadata(CalendarDTO.CalendarMetadata.builder()
-                    .totalActivities(activities.size())
-                    .viewType("search")
-                    .message(activities.isEmpty() ? "Không tìm thấy hoạt động nào phù hợp" : "Kết quả tìm kiếm")
-                    .build())
                 .build();
             return ResponseEntity.ok(ApiResponseCustom.success(calendar));
         }
@@ -186,11 +179,6 @@ public class ActivityController {
             CalendarDTO emptyCalendar = CalendarDTO.builder()
                 .currentDate(LocalDate.now())
                 .activities(new ArrayList<>())
-                .metadata(CalendarDTO.CalendarMetadata.builder()
-                    .totalActivities(0)
-                    .viewType("empty")
-                    .message("Lịch trống - chọn loại hoạt động để xem")
-                    .build())
                 .build();
             return ResponseEntity.ok(ApiResponseCustom.success(emptyCalendar));
         }
@@ -225,13 +213,6 @@ public class ActivityController {
         CalendarDTO calendar = CalendarDTO.builder()
             .currentDate(LocalDate.now())
             .activities(activities)
-            .metadata(CalendarDTO.CalendarMetadata.builder()
-                .totalActivities(activities.size())
-                .viewType(type)
-                .message(activities.isEmpty() ? 
-                    ("my".equals(type) ? "Bạn chưa có hoạt động nào" : "Công ty chưa có hoạt động nào") :
-                    ("my".equals(type) ? "Hoạt động cá nhân" : "Hoạt động công ty"))
-                .build())
             .build();
 
         long duration = System.currentTimeMillis() - requestStartTime;
@@ -309,16 +290,6 @@ public class ActivityController {
         CalendarDTO calendar = CalendarDTO.builder()
             .currentDate(LocalDate.now())
             .activities(activities)
-            .metadata(CalendarDTO.CalendarMetadata.builder()
-                .totalActivities(activities.size())
-                .viewType(type)
-                .message(activities.isEmpty() ? 
-                    (startDate == null && endDate == null ? "Vui lòng chọn khoảng thời gian để xem hoạt động" :
-                    ("my".equals(type) ? "Trong khoảng " + startDate + " đến " + endDate + " bạn chưa có hoạt động nào" : 
-                     "Trong khoảng " + startDate + " đến " + endDate + " công ty chưa có hoạt động nào")) :
-                    ("my".equals(type) ? "Hoạt động cá nhân từ " + startDate + " đến " + endDate : 
-                     "Hoạt động công ty từ " + startDate + " đến " + endDate))
-                .build())
             .build();
 
         long duration = System.currentTimeMillis() - requestStartTime;
@@ -332,7 +303,7 @@ public class ActivityController {
     @Operation(summary = "Tìm kiếm hoạt động theo tháng/năm", description = "Lấy danh sách hoạt động trong tháng và năm cụ thể")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Thành công", 
-                content = @Content(schema = @Schema(implementation = ActivityListApiResponse.class))),
+                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
             @ApiResponse(responseCode = "400", description = "Tham số không hợp lệ", 
                 content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
@@ -348,7 +319,7 @@ public class ActivityController {
     @Operation(summary = "Lấy hoạt động theo ngày", description = "Lấy danh sách hoạt động trong ngày cụ thể")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Thành công", 
-                content = @Content(schema = @Schema(implementation = ActivityListApiResponse.class))),
+                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
             @ApiResponse(responseCode = "400", description = "Định dạng ngày không hợp lệ", 
                 content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
@@ -368,7 +339,7 @@ public class ActivityController {
     @Operation(summary = "Lấy hoạt động theo khoảng thời gian", description = "Lấy danh sách hoạt động trong khoảng thời gian từ ngày bắt đầu đến ngày kết thúc")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Thành công", 
-                content = @Content(schema = @Schema(implementation = ActivityListApiResponse.class))),
+                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
             @ApiResponse(responseCode = "400", description = "Định dạng ngày không hợp lệ hoặc khoảng thời gian không hợp lệ", 
                 content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
@@ -503,7 +474,7 @@ public class ActivityController {
     @Operation(summary = "Lấy hoạt động đã ghim", description = "Lấy danh sách tất cả hoạt động đã được ghim")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Thành công", 
-                content = @Content(schema = @Schema(implementation = ActivityListApiResponse.class)))
+                content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
     public ResponseEntity<ApiResponseCustom<List<ActivityDTO>>> getPinnedActivities() {
         long start = System.currentTimeMillis();
