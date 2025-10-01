@@ -21,24 +21,4 @@ public class CalendarDTO {
     
     @Schema(description = "Danh sách activities trong calendar view")
     private List<ActivityDTO> activities;
-    
-    @Schema(description = "Thông tin tổng quan về calendar")
-    private CalendarMetadata metadata;
-    
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Schema(description = "Metadata của calendar")
-    public static class CalendarMetadata {
-        
-        @Schema(description = "Tổng số activities", example = "7")
-        private int totalActivities;
-        
-        @Schema(description = "Loại calendar view", example = "company", allowableValues = {"company", "my", "empty"})
-        private String viewType;
-        
-        @Schema(description = "Thông báo cho calendar view", example = "Lịch trống - không có hoạt động nào")
-        private String message;
-    }
 }

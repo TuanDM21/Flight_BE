@@ -199,11 +199,6 @@ public class ActivityController {
             CalendarDTO calendar = CalendarDTO.builder()
                 .currentDate(LocalDate.now())
                 .activities(activities)
-                .metadata(CalendarDTO.CalendarMetadata.builder()
-                    .totalActivities(activities.size())
-                    .viewType("search")
-                    .message(activities.isEmpty() ? "Không tìm thấy hoạt động nào phù hợp" : "Kết quả tìm kiếm")
-                    .build())
                 .build();
             return ResponseEntity.ok(ApiResponseCustom.success(calendar));
         }
@@ -214,11 +209,6 @@ public class ActivityController {
             CalendarDTO emptyCalendar = CalendarDTO.builder()
                 .currentDate(LocalDate.now())
                 .activities(new ArrayList<>())
-                .metadata(CalendarDTO.CalendarMetadata.builder()
-                    .totalActivities(0)
-                    .viewType("empty")
-                    .message("Lịch trống - chọn loại hoạt động để xem")
-                    .build())
                 .build();
             return ResponseEntity.ok(ApiResponseCustom.success(emptyCalendar));
         }
@@ -253,13 +243,6 @@ public class ActivityController {
         CalendarDTO calendar = CalendarDTO.builder()
             .currentDate(LocalDate.now())
             .activities(activities)
-            .metadata(CalendarDTO.CalendarMetadata.builder()
-                .totalActivities(activities.size())
-                .viewType(type)
-                .message(activities.isEmpty() ? 
-                    ("my".equals(type) ? "Bạn chưa có hoạt động nào" : "Công ty chưa có hoạt động nào") :
-                    ("my".equals(type) ? "Hoạt động cá nhân" : "Hoạt động công ty"))
-                .build())
             .build();
 
         long duration = System.currentTimeMillis() - requestStartTime;
@@ -337,16 +320,6 @@ public class ActivityController {
         CalendarDTO calendar = CalendarDTO.builder()
             .currentDate(LocalDate.now())
             .activities(activities)
-            .metadata(CalendarDTO.CalendarMetadata.builder()
-                .totalActivities(activities.size())
-                .viewType(type)
-                .message(activities.isEmpty() ? 
-                    (startDate == null && endDate == null ? "Vui lòng chọn khoảng thời gian để xem hoạt động" :
-                    ("my".equals(type) ? "Trong khoảng " + startDate + " đến " + endDate + " bạn chưa có hoạt động nào" : 
-                     "Trong khoảng " + startDate + " đến " + endDate + " công ty chưa có hoạt động nào")) :
-                    ("my".equals(type) ? "Hoạt động cá nhân từ " + startDate + " đến " + endDate : 
-                     "Hoạt động công ty từ " + startDate + " đến " + endDate))
-                .build())
             .build();
 
         long duration = System.currentTimeMillis() - requestStartTime;
