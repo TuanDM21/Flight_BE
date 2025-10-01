@@ -153,6 +153,25 @@ public class ReportServiceImpl implements ReportService {
         }
     }
 
+    @Override
+    public ApiResponseCustom<byte[]> exportReportToWord(ReportRequest request) {
+        try {
+            // Tạo báo cáo trước
+            ApiResponseCustom<ReportResponse> reportResponse = generateReport(request);
+            if (reportResponse.getStatusCode() != 200) {
+                return ApiResponseCustom.error("Không thể tạo báo cáo: " + reportResponse.getMessage());
+            }
+            
+            ReportResponse report = reportResponse.getData();
+            byte[] wordData = generateWordFile(report);
+            
+            return ApiResponseCustom.success("Export Word thành công", wordData);
+        } catch (Exception e) {
+            log.error("Lỗi khi export Word: {}", e.getMessage());
+            return ApiResponseCustom.error("Không thể export Word: " + e.getMessage());
+        }
+    }
+
     // ===================== PRIVATE METHODS =====================
 
     private ReportFieldsResponse buildFieldsResponse(ReportType reportType) {
@@ -1104,46 +1123,60 @@ public class ReportServiceImpl implements ReportService {
             
             StringBuilder csvContent = new StringBuilder();
 
-            // Add header
-            csvContent.append("Report Name: ").append(report.getReportName()).append("\n");
-            csvContent.append("Total Records: ").append(report.getSummary().getTotalRecords()).append("\n");
-            csvContent.append("Total Groups: ").append(report.getSummary().getTotalGroups()).append("\n");
-            csvContent.append("Generated At: ").append(report.getSummary().getGeneratedAt()).append("\n");
+            // Add metadata as comments
+            csvContent.append("# Report Name: ").append(report.getReportName()).append("\n");
+            csvContent.append("# Total Records: ").append(report.getSummary().getTotalRecords()).append("\n");
+            csvContent.append("# Total Groups: ").append(report.getSummary().getTotalGroups()).append("\n");
+            csvContent.append("# Generated At: ").append(report.getSummary().getGeneratedAt()).append("\n");
             csvContent.append("\n");
 
             if (report.getGroups() == null || report.getGroups().isEmpty()) {
-                csvContent.append("No data available for this report.\n");
+                csvContent.append("# No data available for this report.\n");
             } else {
-                // Add column headers
-                for (int i = 0; i < report.getColumns().size(); i++) {
-                    if (i > 0) csvContent.append(",");
-                    csvContent.append("\"").append(report.getColumns().get(i).getLabel()).append("\"");
+                // Add Group column + original columns
+                csvContent.append("\"Group\",\"Percentage\"");
+                for (ReportResponse.ReportColumn column : report.getColumns()) {
+                    csvContent.append(",\"").append(column.getLabel()).append("\"");
                 }
                 csvContent.append("\n");
 
-                // Add data rows grouped
+                // Add data rows with proper CSV format
                 for (ReportResponse.ReportGroup group : report.getGroups()) {
-                    // Add group header row
-                    csvContent.append("\"Group: ").append(group.getGroupName())
-                            .append(" (").append(group.getPercentage()).append("%)\"\n");
-
-                    // Add group data rows
                     for (Map<String, Object> item : group.getItems()) {
-                        for (int i = 0; i < report.getColumns().size(); i++) {
-                            if (i > 0) csvContent.append(",");
-                            ReportResponse.ReportColumn column = report.getColumns().get(i);
+                        // Group info
+                        csvContent.append("\"").append(group.getGroupName()).append("\"");
+                        csvContent.append(",\"").append(group.getPercentage()).append("%\"");
+                        
+                        // Data columns
+                        for (ReportResponse.ReportColumn column : report.getColumns()) {
+                            csvContent.append(",");
                             String field = column.getField();
-                            String fieldKey = field.contains(".") ? field.split("\\.")[1] : field;
-                            Object value = item.get(fieldKey);
-                            csvContent.append("\"").append(value != null ? value.toString().replace("\"", "\"\"") : "").append("\"");
+                            Object value = null;
+                            
+                            // Map field names to data keys
+                            String dataKey = mapFieldToDataKey(field);
+                            value = item.get(dataKey);
+                            
+                            if (value != null) {
+                                String valueStr = value.toString().replace("\"", "\"\"");
+                                csvContent.append("\"").append(valueStr).append("\"");
+                            } else {
+                                log.warn("Field {} (mapped to {}) not found in item keys: {}", field, dataKey, item.keySet());
+                                csvContent.append("\"\"");
+                            }
                         }
                         csvContent.append("\n");
                     }
-                    csvContent.append("\n"); // Empty line between groups
                 }
             }
 
-            byte[] result = csvContent.toString().getBytes("UTF-8");
+            // Convert to bytes with UTF-8 BOM for proper Vietnamese display
+            byte[] bom = {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF}; // UTF-8 BOM
+            byte[] content = csvContent.toString().getBytes("UTF-8");
+            byte[] result = new byte[bom.length + content.length];
+            System.arraycopy(bom, 0, result, 0, bom.length);
+            System.arraycopy(content, 0, result, bom.length, content.length);
+            
             log.info("CSV file generated successfully, size: {} bytes", result.length);
             return result;
 
@@ -1214,9 +1247,15 @@ public class ReportServiceImpl implements ReportService {
                         for (int i = 0; i < report.getColumns().size(); i++) {
                             ReportResponse.ReportColumn column = report.getColumns().get(i);
                             String field = column.getField();
-                            String fieldKey = field.contains(".") ? field.split("\\.")[1] : field;
-                            Object value = item.get(fieldKey);
-                            dataRow.getCell(i).setText(value != null ? value.toString() : "N/A");
+                            String dataKey = mapFieldToDataKey(field);
+                            Object value = item.get(dataKey);
+                            
+                            if (value != null) {
+                                dataRow.getCell(i).setText(value.toString());
+                            } else {
+                                log.warn("Word export - Field {} (mapped to {}) not found in item keys: {}", field, dataKey, item.keySet());
+                                dataRow.getCell(i).setText("N/A");
+                            }
                         }
                     }
                 }
@@ -1326,5 +1365,57 @@ public class ReportServiceImpl implements ReportService {
             log.error("Error generating PowerPoint file: ", e);
             throw new RuntimeException("Lỗi khi tạo PowerPoint file: " + e.getMessage());
         }
+    }
+
+    /**
+     * Map field names to data keys used in report generation
+     */
+    private String mapFieldToDataKey(String field) {
+        return switch (field) {
+            // Task fields
+            case "task.title" -> "title";
+            case "task.content" -> "content";
+            case "task.instructions" -> "instructions";
+            case "task.createdAt" -> "createdAt";
+            case "task.status" -> "status";
+            case "task.priority" -> "priority";
+            case "task.dueDate" -> "dueDate";
+            
+            // Assignment fields
+            case "assignment.id" -> "id";
+            case "assignment.assignedAt" -> "assignedAt";
+            case "assignment.dueAt" -> "dueAt";
+            case "assignment.completedAt" -> "completedAt";
+            case "assignment.status" -> "status";
+            case "assignment.note" -> "note";
+            
+            // Recipient fields
+            case "recipient.name" -> "recipientName";
+            case "recipient.type" -> "recipientType";
+            
+            // Performance fields  
+            case "performance.totalTasks", "totalTasks" -> "totalTasks";
+            case "performance.completedTasks", "completedTasks" -> "completedTasks";
+            case "workloadPercentage" -> "workloadPercentage";
+            
+            // Team fields
+            case "team.name" -> "teamName";
+            
+            // TaskType fields
+            case "taskType.name" -> "taskTypeName";
+            
+            // Other fields
+            case "assignedTo" -> "assignedTo";
+            case "assignedBy.name" -> "assignedByName";
+            case "overdueDays" -> "overdueDays";
+            
+            default -> {
+                // Try without prefix for unknown fields
+                if (field.contains(".")) {
+                    yield field.substring(field.lastIndexOf(".") + 1);
+                }
+                yield field;
+            }
+        };
     }
 }

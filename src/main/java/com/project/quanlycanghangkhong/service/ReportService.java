@@ -44,6 +44,11 @@ public interface ReportService {
     ApiResponseCustom<byte[]> exportReportToCsv(ReportRequest request);
 
     /**
+     * Export báo cáo ra file Word (legacy - từ request)
+     */
+    ApiResponseCustom<byte[]> exportReportToWord(ReportRequest request);
+
+    /**
      * Export data báo cáo có sẵn ra file Excel
      */
     byte[] generateExcelFile(ReportResponse reportData) throws Exception;

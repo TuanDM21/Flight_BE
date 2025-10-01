@@ -1,32 +1,28 @@
 package com.project.quanlycanghangkhong.dto.response.report;
 
-import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
 import com.project.quanlycanghangkhong.dto.response.ReportResponse;
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 
-/**
- * Response wrapper for generated report API
- */
 @Data
-@EqualsAndHashCode(callSuper = true)
-@Schema(description = "Response wrapper cho báo cáo đã tạo")
-public class GeneratedReportApiResponse extends ApiResponseCustom<ReportResponse> {
-    
-    @Schema(description = "Dữ liệu báo cáo với thống kê phần trăm và nhóm")
-    private ReportResponse data;
-    
-    public GeneratedReportApiResponse() {
-        super();
-    }
-    
-    public GeneratedReportApiResponse(int statusCode, String message, ReportResponse data, boolean success) {
-        super();
-        this.setStatusCode(statusCode);
-        this.setMessage(message);
-        this.setData(data);
-        this.setSuccess(success);
-        this.data = data;
-    }
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Schema(description = "API response wrapper for generated report")
+public class GeneratedReportApiResponse {
+
+	@Schema(description = "Response message", example = "Tạo báo cáo thành công")
+	private String message;
+
+	@Schema(description = "HTTP status code", example = "200")
+	private int statusCode;
+
+	@Schema(description = "Generated report data")
+	private ReportResponse data;
+
+	@Schema(description = "Success status", example = "true")
+	private boolean success;
 }
