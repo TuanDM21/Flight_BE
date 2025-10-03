@@ -38,7 +38,7 @@ public class ActivityPushNotificationScheduler {
         List<Activity> activities = activityRepository.findActivitiesStartingBetween(now, in30Min);
         System.out.println("[Scheduler] Số activity sắp diễn ra trong 30 phút tới: " + activities.size());
         for (Activity activity : activities) {
-            System.out.println("[Scheduler] Xét activity: " + activity.getId() + " - " + activity.getName() + " (startTime: " + activity.getStartTime() + ")");
+            System.out.println("[Scheduler] Xét activity: " + activity.getId() + " - " + activity.getTitle() + " (startDate: " + activity.getStartDate() + ")");
             List<ActivityParticipant> participants = participantRepository.findByActivityId(activity.getId());
             System.out.println("[Scheduler] Số participant: " + participants.size());
             Set<Integer> notifiedUserIds = new HashSet<>();
@@ -54,8 +54,8 @@ public class ActivityPushNotificationScheduler {
                         if (!alreadySent) {
                             notificationService.sendPushOnly(
                                 user.getExpoPushToken(),
-                                "Sắp diễn ra hoạt động: " + activity.getName(),
-                                "Bắt đầu lúc: " + activity.getStartTime()
+                                "Sắp diễn ra hoạt động: " + activity.getTitle(),
+                                "Bắt đầu lúc: " + activity.getStartDate()
                             );
                             notificationService.markReminderSent(user.getId(), activity.getId());
                             System.out.println("[Scheduler] Đã gửi push notification reminder cho userId: " + userId + ", activityId: " + activity.getId());
@@ -76,8 +76,8 @@ public class ActivityPushNotificationScheduler {
                                 if (!alreadySent) {
                                     notificationService.sendPushOnly(
                                         user.getExpoPushToken(),
-                                        "Sắp diễn ra hoạt động: " + activity.getName(),
-                                        "Bắt đầu lúc: " + activity.getStartTime()
+                                        "Sắp diễn ra hoạt động: " + activity.getTitle(),
+                                        "Bắt đầu lúc: " + activity.getStartDate()
                                     );
                                     notificationService.markReminderSent(user.getId(), activity.getId());
                                     System.out.println("[Scheduler] Đã gửi push notification reminder cho userId: " + userId + ", activityId: " + activity.getId());
@@ -100,8 +100,8 @@ public class ActivityPushNotificationScheduler {
                                 if (!alreadySent) {
                                     notificationService.sendPushOnly(
                                         user.getExpoPushToken(),
-                                        "Sắp diễn ra hoạt động: " + activity.getName(),
-                                        "Bắt đầu lúc: " + activity.getStartTime()
+                                        "Sắp diễn ra hoạt động: " + activity.getTitle(),
+                                        "Bắt đầu lúc: " + activity.getStartDate()
                                     );
                                     notificationService.markReminderSent(user.getId(), activity.getId());
                                     System.out.println("[Scheduler] Đã gửi push notification reminder cho userId: " + userId + ", activityId: " + activity.getId());

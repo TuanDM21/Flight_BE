@@ -118,7 +118,7 @@ public class ActivityController {
                 content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
     public ResponseEntity<ApiResponseCustom<CalendarDTO>> getAllActivities(
-            @Parameter(description = "Từ khóa tìm kiếm (tìm trong tên, ghi chú, địa điểm)", example = "Họp định kỳ") 
+            @Parameter(description = "Từ khóa tìm kiếm (tìm trong tiêu đề, mô tả, địa điểm)", example = "Họp định kỳ") 
             @RequestParam(required = false) String keyword,
             @Parameter(description = "Loại người tham gia", example = "USER", schema = @Schema(allowableValues = {"USER", "TEAM", "UNIT"})) 
             @RequestParam(required = false) String participantType,
@@ -521,11 +521,11 @@ public class ActivityController {
     // Helper method to convert ActivityRequest to ActivityDTO
     private ActivityDTO convertToActivityDTO(ActivityRequest request) {
         ActivityDTO dto = new ActivityDTO();
-        dto.setName(request.getName());
+        dto.setTitle(request.getTitle());
         dto.setLocation(request.getLocation());
-        dto.setStartTime(request.getStartTime());
-        dto.setEndTime(request.getEndTime());
-        dto.setNotes(request.getNotes());
+        dto.setStartDate(request.getStartDate());
+        dto.setEndDate(request.getEndDate());
+        dto.setDescription(request.getDescription());
         dto.setPinned(request.getPinned());
         
         // Convert participants - flatten the list since each request can contain multiple IDs
