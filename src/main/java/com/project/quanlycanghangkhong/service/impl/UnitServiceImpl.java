@@ -67,6 +67,11 @@ public class UnitServiceImpl implements UnitService {
         List<Unit> assignableUnits;
         
         switch (role) {
+            case "SYSTEM_ADMIN":
+            case "USER_ADMIN":
+                // Admin có thể giao cho tất cả units
+                assignableUnits = unitRepository.findAll();
+                break;
             case "DIRECTOR":
             case "VICE_DIRECTOR":
                 // Có thể giao cho tất cả units
