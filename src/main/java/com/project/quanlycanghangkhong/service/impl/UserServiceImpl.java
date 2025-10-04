@@ -91,12 +91,23 @@ public class UserServiceImpl implements UserService {
         String role = currentUser.getRole().getRoleName();
         List<User> result;
         switch (role) {
-            case "DIRECTOR":
-            case "VICE_DIRECTOR":
-                // Giao cho tất cả trừ DIRECTOR
+            case "USER_ADMIN":
+                // USER_ADMIN có thể giao cho TẤT CẢ users ngoại trừ SYSTEM_ADMIN
                 result = userRepository.findAll().stream()
                     .filter(u -> !u.getId().equals(currentUser.getId()))
-                    .filter(u -> u.getRole() != null && !"DIRECTOR".equals(u.getRole().getRoleName()))
+                    .filter(u -> u.getRole() != null && !"SYSTEM_ADMIN".equals(u.getRole().getRoleName()))
+                    .collect(Collectors.toList());
+                System.out.println("[DEBUG] USER_ADMIN có thể giao cho " + result.size() + " users (tất cả trừ SYSTEM_ADMIN)");
+                break;
+            case "DIRECTOR":
+            case "VICE_DIRECTOR":
+                // Giao cho tất cả trừ DIRECTOR và business admins
+                result = userRepository.findAll().stream()
+                    .filter(u -> !u.getId().equals(currentUser.getId()))
+                    .filter(u -> u.getRole() != null && 
+                            !"DIRECTOR".equals(u.getRole().getRoleName()) && 
+                            !"SYSTEM_ADMIN".equals(u.getRole().getRoleName()) && 
+                            !"USER_ADMIN".equals(u.getRole().getRoleName()))
                     .collect(Collectors.toList());
                 break;
             case "TEAM_LEAD":

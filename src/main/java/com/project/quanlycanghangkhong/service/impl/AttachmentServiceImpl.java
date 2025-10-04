@@ -89,11 +89,13 @@ public class AttachmentServiceImpl implements AttachmentService {
         // Kiểm tra role admin thông qua Role entity
         if (currentUser.getRole() != null && currentUser.getRole().getRoleName() != null) {
             String roleName = currentUser.getRole().getRoleName();
-            return "ADMIN".equals(roleName);
+            return "SYSTEM_ADMIN".equals(roleName) || "USER_ADMIN".equals(roleName);
         }
         
         // Backup check qua email nếu role không có
-        return "admin@admin.com".equals(currentUser.getEmail());
+        return "admin@admin.com".equals(currentUser.getEmail()) || 
+               "system.admin@vdh.com".equals(currentUser.getEmail()) ||
+               "user.admin@vdh.com".equals(currentUser.getEmail());
     }
 
     private AttachmentDTO toDTO(Attachment att) {

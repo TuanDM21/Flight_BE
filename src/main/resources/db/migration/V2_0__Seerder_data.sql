@@ -1,17 +1,18 @@
 -- V2_0__Insert_sample_data.sql
 -- Inserts sample data for Airport Management System
 
--- Insert default roles
+-- Insert default roles (ordered by hierarchy: highest to lowest)
 INSERT INTO roles (role_name, created_at, updated_at) VALUES
-('ADMIN', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-('MEMBER', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-('OFFICE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-('UNIT_VICE_LEAD', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-('UNIT_LEAD', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-('TEAM_VICE_LEAD', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-('TEAM_LEAD', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-('VICE_DIRECTOR', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-('DIRECTOR', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+('SYSTEM_ADMIN', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),    -- Highest: Technical admin
+('USER_ADMIN', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),      -- Business admin
+('DIRECTOR', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),        -- Airport director
+('VICE_DIRECTOR', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),   -- Vice director
+('TEAM_LEAD', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),       -- Team leader
+('TEAM_VICE_LEAD', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),  -- Team vice leader
+('UNIT_LEAD', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),       -- Unit leader
+('UNIT_VICE_LEAD', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),  -- Unit vice leader
+('OFFICE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),          -- Office staff
+('MEMBER', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);          -- Lowest: Regular member
 
 
 -- Insert default teams
@@ -54,236 +55,42 @@ INSERT INTO airports (airport_code, airport_name, latitude, longitude, city, cou
 ('TBB', 'Sân bay Tuy Hòa', 13.045600, 109.333600, 'Phú Yên', 'Vietnam', NOW(), NOW()),
 ('VDH', 'Sân bay Đồng Hới', 17.515000, 106.590278, 'Quảng Bình', 'Vietnam', NOW(), NOW());
 
--- Insert default admin user (password will be hashed in application)
+-- Insert all users (admins first, then other users by hierarchy)
+INSERT INTO users (name, email, password, role_id, team_id, unit_id, created_at, updated_at) VALUES
+-- Admin Users (highest priority)
+('System Administrator', 'system.admin@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', 1, NULL, NULL, NOW(), NOW()), -- SYSTEM_ADMIN
+('Business Administrator', 'user.admin@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', 2, NULL, NULL, NOW(), NOW()), -- USER_ADMIN
 
--- Insert User
--- Nguyễn Thành Nam - Director
-INSERT INTO users (name, email, password, role_id, team_id, unit_id, created_at, updated_at)
-SELECT
-    'Nguyễn Thành Nam',
-    'NamNT@vdh.com',
-    '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K',
-    r.id,
-    1,
-    NULL,
-    NOW(),
-    NOW()
-FROM roles r WHERE r.role_name = 'DIRECTOR';
+-- Directors and Vice Directors
+('Nguyễn Thành Nam', 'NamNT@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', 3, 1, NULL, NOW(), NOW()), -- DIRECTOR
+('Đinh Hải Đức', 'DucDH@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', 4, 1, NULL, NOW(), NOW()), -- VICE_DIRECTOR  
+('Nguyễn Văn Thành', 'ThanhNV@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', 4, 1, NULL, NOW(), NOW()), -- VICE_DIRECTOR
 
--- Đinh Hải Đức - Director
-INSERT INTO users (name, email, password, role_id, team_id, unit_id, created_at, updated_at)
-SELECT
-    'Đinh Hải Đức',
-    'DucDH@vdh.com',
-    '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K',
-    r.id,
-    1,
-    NULL,
-    NOW(),
-    NOW()
-FROM roles r WHERE r.role_name = 'VICE_DIRECTOR';
+-- Team Leads
+('Nguyễn Danh Tuyên', 'TuyenND@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', 5, 2, NULL, NOW(), NOW()), -- TEAM_LEAD team 2
+('Hoàng Ngọc Tuân', 'TuanHN@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', 5, 3, NULL, NOW(), NOW()), -- TEAM_LEAD team 3
+('Trần Thị Hà Giang', 'GiangTTH@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', 5, 5, NULL, NOW(), NOW()), -- TEAM_LEAD team 5
+('Phan Thanh Nam', 'NamPT@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', 5, 4, NULL, NOW(), NOW()), -- TEAM_LEAD team 4
 
--- Nguyễn Văn Thành - Vice Director
-INSERT INTO users (name, email, password, role_id, team_id, unit_id, created_at, updated_at)
-SELECT
-    'Nguyễn Văn Thành',
-    'ThanhNV@vdh.com',
-    '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K',
-    r.id,
-    1,
-    NULL,
-    NOW(),
-    NOW()
-FROM roles r WHERE r.role_name = 'VICE_DIRECTOR';
+-- Team Vice Leads
+('Lâm Duy Hải', 'HaiLD@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', 6, 2, NULL, NOW(), NOW()), -- TEAM_VICE_LEAD team 2
+('Đoàn Hải', 'HaiD@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', 6, 3, NULL, NOW(), NOW()), -- TEAM_VICE_LEAD team 3
+('Nguyễn Quang Trường', 'TruongNQ@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', 6, 3, NULL, NOW(), NOW()), -- TEAM_VICE_LEAD team 3
+('Nguyễn Trung Kiên', 'KienNT@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', 6, 3, NULL, NOW(), NOW()), -- TEAM_VICE_LEAD team 3
+('Nguyễn Trung Thành', 'ThanhNT@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', 6, 5, NULL, NOW(), NOW()), -- TEAM_VICE_LEAD team 5
+('Nguyễn Xuân Hải', 'HaiNX@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', 6, 5, NULL, NOW(), NOW()), -- TEAM_VICE_LEAD team 5
+('Phan Thị Hải Yên', 'YenPTH@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', 6, 4, NULL, NOW(), NOW()), -- TEAM_VICE_LEAD team 4
+('Nguyễn Thị Hằng', 'HangNT@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', 6, 4, NULL, NOW(), NOW()), -- TEAM_VICE_LEAD team 4
 
--- Nguyễn Danh Tuyên - TEAM_LEAD team 2
-INSERT INTO users (name, email, password, role_id, team_id, unit_id, created_at, updated_at)
-SELECT
-    'Nguyễn Danh Tuyên',
-    'TuyenND@vdh.com',
-    '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K',
-    r.id,
-    2,
-    NULL,
-    NOW(),
-    NOW()
-FROM roles r WHERE r.role_name = 'TEAM_LEAD';
-
--- Lâm Duy Hải - TEAM_VICE_LEAD team 2
-INSERT INTO users (name, email, password, role_id, team_id, unit_id, created_at, updated_at)
-SELECT
-    'Lâm Duy Hải',
-    'HaiLD@vdh.com',
-    '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K',
-    r.id,
-    2,
-    NULL,
-    NOW(),
-    NOW()
-FROM roles r WHERE r.role_name = 'TEAM_VICE_LEAD';
-
--- Hoàng Ngọc Tuân - TEAM_LEAD team 3
-INSERT INTO users (name, email, password, role_id, team_id, unit_id, created_at, updated_at)
-SELECT
-    'Hoàng Ngọc Tuân',
-    'TuanHN@vdh.com',
-    '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K',
-    r.id,
-    3,
-    NULL,
-    NOW(),
-    NOW()
-FROM roles r WHERE r.role_name = 'TEAM_LEAD';
-
--- Đoàn Hải - TEAM_VICE_LEAD team 3
-INSERT INTO users (name, email, password, role_id, team_id, unit_id, created_at, updated_at)
-SELECT
-    'Đoàn Hải',
-    'HaiD@vdh.com',
-    '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K',
-    r.id,
-    3,
-    NULL,
-    NOW(),
-    NOW()
-FROM roles r WHERE r.role_name = 'TEAM_VICE_LEAD';
-
--- Nguyễn Quang Trường - TEAM_VICE_LEAD team 3
-INSERT INTO users (name, email, password, role_id, team_id, unit_id, created_at, updated_at)
-SELECT
-    'Nguyễn Quang Trường',
-    'TruongNQ@vdh.com',
-    '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K',
-    r.id,
-    3,
-    NULL,
-    NOW(),
-    NOW()
-FROM roles r WHERE r.role_name = 'TEAM_VICE_LEAD';
-
--- Nguyễn Trung Kiên - TEAM_VICE_LEAD team 3
-INSERT INTO users (name, email, password, role_id, team_id, unit_id, created_at, updated_at)
-SELECT
-    'Nguyễn Trung Kiên',
-    'KienNT@vdh.com',
-    '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K',
-    r.id,
-    3,
-    NULL,
-    NOW(),
-    NOW()
-FROM roles r WHERE r.role_name = 'TEAM_VICE_LEAD';
-
--- Trần Thị Hà Giang - TEAM_LEAD team 5
-INSERT INTO users (name, email, password, role_id, team_id, unit_id, created_at, updated_at)
-SELECT
-    'Trần Thị Hà Giang',
-    'GiangTTH@vdh.com',
-    '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K',
-    r.id,
-    5,
-    NULL,
-    NOW(),
-    NOW()
-FROM roles r WHERE r.role_name = 'TEAM_LEAD';
-
--- Nguyễn Trung Thành - TEAM_VICE_LEAD team 5
-INSERT INTO users (name, email, password, role_id, team_id, unit_id, created_at, updated_at)
-SELECT
-    'Nguyễn Trung Thành',
-    'ThanhNT@vdh.com',
-    '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K',
-    r.id,
-    5,
-    NULL,
-    NOW(),
-    NOW()
-FROM roles r WHERE r.role_name = 'TEAM_VICE_LEAD';
-
--- Nguyễn Xuân Hải - TEAM_VICE_LEAD team 5
-INSERT INTO users (name, email, password, role_id, team_id, unit_id, created_at, updated_at)
-SELECT
-    'Nguyễn Xuân Hải',
-    'HaiNX@vdh.com',
-    '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K',
-    r.id,
-    5,
-    NULL,
-    NOW(),
-    NOW()
-FROM roles r WHERE r.role_name = 'TEAM_VICE_LEAD';
-
--- Phan Thanh Nam - TEAM_LEAD team 4
-INSERT INTO users (name, email, password, role_id, team_id, unit_id, created_at, updated_at)
-SELECT
-    'Phan Thanh Nam',
-    'NamPT@vdh.com',
-    '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K',
-    r.id,
-    4,
-    NULL,
-    NOW(),
-    NOW()
-FROM roles r WHERE r.role_name = 'TEAM_LEAD';
-
--- Phan Thị Hải Yên - TEAM_VICE_LEAD team 4
-INSERT INTO users (name, email, password, role_id, team_id, unit_id, created_at, updated_at)
-SELECT
-    'Phan Thị Hải Yên',
-    'YenPTH@vdh.com',
-    '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K',
-    r.id,
-    4,
-    NULL,
-    NOW(),
-    NOW()
-FROM roles r WHERE r.role_name = 'TEAM_VICE_LEAD';
-
--- Nguyễn Thị Hằng - TEAM_VICE_LEAD team 4
-INSERT INTO users (name, email, password, role_id, team_id, unit_id, created_at, updated_at)
-SELECT
-    'Nguyễn Thị Hằng',
-    'HangNT@vdh.com',
-    '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K',
-    r.id,
-    4,
-    NULL,
-    NOW(),
-    NOW()
-FROM roles r WHERE r.role_name = 'TEAM_VICE_LEAD';
-
-INSERT INTO `airport_db`.`users`
-(`name`, `email`, `password`, `expo_push_token`, `role_id`, `team_id`, `unit_id`, `created_at`, `updated_at`)
-VALUES
--- Trần Công Phượng - Tổ trưởng
-('Trần Công Phượng', 'PhuongTC@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', NULL, 5, 2, 2, NOW(), NOW()),
-
--- Hồ Minh Thắng - Tổ phó
-('Hồ Minh Thắng', 'ThangHM@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', NULL, 4, 2, 1, NOW(), NOW()),
-
--- Vũ Quốc Sơn - Tổ trưởng
-('Vũ Quốc Sơn', 'SonVQ@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', NULL, 5, 4, 3, NOW(), NOW()),
-
--- Lương Thị Thanh Tâm - Tổ phó
-('Lương Thị Thanh Tâm', 'TamLTT@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', NULL, 4, 4, 3, NOW(), NOW()),
-
--- Nguyễn Duy Hạnh - Tổ trưởng
-('Nguyễn Duy Hạnh', 'HanhND@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', NULL, 5, 4, 4, NOW(), NOW()),
-
--- Trần Thị Bích Lan - Tổ phó
-('Trần Thị Bích Lan', 'LanTTB@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', NULL, 4, 4, 4, NOW(), NOW()),
-
--- Phan Xuân Nhân - Tổ trưởng
-('Phan Xuân Nhân', 'NhanPX@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', NULL, 5, 5, 5, NOW(), NOW()),
-
--- Trần Thanh Bình - Tổ phó
-('Trần Thanh Bình', 'BinhTT@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', NULL, 4, 5, 5, NOW(), NOW()),
-
--- Đỗ Thành Trung - Tổ trưởng
-('Đỗ Thành Trung', 'TrungDT@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', NULL, 5, 5, 6, NOW(), NOW()),
-
--- Võ Huy Chương - Tổ phó
-('Võ Huy Chương', 'ChuongVH@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', NULL, 4, 5, 6, NOW(), NOW()),
-
--- Nguyễn Thị Phương Thảo - Tổ trưởng
-('Nguyễn Thị Phương Thảo', 'ThaoNTP@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', NULL, 5, 3, 8, NOW(), NOW());
+-- Unit Leads and Vice Leads
+('Trần Công Phượng', 'PhuongTC@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', 7, 2, 2, NOW(), NOW()), -- UNIT_LEAD
+('Hồ Minh Thắng', 'ThangHM@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', 8, 2, 1, NOW(), NOW()), -- UNIT_VICE_LEAD
+('Vũ Quốc Sơn', 'SonVQ@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', 7, 4, 3, NOW(), NOW()), -- UNIT_LEAD
+('Lương Thị Thanh Tâm', 'TamLTT@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', 8, 4, 3, NOW(), NOW()), -- UNIT_VICE_LEAD
+('Nguyễn Duy Hạnh', 'HanhND@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', 7, 4, 4, NOW(), NOW()), -- UNIT_LEAD
+('Trần Thị Bích Lan', 'LanTTB@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', 8, 4, 4, NOW(), NOW()), -- UNIT_VICE_LEAD
+('Phan Xuân Nhân', 'NhanPX@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', 7, 5, 5, NOW(), NOW()), -- UNIT_LEAD
+('Trần Thanh Bình', 'BinhTT@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', 8, 5, 5, NOW(), NOW()), -- UNIT_VICE_LEAD
+('Đỗ Thành Trung', 'TrungDT@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', 7, 5, 6, NOW(), NOW()), -- UNIT_LEAD
+('Võ Huy Chương', 'ChuongVH@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', 8, 5, 6, NOW(), NOW()), -- UNIT_VICE_LEAD
+('Nguyễn Thị Phương Thảo', 'ThaoNTP@vdh.com', '$2a$10$c93eqLHOQjIhMzB9xR6yauH1KNE8aWK2Hez.pnCoq5noxZVjKgD0K', 7, 3, 8, NOW(), NOW()); -- UNIT_LEAD

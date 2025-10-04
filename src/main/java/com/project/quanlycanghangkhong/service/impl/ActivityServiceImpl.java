@@ -142,6 +142,15 @@ public class ActivityServiceImpl implements ActivityService {
     @Override
     @Transactional
     public ActivityDTO updateActivity(Long id, ActivityDTO dto) {
+        // Validate time range
+        if (dto.getStartDate() != null && dto.getEndDate() != null) {
+            if (dto.getStartDate().isAfter(dto.getEndDate())) {
+                logger.error("[updateActivity] Invalid time range: start {} is after end {}", 
+                    dto.getStartDate(), dto.getEndDate());
+                throw new IllegalArgumentException("Thời gian bắt đầu không thể sau thời gian kết thúc");
+            }
+        }
+        
         Activity activity = activityRepository.findById(id).orElseThrow();
         activity.setTitle(dto.getTitle());
         activity.setLocation(dto.getLocation());

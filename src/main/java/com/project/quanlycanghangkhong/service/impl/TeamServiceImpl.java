@@ -62,6 +62,11 @@ public class TeamServiceImpl implements TeamService {
         List<Team> result;
         
         switch (role) {
+            case "SYSTEM_ADMIN":
+            case "USER_ADMIN":
+                // Admin có thể giao việc cho tất cả teams
+                result = teamRepository.findAll();
+                break;
             case "DIRECTOR":
             case "VICE_DIRECTOR":
                 // Có thể giao việc cho tất cả teams
