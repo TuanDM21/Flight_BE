@@ -15,22 +15,22 @@ public class Activity {
     private Long id;
 
     @Column(nullable = false)
-    private String name;
+    private String title;
 
     @Column(nullable = false)
     private String location;
 
     @Column(nullable = false)
-    private LocalDateTime startTime;
+    private LocalDateTime startDate;
 
     @Column(nullable = false)
-    private LocalDateTime endTime;
+    private LocalDateTime endDate;
 
     @Column(nullable = false)
     private Boolean pinned = false;
 
     @Column
-    private String notes;
+    private String description;
 
     @OneToMany(mappedBy = "activity", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ActivityParticipant> participants = new ArrayList<>();
@@ -47,11 +47,11 @@ public class Activity {
     public void setId(Long id) {
         this.id = id;
     }
-    public String getName() {
-        return name;
+    public String getTitle() {
+        return title;
     }
-    public void setName(String name) {
-        this.name = name;
+    public void setTitle(String title) {
+        this.title = title;
     }
     public String getLocation() {
         return location;
@@ -59,17 +59,17 @@ public class Activity {
     public void setLocation(String location) {
         this.location = location;
     }
-    public LocalDateTime getStartTime() {
-        return startTime;
+    public LocalDateTime getStartDate() {
+        return startDate;
     }
-    public void setStartTime(LocalDateTime startTime) {
-        this.startTime = startTime;
+    public void setStartDate(LocalDateTime startDate) {
+        this.startDate = startDate;
     }
-    public LocalDateTime getEndTime() {
-        return endTime;
+    public LocalDateTime getEndDate() {
+        return endDate;
     }
-    public void setEndTime(LocalDateTime endTime) {
-        this.endTime = endTime;
+    public void setEndDate(LocalDateTime endDate) {
+        this.endDate = endDate;
     }
     public Boolean getPinned() {
         return pinned;
@@ -77,11 +77,11 @@ public class Activity {
     public void setPinned(Boolean pinned) {
         this.pinned = pinned;
     }
-    public String getNotes() {
-        return notes;
+    public String getDescription() {
+        return description;
     }
-    public void setNotes(String notes) {
-        this.notes = notes;
+    public void setDescription(String description) {
+        this.description = description;
     }
     public List<ActivityParticipant> getParticipants() {
         return participants;
