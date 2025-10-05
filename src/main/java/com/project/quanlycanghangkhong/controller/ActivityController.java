@@ -169,6 +169,7 @@ public class ActivityController {
             CalendarDTO calendar = CalendarDTO.builder()
                 .currentDate(LocalDate.now())
                 .activities(activities)
+                .activityType("search")
                 .build();
             return ResponseEntity.ok(ApiResponseCustom.success(calendar));
         }
@@ -179,6 +180,7 @@ public class ActivityController {
             CalendarDTO emptyCalendar = CalendarDTO.builder()
                 .currentDate(LocalDate.now())
                 .activities(new ArrayList<>())
+                .activityType("unknown")
                 .build();
             return ResponseEntity.ok(ApiResponseCustom.success(emptyCalendar));
         }
@@ -213,6 +215,7 @@ public class ActivityController {
         CalendarDTO calendar = CalendarDTO.builder()
             .currentDate(LocalDate.now())
             .activities(activities)
+            .activityType(type)
             .build();
 
         long duration = System.currentTimeMillis() - requestStartTime;
@@ -290,6 +293,7 @@ public class ActivityController {
         CalendarDTO calendar = CalendarDTO.builder()
             .currentDate(LocalDate.now())
             .activities(activities)
+            .activityType(type)
             .build();
 
         long duration = System.currentTimeMillis() - requestStartTime;
