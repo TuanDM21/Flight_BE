@@ -4,12 +4,12 @@
 -- Activities table (matches Activity entity)
 CREATE TABLE activities (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
+    title VARCHAR(255) NOT NULL,
     location VARCHAR(255) NOT NULL,
-    start_time TIMESTAMP NOT NULL,
-    end_time TIMESTAMP NOT NULL,
+    start_date TIMESTAMP NOT NULL,
+    end_date TIMESTAMP NOT NULL,
     pinned BOOLEAN NOT NULL DEFAULT FALSE,
-    notes TEXT,
+    description TEXT,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -36,7 +36,7 @@ CREATE TABLE notification (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Create indexes for better query performance
-CREATE INDEX idx_activities_start_time ON activities(start_time);
+CREATE INDEX idx_activities_start_date ON activities(start_date);
 CREATE INDEX idx_activity_participants_activity ON activity_participants(activity_id);
 CREATE INDEX idx_activity_participants_type ON activity_participants(participant_type, participant_id);
 CREATE INDEX idx_notification_user_id ON notification(user_id);

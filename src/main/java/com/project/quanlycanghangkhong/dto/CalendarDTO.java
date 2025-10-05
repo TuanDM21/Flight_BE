@@ -21,4 +21,7 @@ public class CalendarDTO {
     
     @Schema(description = "Danh sách activities trong calendar view")
     private List<ActivityDTO> activities;
+    
+    @Schema(description = "Loại activities được trả về", example = "company", allowableValues = {"company", "my"})
+    private String activityType;
 }
