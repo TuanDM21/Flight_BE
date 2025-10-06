@@ -58,7 +58,7 @@ INSERT INTO airports (airport_code, airport_name, latitude, longitude, city, cou
 
 -- Insert User
 -- Nguyễn Thành Nam - Director
-INSERT INTO users (name, email, password, role_id, team_id, unit_id, created_at, updated_at)
+INSERT INTO users (name, email, password, role_id, team_id, unit_id, is_first_login, created_at, updated_at)
 SELECT
     'Nguyễn Thành Nam',
     'NamNT@vdh.com',
@@ -66,12 +66,13 @@ SELECT
     r.id,
     1,
     NULL,
+    TRUE,  -- Admin không cần đổi password lần đầu
     NOW(),
     NOW()
 FROM roles r WHERE r.role_name = 'DIRECTOR';
 
--- Đinh Hải Đức - Director
-INSERT INTO users (name, email, password, role_id, team_id, unit_id, created_at, updated_at)
+-- Đinh Hải Đức - Vice Director
+INSERT INTO users (name, email, password, role_id, team_id, unit_id, is_first_login, created_at, updated_at)
 SELECT
     'Đinh Hải Đức',
     'DucDH@vdh.com',
@@ -79,12 +80,13 @@ SELECT
     r.id,
     1,
     NULL,
+    TRUE,  -- Vice Director không cần đổi password lần đầu
     NOW(),
     NOW()
 FROM roles r WHERE r.role_name = 'VICE_DIRECTOR';
 
 -- Nguyễn Văn Thành - Vice Director
-INSERT INTO users (name, email, password, role_id, team_id, unit_id, created_at, updated_at)
+INSERT INTO users (name, email, password, role_id, team_id, unit_id, is_first_login, created_at, updated_at)
 SELECT
     'Nguyễn Văn Thành',
     'ThanhNV@vdh.com',
@@ -92,12 +94,13 @@ SELECT
     r.id,
     1,
     NULL,
+    TRUE,  -- Vice Director không cần đổi password lần đầu
     NOW(),
     NOW()
 FROM roles r WHERE r.role_name = 'VICE_DIRECTOR';
 
 -- Nguyễn Danh Tuyên - TEAM_LEAD team 2
-INSERT INTO users (name, email, password, role_id, team_id, unit_id, created_at, updated_at)
+INSERT INTO users (name, email, password, role_id, team_id, unit_id, is_first_login, created_at, updated_at)
 SELECT
     'Nguyễn Danh Tuyên',
     'TuyenND@vdh.com',
@@ -105,12 +108,13 @@ SELECT
     r.id,
     2,
     NULL,
+    TRUE,  -- Team Lead cần đổi password lần đầu
     NOW(),
     NOW()
 FROM roles r WHERE r.role_name = 'TEAM_LEAD';
 
 -- Lâm Duy Hải - TEAM_VICE_LEAD team 2
-INSERT INTO users (name, email, password, role_id, team_id, unit_id, created_at, updated_at)
+INSERT INTO users (name, email, password, role_id, team_id, unit_id, is_first_login, created_at, updated_at)
 SELECT
     'Lâm Duy Hải',
     'HaiLD@vdh.com',
@@ -118,12 +122,13 @@ SELECT
     r.id,
     2,
     NULL,
+    TRUE,  -- Team Vice Lead cần đổi password lần đầu
     NOW(),
     NOW()
 FROM roles r WHERE r.role_name = 'TEAM_VICE_LEAD';
 
 -- Hoàng Ngọc Tuân - TEAM_LEAD team 3
-INSERT INTO users (name, email, password, role_id, team_id, unit_id, created_at, updated_at)
+INSERT INTO users (name, email, password, role_id, team_id, unit_id, is_first_login, created_at, updated_at)
 SELECT
     'Hoàng Ngọc Tuân',
     'TuanHN@vdh.com',
@@ -131,12 +136,13 @@ SELECT
     r.id,
     3,
     NULL,
+    TRUE,  -- Cần đổi password lần đầu
     NOW(),
     NOW()
 FROM roles r WHERE r.role_name = 'TEAM_LEAD';
 
 -- Đoàn Hải - TEAM_VICE_LEAD team 3
-INSERT INTO users (name, email, password, role_id, team_id, unit_id, created_at, updated_at)
+INSERT INTO users (name, email, password, role_id, team_id, unit_id, is_first_login, created_at, updated_at)
 SELECT
     'Đoàn Hải',
     'HaiD@vdh.com',
@@ -144,12 +150,13 @@ SELECT
     r.id,
     3,
     NULL,
+    TRUE,  -- Cần đổi password lần đầu
     NOW(),
     NOW()
 FROM roles r WHERE r.role_name = 'TEAM_VICE_LEAD';
 
 -- Nguyễn Quang Trường - TEAM_VICE_LEAD team 3
-INSERT INTO users (name, email, password, role_id, team_id, unit_id, created_at, updated_at)
+INSERT INTO users (name, email, password, role_id, team_id, unit_id, is_first_login, created_at, updated_at)
 SELECT
     'Nguyễn Quang Trường',
     'TruongNQ@vdh.com',
@@ -157,12 +164,13 @@ SELECT
     r.id,
     3,
     NULL,
+    TRUE,  -- Cần đổi password lần đầu
     NOW(),
     NOW()
 FROM roles r WHERE r.role_name = 'TEAM_VICE_LEAD';
 
 -- Nguyễn Trung Kiên - TEAM_VICE_LEAD team 3
-INSERT INTO users (name, email, password, role_id, team_id, unit_id, created_at, updated_at)
+INSERT INTO users (name, email, password, role_id, team_id, unit_id, is_first_login, created_at, updated_at)
 SELECT
     'Nguyễn Trung Kiên',
     'KienNT@vdh.com',
@@ -170,12 +178,13 @@ SELECT
     r.id,
     3,
     NULL,
+    TRUE,  -- Cần đổi password lần đầu
     NOW(),
     NOW()
 FROM roles r WHERE r.role_name = 'TEAM_VICE_LEAD';
 
 -- Trần Thị Hà Giang - TEAM_LEAD team 5
-INSERT INTO users (name, email, password, role_id, team_id, unit_id, created_at, updated_at)
+INSERT INTO users (name, email, password, role_id, team_id, unit_id, is_first_login, created_at, updated_at)
 SELECT
     'Trần Thị Hà Giang',
     'GiangTTH@vdh.com',
@@ -183,12 +192,13 @@ SELECT
     r.id,
     5,
     NULL,
+    TRUE,  -- Cần đổi password lần đầu
     NOW(),
     NOW()
 FROM roles r WHERE r.role_name = 'TEAM_LEAD';
 
 -- Nguyễn Trung Thành - TEAM_VICE_LEAD team 5
-INSERT INTO users (name, email, password, role_id, team_id, unit_id, created_at, updated_at)
+INSERT INTO users (name, email, password, role_id, team_id, unit_id, is_first_login, created_at, updated_at)
 SELECT
     'Nguyễn Trung Thành',
     'ThanhNT@vdh.com',
@@ -196,12 +206,13 @@ SELECT
     r.id,
     5,
     NULL,
+    TRUE,  -- Cần đổi password lần đầu
     NOW(),
     NOW()
 FROM roles r WHERE r.role_name = 'TEAM_VICE_LEAD';
 
 -- Nguyễn Xuân Hải - TEAM_VICE_LEAD team 5
-INSERT INTO users (name, email, password, role_id, team_id, unit_id, created_at, updated_at)
+INSERT INTO users (name, email, password, role_id, team_id, unit_id, is_first_login, created_at, updated_at)
 SELECT
     'Nguyễn Xuân Hải',
     'HaiNX@vdh.com',
@@ -209,12 +220,13 @@ SELECT
     r.id,
     5,
     NULL,
+    TRUE,  -- Cần đổi password lần đầu
     NOW(),
     NOW()
 FROM roles r WHERE r.role_name = 'TEAM_VICE_LEAD';
 
 -- Phan Thanh Nam - TEAM_LEAD team 4
-INSERT INTO users (name, email, password, role_id, team_id, unit_id, created_at, updated_at)
+INSERT INTO users (name, email, password, role_id, team_id, unit_id, is_first_login, created_at, updated_at)
 SELECT
     'Phan Thanh Nam',
     'NamPT@vdh.com',
@@ -222,12 +234,13 @@ SELECT
     r.id,
     4,
     NULL,
+    TRUE,  -- Cần đổi password lần đầu
     NOW(),
     NOW()
 FROM roles r WHERE r.role_name = 'TEAM_LEAD';
 
 -- Phan Thị Hải Yên - TEAM_VICE_LEAD team 4
-INSERT INTO users (name, email, password, role_id, team_id, unit_id, created_at, updated_at)
+INSERT INTO users (name, email, password, role_id, team_id, unit_id, is_first_login, created_at, updated_at)
 SELECT
     'Phan Thị Hải Yên',
     'YenPTH@vdh.com',
@@ -235,12 +248,13 @@ SELECT
     r.id,
     4,
     NULL,
+    TRUE,  -- Cần đổi password lần đầu
     NOW(),
     NOW()
 FROM roles r WHERE r.role_name = 'TEAM_VICE_LEAD';
 
 -- Nguyễn Thị Hằng - TEAM_VICE_LEAD team 4
-INSERT INTO users (name, email, password, role_id, team_id, unit_id, created_at, updated_at)
+INSERT INTO users (name, email, password, role_id, team_id, unit_id, is_first_login, created_at, updated_at)
 SELECT
     'Nguyễn Thị Hằng',
     'HangNT@vdh.com',
@@ -248,6 +262,7 @@ SELECT
     r.id,
     4,
     NULL,
+    TRUE,  -- Cần đổi password lần đầu
     NOW(),
     NOW()
 FROM roles r WHERE r.role_name = 'TEAM_VICE_LEAD';

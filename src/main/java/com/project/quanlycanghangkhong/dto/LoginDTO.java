@@ -9,4 +9,6 @@ public class LoginDTO {
 	private String accessToken;
 	private String tokenType;
 	private Long expiresIn;
+	private Boolean requiresPasswordChange;
+	private String message;
 }
