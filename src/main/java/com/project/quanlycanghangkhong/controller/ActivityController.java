@@ -56,6 +56,12 @@ public class ActivityController {
                 content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
     })
     public ResponseEntity<ApiResponseCustom<ActivityDTO>> createActivity(@Valid @RequestBody ActivityRequest request) {
+        // Check permission: Only USER_ADMIN can create activities
+        if (!canManageActivities()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponseCustom.error("Chỉ có USER_ADMIN mới có quyền tạo hoạt động"));
+        }
+        
         ActivityDTO dto = convertToActivityDTO(request);
         ActivityDTO created = activityService.createActivity(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponseCustom.created(created));
@@ -74,6 +80,12 @@ public class ActivityController {
     public ResponseEntity<ApiResponseCustom<ActivityDTO>> updateActivity(
             @Parameter(description = "ID của hoạt động", required = true) @PathVariable Long id, 
             @Valid @RequestBody ActivityRequest request) {
+        // Check permission: Only USER_ADMIN can update activities
+        if (!canManageSpecificActivity(id)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponseCustom.error("Chỉ có USER_ADMIN mới có quyền cập nhật hoạt động"));
+        }
+        
         ActivityDTO dto = convertToActivityDTO(request);
         ActivityDTO updated = activityService.updateActivity(id, dto);
         return ResponseEntity.ok(ApiResponseCustom.updated(updated));
@@ -89,6 +101,12 @@ public class ActivityController {
     })
     public ResponseEntity<ApiResponseCustom<Void>> deleteActivity(
             @Parameter(description = "ID của hoạt động", required = true) @PathVariable Long id) {
+        // Check permission: Only USER_ADMIN can delete activities
+        if (!canManageSpecificActivity(id)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponseCustom.error("Chỉ có USER_ADMIN mới có quyền xóa hoạt động"));
+        }
+        
         activityService.deleteActivity(id);
         return ResponseEntity.ok(ApiResponseCustom.deleted());
     }
@@ -469,6 +487,12 @@ public class ActivityController {
             @Parameter(description = "ID của hoạt động", required = true) @PathVariable Long id, 
             @Parameter(description = "Trạng thái ghim (true: ghim, false: bỏ ghim)", required = true) 
             @RequestParam boolean pinned) {
+        // Check permission: Only USER_ADMIN can pin/unpin activities
+        if (!canManageSpecificActivity(id)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponseCustom.error("Chỉ có USER_ADMIN mới có quyền ghim/bỏ ghim hoạt động"));
+        }
+        
         activityService.pinActivity(id, pinned);
         String message = pinned ? "Đã ghim hoạt động thành công" : "Đã bỏ ghim hoạt động thành công";
         return ResponseEntity.ok(ApiResponseCustom.success(message, null));
@@ -499,6 +523,12 @@ public class ActivityController {
     public ResponseEntity<ApiResponseCustom<String>> deleteMultipleActivities(
             @Parameter(description = "Danh sách ID các hoạt động cần xóa", required = true)
             @RequestBody List<Long> activityIds) {
+        
+        // Check permission: Only USER_ADMIN can delete activities
+        if (!canManageActivities()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponseCustom.error("Chỉ có USER_ADMIN mới có quyền xóa hoạt động"));
+        }
         
         if (activityIds.isEmpty()) {
             return ResponseEntity.badRequest().body(
@@ -569,6 +599,35 @@ public class ActivityController {
                 return dto;
             })
             .collect(java.util.stream.Collectors.toList());
+    }
+    
+    // Helper method to check if current user can manage activities
+    private boolean canManageActivities() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication != null ? authentication.getName() : null;
+        if (email == null) return false;
+        
+        User currentUser = userRepository.findByEmail(email).orElse(null);
+        if (currentUser == null || currentUser.getRole() == null) return false;
+        
+        String roleName = currentUser.getRole().getRoleName();
+        // Only USER_ADMIN can manage activities
+        return "USER_ADMIN".equals(roleName);
+    }
+    
+    // Helper method to check if current user can manage a specific activity (only USER_ADMIN)
+    private boolean canManageSpecificActivity(Long activityId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication != null ? authentication.getName() : null;
+        if (email == null) return false;
+        
+        User currentUser = userRepository.findByEmail(email).orElse(null);
+        if (currentUser == null || currentUser.getRole() == null) return false;
+        
+        String roleName = currentUser.getRole().getRoleName();
+        
+        // Only USER_ADMIN can manage activities
+        return "USER_ADMIN".equals(roleName);
     }
     
 

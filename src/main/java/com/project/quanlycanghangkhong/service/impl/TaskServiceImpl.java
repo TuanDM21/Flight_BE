@@ -2147,8 +2147,9 @@ public class TaskServiceImpl implements TaskService {
     private List<Task> getTasksBasedOnRole(User currentUser) {
         String roleName = currentUser.getRole() != null ? currentUser.getRole().getRoleName() : null;
         
-        // ADMIN, DIRECTOR, VICE_DIRECTOR see all tasks
-        if ("ADMIN".equals(roleName) || "DIRECTOR".equals(roleName) || "VICE_DIRECTOR".equals(roleName)) {
+        // SYSTEM_ADMIN, USER_ADMIN, DIRECTOR, VICE_DIRECTOR see all tasks
+        if ("SYSTEM_ADMIN".equals(roleName) || "USER_ADMIN".equals(roleName) || 
+            "DIRECTOR".equals(roleName) || "VICE_DIRECTOR".equals(roleName)) {
             return taskRepository.findAllByDeletedFalse();
         } else {
             // Other roles see only team tasks (assigned to their team)
