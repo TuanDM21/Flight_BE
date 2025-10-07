@@ -206,9 +206,9 @@ public class ActivityController {
             if (keyword != null || startDateTime != null || endDateTime != null) {
                 activities = activities.stream()
                     .filter(a -> (keyword == null || 
-                            a.getTitle().toLowerCase().contains(keyword.toLowerCase()) ||
+                            (a.getTitle() != null && a.getTitle().toLowerCase().contains(keyword.toLowerCase())) ||
                             (a.getDescription() != null && a.getDescription().toLowerCase().contains(keyword.toLowerCase())) ||
-                            a.getLocation().toLowerCase().contains(keyword.toLowerCase()))
+                            (a.getLocation() != null && a.getLocation().toLowerCase().contains(keyword.toLowerCase())))
                             && (startDateTime == null || a.getStartDate().isAfter(startDateTime) || a.getStartDate().isEqual(startDateTime))
                             && (endDateTime == null || a.getEndDate().isBefore(endDateTime) || a.getEndDate().isEqual(endDateTime)))
                     .collect(Collectors.toList());
@@ -221,9 +221,9 @@ public class ActivityController {
             if (keyword != null || startDateTime != null || endDateTime != null) {
                 activities = activities.stream()
                     .filter(a -> (keyword == null || 
-                            a.getTitle().toLowerCase().contains(keyword.toLowerCase()) ||
+                            (a.getTitle() != null && a.getTitle().toLowerCase().contains(keyword.toLowerCase())) ||
                             (a.getDescription() != null && a.getDescription().toLowerCase().contains(keyword.toLowerCase())) ||
-                            a.getLocation().toLowerCase().contains(keyword.toLowerCase()))
+                            (a.getLocation() != null && a.getLocation().toLowerCase().contains(keyword.toLowerCase())))
                             && (startDateTime == null || a.getStartDate().isAfter(startDateTime) || a.getStartDate().isEqual(startDateTime))
                             && (endDateTime == null || a.getEndDate().isBefore(endDateTime) || a.getEndDate().isEqual(endDateTime)))
                     .collect(Collectors.toList());
