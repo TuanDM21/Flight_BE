@@ -135,8 +135,8 @@ public class ActivityController {
         long requestStartTime = System.currentTimeMillis();
 
         // Validate date parameters
-        java.time.LocalDateTime startDateTime = null;
-        java.time.LocalDateTime endDateTime = null;
+        final java.time.LocalDateTime startDateTime;
+        final java.time.LocalDateTime endDateTime;
         
         if (startDate != null) {
             try {
@@ -146,6 +146,8 @@ public class ActivityController {
                 logger.warn("[GET /api/activities] Invalid startDate format: {}", startDate);
                 return ResponseEntity.badRequest().body(ApiResponseCustom.error("Định dạng startDate không hợp lệ. Sử dụng format: yyyy-MM-dd"));
             }
+        } else {
+            startDateTime = null;
         }
         
         if (endDate != null) {
@@ -156,22 +158,12 @@ public class ActivityController {
                 logger.warn("[GET /api/activities] Invalid endDate format: {}", endDate);
                 return ResponseEntity.badRequest().body(ApiResponseCustom.error("Định dạng endDate không hợp lệ. Sử dụng format: yyyy-MM-dd"));
             }
+        } else {
+            endDateTime = null;
         }
         
         if (startDateTime != null && endDateTime != null && startDateTime.isAfter(endDateTime)) {
             return ResponseEntity.badRequest().body(ApiResponseCustom.error("Ngày bắt đầu không thể sau ngày kết thúc"));
-        }
-
-        // If searching by any field or date range, use search method
-        if (keyword != null || (participantType != null && participantId != null) || 
-            startDateTime != null || endDateTime != null) {
-            List<ActivityDTO> activities = activityService.searchActivities(keyword, participantType, participantId, startDateTime, endDateTime);
-            CalendarDTO calendar = CalendarDTO.builder()
-                .currentDate(LocalDate.now())
-                .activities(activities)
-                .activityType("search")
-                .build();
-            return ResponseEntity.ok(ApiResponseCustom.success(calendar));
         }
 
         // If no type parameter is provided, return empty calendar
@@ -197,7 +189,10 @@ public class ActivityController {
 
         List<ActivityDTO> activities;
         
-        if ("my".equals(type)) {
+        // Handle search with participant filter first (always searches all activities)
+        if (participantType != null && participantId != null) {
+            activities = activityService.searchActivities(keyword, participantType, participantId, startDateTime, endDateTime);
+        } else if ("my".equals(type)) {
             // Get user's personal activities - need to find user first
             Optional<User> userOpt = userRepository.findByEmail(email);
             if (userOpt.isEmpty()) {
@@ -206,16 +201,47 @@ public class ActivityController {
             }
             Integer userId = userOpt.get().getId();
             activities = activityService.getActivitiesForUser(userId);
+            
+            // Apply search filters on user's activities if needed
+            if (keyword != null || startDateTime != null || endDateTime != null) {
+                activities = activities.stream()
+                    .filter(a -> (keyword == null || 
+                            (a.getTitle() != null && a.getTitle().toLowerCase().contains(keyword.toLowerCase())) ||
+                            (a.getDescription() != null && a.getDescription().toLowerCase().contains(keyword.toLowerCase())) ||
+                            (a.getLocation() != null && a.getLocation().toLowerCase().contains(keyword.toLowerCase())))
+                            && (startDateTime == null || a.getStartDate().isAfter(startDateTime) || a.getStartDate().isEqual(startDateTime))
+                            && (endDateTime == null || a.getEndDate().isBefore(endDateTime) || a.getEndDate().isEqual(endDateTime)))
+                    .collect(Collectors.toList());
+            }
         } else {
             // Get all company activities
             activities = activityService.getAllActivities();
+            
+            // Apply search filters on company activities if needed
+            if (keyword != null || startDateTime != null || endDateTime != null) {
+                activities = activities.stream()
+                    .filter(a -> (keyword == null || 
+                            (a.getTitle() != null && a.getTitle().toLowerCase().contains(keyword.toLowerCase())) ||
+                            (a.getDescription() != null && a.getDescription().toLowerCase().contains(keyword.toLowerCase())) ||
+                            (a.getLocation() != null && a.getLocation().toLowerCase().contains(keyword.toLowerCase())))
+                            && (startDateTime == null || a.getStartDate().isAfter(startDateTime) || a.getStartDate().isEqual(startDateTime))
+                            && (endDateTime == null || a.getEndDate().isBefore(endDateTime) || a.getEndDate().isEqual(endDateTime)))
+                    .collect(Collectors.toList());
+            }
         }
 
         // Build calendar response
+        String responseActivityType = type;
+        if ((keyword != null || startDateTime != null || endDateTime != null) && (participantType == null || participantId == null)) {
+            responseActivityType = type + "_search"; // "my_search" or "company_search"
+        } else if (participantType != null && participantId != null) {
+            responseActivityType = "participant_search";
+        }
+        
         CalendarDTO calendar = CalendarDTO.builder()
             .currentDate(LocalDate.now())
             .activities(activities)
-            .activityType(type)
+            .activityType(responseActivityType)
             .build();
 
         long duration = System.currentTimeMillis() - requestStartTime;
