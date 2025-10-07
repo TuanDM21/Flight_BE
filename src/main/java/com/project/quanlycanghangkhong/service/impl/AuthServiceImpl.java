@@ -2,8 +2,10 @@ package com.project.quanlycanghangkhong.service.impl;
 
 import com.project.quanlycanghangkhong.request.LoginRequest;
 import com.project.quanlycanghangkhong.request.RegisterRequest;
+import com.project.quanlycanghangkhong.request.FirstLoginPasswordChangeRequest;
 import com.project.quanlycanghangkhong.dto.LoginDTO;
 import com.project.quanlycanghangkhong.dto.RegisterDTO;
+import com.project.quanlycanghangkhong.dto.FirstLoginPasswordChangeDTO;
 import com.project.quanlycanghangkhong.model.Role;
 import com.project.quanlycanghangkhong.model.Team;
 import com.project.quanlycanghangkhong.model.Unit;
@@ -25,6 +27,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,15 +52,29 @@ public class AuthServiceImpl implements AuthService {
 							loginRequest.getEmail(),
 							loginRequest.getPassword()));
 
+			// Lấy thông tin user để kiểm tra first login
+			User user = userRepository.findByEmail(loginRequest.getEmail())
+					.orElseThrow(() -> new RuntimeException("User not found"));
+
 			String token = jwtTokenProvider.generateToken(authentication);
 
-			LoginDTO loginResponse = LoginDTO.builder()
+			LoginDTO.LoginDTOBuilder loginResponseBuilder = LoginDTO.builder()
 					.accessToken(token)
 					.tokenType("Bearer")
-					.expiresIn(3600L)
-					.build();
+					.expiresIn(3600L);
 
-			return ApiResponseCustom.success(loginResponse);
+			// Kiểm tra nếu đây là lần đăng nhập đầu tiên
+			if (user.getIsFirstLogin() != null && user.getIsFirstLogin()) {
+				loginResponseBuilder
+						.requiresPasswordChange(true)
+						.message("Bạn cần đổi mật khẩu lần đầu đăng nhập");
+			} else {
+				loginResponseBuilder
+						.requiresPasswordChange(false)
+						.message("Đăng nhập thành công");
+			}
+
+			return ApiResponseCustom.success(loginResponseBuilder.build());
 		} catch (BadCredentialsException e) {
 			return ApiResponseCustom.error(HttpStatus.UNAUTHORIZED, "Invalid email or password");
 		} catch (DisabledException e) {
@@ -114,5 +131,62 @@ public class AuthServiceImpl implements AuthService {
 		response.setTeam(DTOConverter.convertTeam(user.getTeam()));
 		response.setUnit(DTOConverter.convertUnit(user.getUnit()));
 		return ApiResponseCustom.success(response);
+	}
+
+	@Override
+	@Transactional
+	public ApiResponseCustom<FirstLoginPasswordChangeDTO> changePasswordFirstLogin(FirstLoginPasswordChangeRequest request) {
+		try {
+			// Lấy thông tin user hiện tại từ SecurityContext
+			Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+			String userEmail = authentication.getName();
+			
+			User user = userRepository.findByEmail(userEmail)
+					.orElseThrow(() -> new RuntimeException("User not found"));
+
+			// Kiểm tra user có phải first login không
+			if (user.getIsFirstLogin() == null || !user.getIsFirstLogin()) {
+				return ApiResponseCustom.error(HttpStatus.BAD_REQUEST, "Tài khoản này không cần đổi mật khẩu lần đầu");
+			}
+
+			// Kiểm tra mật khẩu hiện tại
+			if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+				return ApiResponseCustom.error(HttpStatus.BAD_REQUEST, "Mật khẩu hiện tại không đúng");
+			}
+
+			// Kiểm tra mật khẩu mới và confirm password
+			if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+				return ApiResponseCustom.error(HttpStatus.BAD_REQUEST, "Mật khẩu mới và xác nhận mật khẩu không khớp");
+			}
+
+			// Kiểm tra mật khẩu mới không trùng với mật khẩu cũ
+			if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+				return ApiResponseCustom.error(HttpStatus.BAD_REQUEST, "Mật khẩu mới phải khác mật khẩu hiện tại");
+			}
+
+			// Cập nhật mật khẩu và đặt isFirstLogin = false
+			user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+			user.setIsFirstLogin(false);
+			userRepository.save(user);
+
+			// Tạo token mới sau khi đổi password
+			Authentication newAuth = authenticationManager.authenticate(
+					new UsernamePasswordAuthenticationToken(userEmail, request.getNewPassword()));
+			String newToken = jwtTokenProvider.generateToken(newAuth);
+
+			FirstLoginPasswordChangeDTO response = FirstLoginPasswordChangeDTO.builder()
+					.message("Đổi mật khẩu thành công")
+					.success(true)
+					.newToken(newToken)
+					.tokenType("Bearer")
+					.expiresIn(3600L)
+					.build();
+
+			return ApiResponseCustom.success(response);
+
+		} catch (Exception e) {
+			return ApiResponseCustom.error(HttpStatus.INTERNAL_SERVER_ERROR, 
+					"Có lỗi xảy ra khi đổi mật khẩu: " + e.getMessage());
+		}
 	}
 }

@@ -2,11 +2,13 @@ package com.project.quanlycanghangkhong.controller;
 
 import com.project.quanlycanghangkhong.request.LoginRequest;
 import com.project.quanlycanghangkhong.request.RegisterRequest;
+import com.project.quanlycanghangkhong.request.FirstLoginPasswordChangeRequest;
 import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
 import com.project.quanlycanghangkhong.dto.response.auth.LoginApiResponse;
 import com.project.quanlycanghangkhong.dto.response.auth.RegisterApiResponse;
 import com.project.quanlycanghangkhong.dto.LoginDTO;
 import com.project.quanlycanghangkhong.dto.RegisterDTO;
+import com.project.quanlycanghangkhong.dto.FirstLoginPasswordChangeDTO;
 import com.project.quanlycanghangkhong.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -59,5 +61,19 @@ public class AuthController {
 	public ResponseEntity<ApiResponseCustom<RegisterDTO>> register(
 			@Valid @RequestBody RegisterRequest registerRequest) {
 		return ResponseEntity.ok(authService.register(registerRequest));
+	}
+
+	@PostMapping("/change-password-first-login")
+	@Operation(summary = "Change password on first login", description = "Change password for users logging in for the first time")
+	@ApiResponses(value = {
+			@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Password changed successfully", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+			@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request or password validation failed", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+			@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - Invalid current password", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class))),
+			@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(schema = @Schema(implementation = ApiResponseCustom.class)))
+	})
+	public ResponseEntity<ApiResponseCustom<FirstLoginPasswordChangeDTO>> changePasswordFirstLogin(
+			@Valid @RequestBody FirstLoginPasswordChangeRequest request) {
+		ApiResponseCustom<FirstLoginPasswordChangeDTO> response = authService.changePasswordFirstLogin(request);
+		return ResponseEntity.status(response.getStatusCode()).body(response);
 	}
 }
