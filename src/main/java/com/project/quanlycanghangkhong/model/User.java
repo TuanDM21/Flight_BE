@@ -23,6 +23,9 @@ public class User {
     @Column(name = "expo_push_token", length = 255)
     private String expoPushToken;
 
+    @Column(name = "is_first_login", nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
+    private Boolean isFirstLogin = true;
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
@@ -80,6 +83,14 @@ public class User {
 
     public void setExpoPushToken(String expoPushToken) {
         this.expoPushToken = expoPushToken;
+    }
+
+    public Boolean getIsFirstLogin() {
+        return isFirstLogin;
+    }
+
+    public void setIsFirstLogin(Boolean isFirstLogin) {
+        this.isFirstLogin = isFirstLogin;
     }
 
     public Role getRole() {

@@ -2,8 +2,10 @@ package com.project.quanlycanghangkhong.service;
 
 import com.project.quanlycanghangkhong.request.LoginRequest;
 import com.project.quanlycanghangkhong.request.RegisterRequest;
+import com.project.quanlycanghangkhong.request.FirstLoginPasswordChangeRequest;
 import com.project.quanlycanghangkhong.dto.LoginDTO;
 import com.project.quanlycanghangkhong.dto.RegisterDTO;
+import com.project.quanlycanghangkhong.dto.FirstLoginPasswordChangeDTO;
 import com.project.quanlycanghangkhong.dto.response.ApiResponseCustom;
 
 /**
@@ -28,4 +30,12 @@ public interface AuthService {
 	 * @return a custom API response containing the register response
 	 */
 	ApiResponseCustom<RegisterDTO> register(RegisterRequest registerRequest);
+
+	/**
+	 * Changes password for first login users.
+	 *
+	 * @param request the password change request containing current and new passwords
+	 * @return a custom API response containing the new token after password change
+	 */
+	ApiResponseCustom<FirstLoginPasswordChangeDTO> changePasswordFirstLogin(FirstLoginPasswordChangeRequest request);
 }

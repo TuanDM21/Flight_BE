@@ -12,27 +12,27 @@ import java.util.List;
 @Schema(description = "Request DTO for creating or updating activities")
 public class ActivityRequest {
     
-    @Schema(description = "Activity name", example = "Họp định kỳ tuần", required = true)
-    @NotBlank(message = "Activity name is required")
-    @Size(max = 255, message = "Activity name must not exceed 255 characters")
-    private String name;
+    @Schema(description = "Activity title", example = "Họp định kỳ tuần", required = true)
+    @NotBlank(message = "Activity title is required")
+    @Size(max = 255, message = "Activity title must not exceed 255 characters")
+    private String title;
     
     @Schema(description = "Activity location", example = "Phòng họp A1", required = true)
     @NotBlank(message = "Location is required")
     @Size(max = 255, message = "Location must not exceed 255 characters")
     private String location;
     
-    @Schema(description = "Start time of the activity", example = "2025-09-27T09:00:00", required = true)
-    @NotNull(message = "Start time is required")
-    private LocalDateTime startTime;
+    @Schema(description = "Start date of the activity", example = "2025-09-27T09:00:00", required = true)
+    @NotNull(message = "Start date is required")
+    private LocalDateTime startDate;
     
-    @Schema(description = "End time of the activity", example = "2025-09-27T10:00:00", required = true)
-    @NotNull(message = "End time is required")
-    private LocalDateTime endTime;
+    @Schema(description = "End date of the activity", example = "2025-09-27T10:00:00", required = true)
+    @NotNull(message = "End date is required")
+    private LocalDateTime endDate;
     
-    @Schema(description = "Additional notes", example = "Thảo luận về kế hoạch Q4")
-    @Size(max = 1000, message = "Notes must not exceed 1000 characters")
-    private String notes;
+    @Schema(description = "Additional description", example = "Thảo luận về kế hoạch Q4")
+    @Size(max = 1000, message = "Description must not exceed 1000 characters")
+    private String description;
     
     @Schema(description = "List of participants (required - activity must have at least one participant)", required = true)
     @Valid
@@ -44,12 +44,12 @@ public class ActivityRequest {
     private Boolean pinned;
 
     // Getters and Setters
-    public String getName() {
-        return name;
+    public String getTitle() {
+        return title;
     }
     
-    public void setName(String name) {
-        this.name = name;
+    public void setTitle(String title) {
+        this.title = title;
     }
     
     public String getLocation() {
@@ -60,28 +60,28 @@ public class ActivityRequest {
         this.location = location;
     }
     
-    public LocalDateTime getStartTime() {
-        return startTime;
+    public LocalDateTime getStartDate() {
+        return startDate;
     }
     
-    public void setStartTime(LocalDateTime startTime) {
-        this.startTime = startTime;
+    public void setStartDate(LocalDateTime startDate) {
+        this.startDate = startDate;
     }
     
-    public LocalDateTime getEndTime() {
-        return endTime;
+    public LocalDateTime getEndDate() {
+        return endDate;
     }
     
-    public void setEndTime(LocalDateTime endTime) {
-        this.endTime = endTime;
+    public void setEndDate(LocalDateTime endDate) {
+        this.endDate = endDate;
     }
     
-    public String getNotes() {
-        return notes;
+    public String getDescription() {
+        return description;
     }
     
-    public void setNotes(String notes) {
-        this.notes = notes;
+    public void setDescription(String description) {
+        this.description = description;
     }
     
     public List<ActivityParticipantRequest> getParticipants() {
