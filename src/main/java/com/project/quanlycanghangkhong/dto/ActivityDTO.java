@@ -10,11 +10,11 @@ import java.util.List;
 @Schema(description = "Activity response DTO", example = """
 {
   "id": 101,
-  "name": "Họp định kỳ tuần",
+  "title": "Họp định kỳ tuần",
   "location": "Phòng họp A1",
-  "startTime": "2025-10-01T13:59:01.290Z",
-  "endTime": "2025-10-01T15:00:00.000Z",
-  "notes": "Thảo luận về kế hoạch Q4",
+  "startDate": "2025-10-01T13:59:01.290Z",
+  "endDate": "2025-10-01T15:00:00.000Z",
+  "description": "Thảo luận về kế hoạch Q4",
   "participants": [
     {
       "id": 201,
@@ -47,8 +47,8 @@ public class ActivityDTO {
     
     @NotBlank
     @Size(max = 255)
-    @Schema(description = "Activity name", example = "Họp định kỳ tuần", required = true)
-    private String name;
+    @Schema(description = "Activity title", example = "Họp định kỳ tuần", required = true)
+    private String title;
     
     @NotBlank
     @Size(max = 255)
@@ -56,16 +56,16 @@ public class ActivityDTO {
     private String location;
     
     @NotNull
-    @Schema(description = "Start time", example = "2025-10-01T13:59:01.290Z", required = true)
-    private LocalDateTime startTime;
+    @Schema(description = "Start date", example = "2025-10-01T13:59:01.290Z", required = true)
+    private LocalDateTime startDate;
     
     @NotNull
-    @Schema(description = "End time", example = "2025-10-01T15:00:00.000Z", required = true)
-    private LocalDateTime endTime;
+    @Schema(description = "End date", example = "2025-10-01T15:00:00.000Z", required = true)
+    private LocalDateTime endDate;
     
     @Size(max = 1000)
-    @Schema(description = "Activity notes", example = "Thảo luận về kế hoạch Q4")
-    private String notes;
+    @Schema(description = "Activity description", example = "Thảo luận về kế hoạch Q4")
+    private String description;
     
     @Schema(description = "List of participants")
     private List<ActivityParticipantDTO> participants;
@@ -85,11 +85,11 @@ public class ActivityDTO {
     public void setId(Long id) {
         this.id = id;
     }
-    public String getName() {
-        return name;
+    public String getTitle() {
+        return title;
     }
-    public void setName(String name) {
-        this.name = name;
+    public void setTitle(String title) {
+        this.title = title;
     }
     public String getLocation() {
         return location;
@@ -97,23 +97,23 @@ public class ActivityDTO {
     public void setLocation(String location) {
         this.location = location;
     }
-    public LocalDateTime getStartTime() {
-        return startTime;
+    public LocalDateTime getStartDate() {
+        return startDate;
     }
-    public void setStartTime(LocalDateTime startTime) {
-        this.startTime = startTime;
+    public void setStartDate(LocalDateTime startDate) {
+        this.startDate = startDate;
     }
-    public LocalDateTime getEndTime() {
-        return endTime;
+    public LocalDateTime getEndDate() {
+        return endDate;
     }
-    public void setEndTime(LocalDateTime endTime) {
-        this.endTime = endTime;
+    public void setEndDate(LocalDateTime endDate) {
+        this.endDate = endDate;
     }
-    public String getNotes() {
-        return notes;
+    public String getDescription() {
+        return description;
     }
-    public void setNotes(String notes) {
-        this.notes = notes;
+    public void setDescription(String description) {
+        this.description = description;
     }
     public List<ActivityParticipantDTO> getParticipants() {
         return participants;

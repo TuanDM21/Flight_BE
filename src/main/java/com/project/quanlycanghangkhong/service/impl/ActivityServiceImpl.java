@@ -49,13 +49,13 @@ public class ActivityServiceImpl implements ActivityService {
     @Override
     @Transactional
     public ActivityDTO createActivity(ActivityDTO dto) {
-        logger.info("[createActivity] Bắt đầu tạo activity với name: {}", dto.getName());
+        logger.info("[createActivity] Bắt đầu tạo activity với title: {}", dto.getTitle());
         Activity activity = new Activity();
-        activity.setName(dto.getName());
+        activity.setTitle(dto.getTitle());
         activity.setLocation(dto.getLocation());
-        activity.setStartTime(dto.getStartTime());
-        activity.setEndTime(dto.getEndTime());
-        activity.setNotes(dto.getNotes());
+        activity.setStartDate(dto.getStartDate());
+        activity.setEndDate(dto.getEndDate());
+        activity.setDescription(dto.getDescription());
         Activity saved = activityRepository.save(activity);
         logger.info("[createActivity] Đã lưu activity id: {}", saved.getId());
 
@@ -120,8 +120,8 @@ public class ActivityServiceImpl implements ActivityService {
                 notificationService.createNotifications(
                     userIds,
                     "ACTIVITY",
-                    "Bạn có hoạt động mới: " + activity.getName(),
-                    "Địa điểm: " + activity.getLocation() + ", Thời gian: " + activity.getStartTime(),
+                    "Bạn có hoạt động mới: " + activity.getTitle(),
+                    "Địa điểm: " + activity.getLocation() + ", Thời gian: " + activity.getStartDate(),
                     saved.getId().intValue(),
                     true
                 );
@@ -143,11 +143,11 @@ public class ActivityServiceImpl implements ActivityService {
     @Transactional
     public ActivityDTO updateActivity(Long id, ActivityDTO dto) {
         Activity activity = activityRepository.findById(id).orElseThrow();
-        activity.setName(dto.getName());
+        activity.setTitle(dto.getTitle());
         activity.setLocation(dto.getLocation());
-        activity.setStartTime(dto.getStartTime());
-        activity.setEndTime(dto.getEndTime());
-        activity.setNotes(dto.getNotes());
+        activity.setStartDate(dto.getStartDate());
+        activity.setEndDate(dto.getEndDate());
+        activity.setDescription(dto.getDescription());
         Activity saved = activityRepository.save(activity);
 
         // Xóa toàn bộ participant cũ và thêm mới lại từ DTO
@@ -203,25 +203,25 @@ public class ActivityServiceImpl implements ActivityService {
     }
 
     @Override
-    public List<ActivityDTO> searchActivities(String keyword, String participantType, Long participantId, java.time.LocalDateTime startTime, java.time.LocalDateTime endTime) {
+    public List<ActivityDTO> searchActivities(String keyword, String participantType, Long participantId, java.time.LocalDateTime startDate, java.time.LocalDateTime endDate) {
         // If searching by participant, use optimized repository query
         if (participantType != null && participantId != null) {
-            return searchActivitiesByParticipant(keyword, participantType, participantId, startTime, endTime);
+            return searchActivitiesByParticipant(keyword, participantType, participantId, startDate, endDate);
         }
         
         // Standard search without participant filter
         return activityRepository.findAll().stream()
                 .filter(a -> (keyword == null || 
-                        a.getName().toLowerCase().contains(keyword.toLowerCase()) ||
-                        (a.getNotes() != null && a.getNotes().toLowerCase().contains(keyword.toLowerCase())) ||
+                        a.getTitle().toLowerCase().contains(keyword.toLowerCase()) ||
+                        (a.getDescription() != null && a.getDescription().toLowerCase().contains(keyword.toLowerCase())) ||
                         a.getLocation().toLowerCase().contains(keyword.toLowerCase()))
-                        && (startTime == null || a.getStartTime().isAfter(startTime) || a.getStartTime().isEqual(startTime))
-                        && (endTime == null || a.getEndTime().isBefore(endTime) || a.getEndTime().isEqual(endTime)))
+                        && (startDate == null || a.getStartDate().isAfter(startDate) || a.getStartDate().isEqual(startDate))
+                        && (endDate == null || a.getEndDate().isBefore(endDate) || a.getEndDate().isEqual(endDate)))
                 .map(this::toDTO)
                 .collect(Collectors.toList());
     }
     
-    private List<ActivityDTO> searchActivitiesByParticipant(String keyword, String participantType, Long participantId, java.time.LocalDateTime startTime, java.time.LocalDateTime endTime) {
+    private List<ActivityDTO> searchActivitiesByParticipant(String keyword, String participantType, Long participantId, java.time.LocalDateTime startDate, java.time.LocalDateTime endDate) {
         // Validate participant type
         if (!participantType.equals("USER") && !participantType.equals("TEAM") && !participantType.equals("UNIT")) {
             logger.warn("[searchActivitiesByParticipant] Invalid participantType: {}", participantType);
@@ -256,11 +256,11 @@ public class ActivityServiceImpl implements ActivityService {
         // Get activities and apply remaining filters including keyword and time range
         return activityRepository.findAllById(activityIds).stream()
                 .filter(a -> (keyword == null || 
-                        a.getName().toLowerCase().contains(keyword.toLowerCase()) ||
-                        (a.getNotes() != null && a.getNotes().toLowerCase().contains(keyword.toLowerCase())) ||
+                        a.getTitle().toLowerCase().contains(keyword.toLowerCase()) ||
+                        (a.getDescription() != null && a.getDescription().toLowerCase().contains(keyword.toLowerCase())) ||
                         a.getLocation().toLowerCase().contains(keyword.toLowerCase()))
-                        && (startTime == null || a.getStartTime().isAfter(startTime) || a.getStartTime().isEqual(startTime))
-                        && (endTime == null || a.getEndTime().isBefore(endTime) || a.getEndTime().isEqual(endTime)))
+                        && (startDate == null || a.getStartDate().isAfter(startDate) || a.getStartDate().isEqual(startDate))
+                        && (endDate == null || a.getEndDate().isBefore(endDate) || a.getEndDate().isEqual(endDate)))
                 .map(this::toDTO)
                 .collect(Collectors.toList());
     }
@@ -423,11 +423,11 @@ public class ActivityServiceImpl implements ActivityService {
     private ActivityDTO toDTO(Activity activity) {
         ActivityDTO dto = new ActivityDTO();
         dto.setId(activity.getId());
-        dto.setName(activity.getName());
+        dto.setTitle(activity.getTitle());
         dto.setLocation(activity.getLocation());
-        dto.setStartTime(activity.getStartTime());
-        dto.setEndTime(activity.getEndTime());
-        dto.setNotes(activity.getNotes());
+        dto.setStartDate(activity.getStartDate());
+        dto.setEndDate(activity.getEndDate());
+        dto.setDescription(activity.getDescription());
         dto.setCreatedAt(activity.getCreatedAt());
         dto.setUpdatedAt(activity.getUpdatedAt());
         dto.setPinned(activity.getPinned());
@@ -484,11 +484,11 @@ public class ActivityServiceImpl implements ActivityService {
                                       Map<Integer, String> teamNames, Map<Integer, String> unitNames) {
         ActivityDTO dto = new ActivityDTO();
         dto.setId(activity.getId());
-        dto.setName(activity.getName());
+        dto.setTitle(activity.getTitle());
         dto.setLocation(activity.getLocation());
-        dto.setStartTime(activity.getStartTime());
-        dto.setEndTime(activity.getEndTime());
-        dto.setNotes(activity.getNotes());
+        dto.setStartDate(activity.getStartDate());
+        dto.setEndDate(activity.getEndDate());
+        dto.setDescription(activity.getDescription());
         dto.setCreatedAt(activity.getCreatedAt());
         dto.setUpdatedAt(activity.getUpdatedAt());
         dto.setPinned(activity.getPinned());
