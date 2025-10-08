@@ -41,16 +41,31 @@ public class UnitServiceImpl implements UnitService {
 
     @Override
     public Unit createUnit(Unit unit) {
+        // ✅ ADMIN ONLY: Chỉ ADMIN mới có thể tạo unit
+        if (!isAdmin()) {
+            throw new RuntimeException("Access denied: Only ADMIN can create units");
+        }
+        
         return unitRepository.save(unit);
     }
 
     @Override
     public void deleteUnit(Integer id) {
+        // ✅ ADMIN ONLY: Chỉ ADMIN mới có thể xóa unit
+        if (!isAdmin()) {
+            throw new RuntimeException("Access denied: Only ADMIN can delete units");
+        }
+        
         unitRepository.deleteById(id);
     }
 
     @Override
     public List<UnitDTO> getAllUnits() {
+        // ✅ ADMIN ONLY: Chỉ ADMIN mới có thể xem tất cả units
+        if (!isAdmin()) {
+            throw new RuntimeException("Access denied: Only ADMIN can get all units");
+        }
+        
         List<Unit> units = unitRepository.findAll();
         return units.stream()
                 .map(DTOConverter::convertUnit)
@@ -67,6 +82,10 @@ public class UnitServiceImpl implements UnitService {
         List<Unit> assignableUnits;
         
         switch (role) {
+            case "ADMIN":
+                // ADMIN có thể giao cho tất cả units (full quyền)
+                assignableUnits = unitRepository.findAll();
+                break;
             case "DIRECTOR":
             case "VICE_DIRECTOR":
                 // Có thể giao cho tất cả units
@@ -109,5 +128,16 @@ public class UnitServiceImpl implements UnitService {
         return assignableUnits.stream()
                 .map(DTOConverter::convertUnit)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Helper method để check xem user hiện tại có phải ADMIN không
+     */
+    private boolean isAdmin() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByEmail(email).orElse(null);
+        return currentUser != null && 
+               currentUser.getRole() != null && 
+               "ADMIN".equals(currentUser.getRole().getRoleName());
     }
 }

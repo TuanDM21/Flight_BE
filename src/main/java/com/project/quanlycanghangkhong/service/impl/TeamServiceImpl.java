@@ -28,6 +28,11 @@ public class TeamServiceImpl implements TeamService {
 
     @Override
     public List<TeamDTO> getAllTeams() {
+        // ✅ ADMIN ONLY: Chỉ ADMIN mới có thể xem tất cả teams
+        if (!isAdmin()) {
+            throw new RuntimeException("Access denied: Only ADMIN can get all teams");
+        }
+        
         List<Team> teams = teamRepository.findAll();
         return teams.stream()
                 .map(DTOConverter::convertTeam) // Chuyển sang TeamDTO
@@ -36,11 +41,21 @@ public class TeamServiceImpl implements TeamService {
 
     @Override
     public Team getTeamById(Integer id) {
+        // ✅ ADMIN ONLY: Chỉ ADMIN mới có thể lấy team theo ID
+        if (!isAdmin()) {
+            throw new RuntimeException("Access denied: Only ADMIN can get team by ID");
+        }
+        
         return teamRepository.findById(id).orElseThrow(() -> new RuntimeException("Team not found"));
     }
 
     @Override
     public Team createTeam(Team team) {
+        // ✅ ADMIN ONLY: Chỉ ADMIN mới có thể tạo team
+        if (!isAdmin()) {
+            throw new RuntimeException("Access denied: Only ADMIN can create teams");
+        }
+        
         return teamRepository.save(team);
     }
 
@@ -62,6 +77,7 @@ public class TeamServiceImpl implements TeamService {
         List<Team> result;
         
         switch (role) {
+            case "ADMIN":
             case "DIRECTOR":
             case "VICE_DIRECTOR":
                 // Có thể giao việc cho tất cả teams
@@ -96,5 +112,16 @@ public class TeamServiceImpl implements TeamService {
         return result.stream()
                 .map(DTOConverter::convertTeam)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Helper method để check xem user hiện tại có phải ADMIN không
+     */
+    private boolean isAdmin() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByEmail(email).orElse(null);
+        return currentUser != null && 
+               currentUser.getRole() != null && 
+               "ADMIN".equals(currentUser.getRole().getRoleName());
     }
 }

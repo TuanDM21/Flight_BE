@@ -441,7 +441,12 @@ public class TaskServiceImpl implements TaskService {
                 List<Task> receivedTasks = new ArrayList<>();
                 receivedTasks.addAll(taskRepository.findReceivedTasksByUserId(currentUserId));
                 
+                // ADMIN can see all received tasks
                 if (currentUser.getRole() != null && 
+                    "ADMIN".equals(currentUser.getRole().getRoleName())) {
+                    receivedTasks.addAll(taskRepository.findAllByDeletedFalse());
+                }
+                else if (currentUser.getRole() != null && 
                     "TEAM_LEAD".equals(currentUser.getRole().getRoleName()) &&
                     currentUser.getTeam() != null) {
                     receivedTasks.addAll(taskRepository.findReceivedTasksByTeamId(currentUser.getTeam().getId()));
@@ -451,8 +456,7 @@ public class TaskServiceImpl implements TaskService {
                         receivedTasks.addAll(taskRepository.findReceivedTasksByUnitId(unit.getId()));
                     }
                 }
-                
-                if (currentUser.getRole() != null && 
+                else if (currentUser.getRole() != null && 
                     "UNIT_LEAD".equals(currentUser.getRole().getRoleName()) &&
                     currentUser.getUnit() != null) {
                     receivedTasks.addAll(taskRepository.findReceivedTasksByUnitId(currentUser.getUnit().getId()));
@@ -901,8 +905,13 @@ public class TaskServiceImpl implements TaskService {
                 List<Task> receivedTasks = new ArrayList<>();
                 receivedTasks.addAll(taskRepository.findReceivedTasksByUserId(userId));
                 
-                // Add team tasks if user is team lead
+                // ADMIN can see all received tasks
                 if (currentUser.getRole() != null && 
+                    "ADMIN".equals(currentUser.getRole().getRoleName())) {
+                    receivedTasks.addAll(taskRepository.findAllByDeletedFalse());
+                }
+                // Add team tasks if user is team lead
+                else if (currentUser.getRole() != null && 
                     "TEAM_LEAD".equals(currentUser.getRole().getRoleName()) &&
                     currentUser.getTeam() != null) {
                     receivedTasks.addAll(taskRepository.findReceivedTasksByTeamId(currentUser.getTeam().getId()));
@@ -912,9 +921,8 @@ public class TaskServiceImpl implements TaskService {
                         receivedTasks.addAll(taskRepository.findReceivedTasksByUnitId(unit.getId()));
                     }
                 }
-                
                 // Add unit tasks if user is unit lead
-                if (currentUser.getRole() != null && 
+                else if (currentUser.getRole() != null && 
                     "UNIT_LEAD".equals(currentUser.getRole().getRoleName()) &&
                     currentUser.getUnit() != null) {
                     receivedTasks.addAll(taskRepository.findReceivedTasksByUnitId(currentUser.getUnit().getId()));

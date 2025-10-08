@@ -61,6 +61,9 @@ public class AttachmentServiceImpl implements AttachmentService {
         User currentUser = getCurrentUser();
         if (currentUser == null) return false;
         
+        // ADMIN có full quyền
+        if (isAdmin()) return true;
+        
         // Chỉ owner có quyền
         return isOwner(attachment);
     }
@@ -73,6 +76,9 @@ public class AttachmentServiceImpl implements AttachmentService {
     private boolean hasWriteAccess(Attachment attachment) {
         User currentUser = getCurrentUser();
         if (currentUser == null) return false;
+        
+        // ADMIN có full quyền chỉnh sửa
+        if (isAdmin()) return true;
         
         // Chỉ owner có quyền chỉnh sửa
         return isOwner(attachment);
@@ -169,9 +175,9 @@ public class AttachmentServiceImpl implements AttachmentService {
     public void deleteAttachment(Integer id) {
         Attachment att = attachmentRepository.findById(id).orElse(null);
         if (att != null) {
-            // Chỉ owner mới có quyền xóa
-            if (!isOwner(att)) {
-                throw new RuntimeException("Bạn không có quyền xóa file này. Chỉ người upload file mới có thể thực hiện.");
+            // ADMIN hoặc owner mới có quyền xóa
+            if (!isAdmin() && !isOwner(att)) {
+                throw new RuntimeException("Bạn không có quyền xóa file này. Chỉ người upload file hoặc admin mới có thể thực hiện.");
             }
             
             // Thực hiện soft delete attachment

@@ -22,6 +22,11 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<UserDTO> getAllUsers() {
+        // ✅ ADMIN ONLY: Chỉ ADMIN mới có thể xem tất cả users
+        if (!isAdmin()) {
+            throw new RuntimeException("Access denied: Only ADMIN can get all users");
+        }
+        
         List<User> users = userRepository.findAllWithPermissions();
         return users.stream()
                 .map(DTOConverter::convertUser)
@@ -35,11 +40,21 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User createUser(User user) {
+        // ✅ ADMIN ONLY: Chỉ ADMIN mới có thể tạo user
+        if (!isAdmin()) {
+            throw new RuntimeException("Access denied: Only ADMIN can create users");
+        }
+        
         return userRepository.save(user);
     }
 
     @Override
     public User updateUser(Integer id, User user) {
+        // ✅ ADMIN ONLY: Chỉ ADMIN mới có thể update user
+        if (!isAdmin()) {
+            throw new RuntimeException("Access denied: Only ADMIN can update users");
+        }
+        
         return userRepository.findById(id).map(existingUser -> {
             existingUser.setName(user.getName());
             existingUser.setEmail(user.getEmail());
@@ -50,6 +65,11 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void deleteUser(Integer id) {
+        // ✅ ADMIN ONLY: Chỉ ADMIN mới có thể xóa user
+        if (!isAdmin()) {
+            throw new RuntimeException("Access denied: Only ADMIN can delete users");
+        }
+        
         userRepository.deleteById(id);
     }
 
@@ -91,6 +111,12 @@ public class UserServiceImpl implements UserService {
         String role = currentUser.getRole().getRoleName();
         List<User> result;
         switch (role) {
+            case "ADMIN":
+                // ADMIN có thể giao cho tất cả users (full quyền)
+                result = userRepository.findAll().stream()
+                    .filter(u -> !u.getId().equals(currentUser.getId()))
+                    .collect(Collectors.toList());
+                break;
             case "DIRECTOR":
             case "VICE_DIRECTOR":
                 // Giao cho tất cả trừ DIRECTOR
@@ -184,5 +210,16 @@ public class UserServiceImpl implements UserService {
                 result = List.of();
         }
         return result.stream().map(DTOConverter::convertUser).collect(Collectors.toList());
+    }
+
+    /**
+     * Helper method để check xem user hiện tại có phải ADMIN không
+     */
+    private boolean isAdmin() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByEmail(email).orElse(null);
+        return currentUser != null && 
+               currentUser.getRole() != null && 
+               "ADMIN".equals(currentUser.getRole().getRoleName());
     }
 }
