@@ -51,7 +51,7 @@ services:
       - migration
 
   mariadb:
-    image: ghcr.io/library/mariadb:11.2
+    image: mariadb:11.2
     container_name: flight-mariadb-prod
     env_file:
       - .env
