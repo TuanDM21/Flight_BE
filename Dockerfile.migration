@@ -1,4 +1,4 @@
-FROM alpine:3.18
+FROM public.ecr.aws/docker/library/alpine:3.18
 
 # Install OpenJDK and required tools
 RUN apk add --no-cache openjdk17-jre curl bash
