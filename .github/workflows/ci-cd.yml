@@ -152,6 +152,31 @@ jobs:
               exit 1
             fi
 
+            # --- 7. Run Database Migrations ---
+            echo "🔄 Running database migrations..."
+            set +e
+            make db-migrate
+            MIGRATION_EXIT_CODE=$?
+            set -e
+            
+            if [ $MIGRATION_EXIT_CODE -ne 0 ]; then
+              echo "❌ Database migration failed"
+              docker compose logs --no-color --tail=200 migration || true
+              
+              # Retry migration once in case of timeout
+              echo "🔄 Retrying migration..."
+              set +e
+              make db-migrate
+              MIGRATION_RETRY_CODE=$?
+              set -e
+              
+              if [ $MIGRATION_RETRY_CODE -ne 0 ]; then
+                echo "❌ Migration retry also failed"
+                exit 1
+              fi
+            fi
+            echo "✅ Database migration completed successfully!"
+
             # --- 8. Deploy App ---
             echo "🚀 Starting application..."
             set +e

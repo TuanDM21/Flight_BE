@@ -1,4 +1,4 @@
-FROM flyway/flyway:11.13.2-alpine
+FROM flyway/flyway:10.15.2-alpine
 
 WORKDIR /flyway
 
