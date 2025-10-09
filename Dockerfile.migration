@@ -2,7 +2,9 @@ FROM public.ecr.aws/docker/library/alpine:3.18
 
 # Force rebuild by adding build timestamp
 ARG BUILD_DATE
+ARG VPS_DEBUG=true
 LABEL build_date=$BUILD_DATE
+LABEL vps_debug=$VPS_DEBUG
 
 # Install OpenJDK and required tools
 RUN apk add --no-cache openjdk17-jre curl bash
@@ -22,7 +24,31 @@ WORKDIR /flyway
 COPY src/main/resources/db/migration ./db/migration/
 
 # Set entrypoint and default command explicitly
-# Debug: List flyway contents
-RUN ls -la /flyway/ && /flyway/flyway --version
-ENTRYPOINT ["/flyway/flyway"]
+# Debug: List flyway contents and system info
+RUN echo "=== FLYWAY DEBUG INFO ===" \
+    && ls -la /flyway/ \
+    && echo "=== FLYWAY VERSION ===" \
+    && /flyway/flyway --version \
+    && echo "=== SYSTEM INFO ===" \
+    && uname -a \
+    && echo "=== JAVA VERSION ===" \
+    && java -version \
+    && echo "=== PATH ===" \
+    && echo $PATH \
+    && echo "=== WHICH FLYWAY ===" \
+    && which flyway || echo "flyway not in PATH" \
+    && echo "=== EXECUTABLE TEST ===" \
+    && /flyway/flyway --help | head -5
+
+# Create wrapper script for additional safety
+RUN echo '#!/bin/bash' > /usr/local/bin/flyway-wrapper \
+    && echo 'echo "=== WRAPPER EXECUTION ==="' >> /usr/local/bin/flyway-wrapper \
+    && echo 'echo "Args: $@"' >> /usr/local/bin/flyway-wrapper \
+    && echo 'echo "PWD: $(pwd)"' >> /usr/local/bin/flyway-wrapper \
+    && echo 'echo "Flyway exists: $(ls -la /flyway/flyway)"' >> /usr/local/bin/flyway-wrapper \
+    && echo 'exec /flyway/flyway "$@"' >> /usr/local/bin/flyway-wrapper \
+    && chmod +x /usr/local/bin/flyway-wrapper
+
+# Use wrapper as entrypoint for better debugging
+ENTRYPOINT ["/usr/local/bin/flyway-wrapper"]
 CMD ["migrate"]

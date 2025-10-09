@@ -33,6 +33,7 @@ services:
       dockerfile: Dockerfile.migration
       args:
         BUILD_DATE: ${BUILD_DATE:-default}
+        VPS_DEBUG: ${VPS_DEBUG:-true}
     container_name: flight-migration-prod
     working_dir: /flyway
     env_file:
