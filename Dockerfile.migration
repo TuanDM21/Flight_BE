@@ -40,14 +40,20 @@ RUN echo "=== FLYWAY DEBUG INFO ===" \
     && echo "=== EXECUTABLE TEST ===" \
     && /flyway/flyway --help | head -5
 
-# Create wrapper script for additional safety
+# Create wrapper script for additional safety and debugging
 RUN echo '#!/bin/bash' > /usr/local/bin/flyway-wrapper \
     && echo 'echo "=== WRAPPER EXECUTION ==="' >> /usr/local/bin/flyway-wrapper \
     && echo 'echo "Args: $@"' >> /usr/local/bin/flyway-wrapper \
     && echo 'echo "PWD: $(pwd)"' >> /usr/local/bin/flyway-wrapper \
-    && echo 'echo "Flyway exists: $(ls -la /flyway/flyway)"' >> /usr/local/bin/flyway-wrapper \
+    && echo 'echo "PATH: $PATH"' >> /usr/local/bin/flyway-wrapper \
+    && echo 'echo "Flyway exists: $(ls -la /flyway/flyway 2>/dev/null || echo "NOT FOUND")"' >> /usr/local/bin/flyway-wrapper \
+    && echo 'echo "About to execute: /flyway/flyway $@"' >> /usr/local/bin/flyway-wrapper \
     && echo 'exec /flyway/flyway "$@"' >> /usr/local/bin/flyway-wrapper \
     && chmod +x /usr/local/bin/flyway-wrapper
+
+# Create symlink for backward compatibility với direct 'migrate' command
+RUN ln -s /usr/local/bin/flyway-wrapper /usr/local/bin/migrate \
+    && ln -s /flyway/flyway /usr/local/bin/flyway
 
 # Use wrapper as entrypoint for better debugging
 ENTRYPOINT ["/usr/local/bin/flyway-wrapper"]
