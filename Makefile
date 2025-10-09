@@ -173,7 +173,7 @@ db-migrate-local: ## Run Flyway migrations on development environment
 	fi
 	@if [ "$(shell docker compose -f $(COMPOSE_FILE_LOCAL) ps -q mariadb 2>/dev/null)" ]; then \
 		echo "📍 Using development environment"; \
-		docker compose -f $(COMPOSE_FILE_LOCAL) --profile migration run --rm migration flyway migrate; \
+		docker compose -f $(COMPOSE_FILE_LOCAL) --profile migration run --rm migration migrate; \
 	else \
 		echo "❌ No MariaDB container found for development environment. Please start it first with 'make up-local'"; \
 		exit 1; \
@@ -184,7 +184,7 @@ db-migrate: ## Run Flyway migrations on production environment
 	@echo "🗄️  Running database migrations on production environment..."
 	@if [ "$(shell docker compose -f $(COMPOSE_FILE_PROD) ps -q mariadb 2>/dev/null)" ]; then \
 		echo "📍 Using production environment"; \
-		docker compose -f $(COMPOSE_FILE_PROD) --profile migration run --rm migration flyway migrate; \
+		docker compose -f $(COMPOSE_FILE_PROD) --profile migration run --rm migration migrate; \
 	else \
 		echo "❌ No MariaDB container found for production environment. Please start it first with 'make up'"; \
 		exit 1; \
@@ -199,7 +199,7 @@ db-info-local: ## Show migration status for development environment
 	fi
 	@if [ "$(shell docker compose -f $(COMPOSE_FILE_LOCAL) ps -q mariadb 2>/dev/null)" ]; then \
 		echo "📍 Using development environment"; \
-		docker compose -f $(COMPOSE_FILE_LOCAL) --profile migration run --rm migration flyway info; \
+		docker compose -f $(COMPOSE_FILE_LOCAL) --profile migration run --rm migration info; \
 	else \
 		echo "❌ No MariaDB container found for development environment. Please start it first with 'make up-local'"; \
 		exit 1; \
@@ -209,7 +209,7 @@ db-info: ## Show migration status for production environment
 	@echo "📊 Database migration status for production environment:"
 	@if [ "$(shell docker compose -f $(COMPOSE_FILE_PROD) ps -q mariadb 2>/dev/null)" ]; then \
 		echo "📍 Using production environment"; \
-		docker compose -f $(COMPOSE_FILE_PROD) --profile migration run --rm migration flyway info; \
+		docker compose -f $(COMPOSE_FILE_PROD) --profile migration run --rm migration info; \
 	else \
 		echo "❌ No MariaDB container found for production environment. Please start it first with 'make up'"; \
 		exit 1; \
@@ -225,7 +225,7 @@ db-clean-local: ## Clean development database (DANGEROUS - will drop all objects
 	fi
 	@if [ "$(shell docker compose -f $(COMPOSE_FILE_LOCAL) ps -q mariadb 2>/dev/null)" ]; then \
 		echo "📍 Using development environment"; \
-		docker compose -f $(COMPOSE_FILE_LOCAL) --profile migration run --rm migration flyway clean; \
+		docker compose -f $(COMPOSE_FILE_LOCAL) --profile migration run --rm migration clean; \
 	else \
 		echo "❌ No MariaDB container found for development environment. Please start it first"; \
 		exit 1; \
@@ -238,7 +238,7 @@ db-clean: ## Clean production database (DANGEROUS - will drop all objects)
 	@echo "🧹 Cleaning production database..."
 	@if [ "$(shell docker compose -f $(COMPOSE_FILE_PROD) ps -q mariadb 2>/dev/null)" ]; then \
 		echo "📍 Using production environment"; \
-		docker compose -f $(COMPOSE_FILE_PROD) --profile migration run --rm migration flyway clean; \
+		docker compose -f $(COMPOSE_FILE_PROD) --profile migration run --rm migration clean; \
 	else \
 		echo "❌ No MariaDB container found for production environment. Please start it first"; \
 		exit 1; \
@@ -253,7 +253,7 @@ db-validate-local: ## Validate development migrations
 	fi
 	@if [ "$(shell docker compose -f $(COMPOSE_FILE_LOCAL) ps -q mariadb 2>/dev/null)" ]; then \
 		echo "📍 Using development environment"; \
-		docker compose -f $(COMPOSE_FILE_LOCAL) --profile migration run --rm migration flyway validate; \
+		docker compose -f $(COMPOSE_FILE_LOCAL) --profile migration run --rm migration validate; \
 	else \
 		echo "❌ No MariaDB container found for development environment. Please start it first"; \
 		exit 1; \
@@ -264,7 +264,7 @@ db-validate: ## Validate production migrations
 	@echo "✅ Validating production migrations..."
 	@if [ "$(shell docker compose -f $(COMPOSE_FILE_PROD) ps -q mariadb 2>/dev/null)" ]; then \
 		echo "📍 Using production environment"; \
-		docker compose -f $(COMPOSE_FILE_PROD) --profile migration run --rm migration flyway validate; \
+		docker compose -f $(COMPOSE_FILE_PROD) --profile migration run --rm migration validate; \
 	else \
 		echo "❌ No MariaDB container found for production environment. Please start it first"; \
 		exit 1; \
@@ -279,7 +279,7 @@ db-repair-local: ## Repair Flyway schema history for development environment
 	fi
 	@if [ "$(shell docker compose -f $(COMPOSE_FILE_LOCAL) ps -q mariadb 2>/dev/null)" ]; then \
 		echo "📍 Using development environment"; \
-		docker compose -f $(COMPOSE_FILE_LOCAL) --profile migration run --rm migration flyway repair; \
+		docker compose -f $(COMPOSE_FILE_LOCAL) --profile migration run --rm migration repair; \
 	else \
 		echo "❌ No MariaDB container found for development environment. Please start it first"; \
 		exit 1; \
@@ -290,7 +290,7 @@ db-repair: ## Repair Flyway schema history for production environment
 	@echo "🔧 Repairing Flyway schema history for production environment..."
 	@if [ "$(shell docker compose -f $(COMPOSE_FILE_PROD) ps -q mariadb 2>/dev/null)" ]; then \
 		echo "📍 Using production environment"; \
-		docker compose -f $(COMPOSE_FILE_PROD) --profile migration run --rm migration flyway repair; \
+		docker compose -f $(COMPOSE_FILE_PROD) --profile migration run --rm migration repair; \
 	else \
 		echo "❌ No MariaDB container found for production environment. Please start it first"; \
 		exit 1; \

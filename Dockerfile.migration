@@ -17,5 +17,6 @@ WORKDIR /flyway
 # Copy migration files
 COPY src/main/resources/db/migration ./db/migration/
 
-# CMD migrate (baseline if needed via env)
-CMD ["flyway", "migrate"]
+# Set entrypoint and default command explicitly
+ENTRYPOINT ["/flyway/flyway"]
+CMD ["migrate"]
