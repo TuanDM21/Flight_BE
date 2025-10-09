@@ -18,4 +18,4 @@ WORKDIR /flyway
 COPY src/main/resources/db/migration ./db/migration/
 
 # CMD migrate (baseline if needed via env)
-CMD ["migrate"]
+CMD ["flyway", "migrate"]
