@@ -54,7 +54,9 @@ services:
       - migration
 
   mariadb:
-    image: mariadb:11.2
+    build:
+      context: .
+      dockerfile: Dockerfile.mariadb
     container_name: flight-mariadb-dev
     env_file:
       - .env
@@ -64,7 +66,6 @@ services:
       - "3306:3306"
     volumes:
       - mariadb_data_dev:/var/lib/mysql
-      - ./scripts/init-mariadb.sh:/docker-entrypoint-initdb.d/init-mariadb.sh:ro
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --max_allowed_packet=256M
     networks:
       - flight-dev-network
