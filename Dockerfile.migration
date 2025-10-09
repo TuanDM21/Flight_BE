@@ -1,5 +1,9 @@
 FROM public.ecr.aws/docker/library/alpine:3.18
 
+# Force rebuild by adding build timestamp
+ARG BUILD_DATE
+LABEL build_date=$BUILD_DATE
+
 # Install OpenJDK and required tools
 RUN apk add --no-cache openjdk17-jre curl bash
 
@@ -18,5 +22,7 @@ WORKDIR /flyway
 COPY src/main/resources/db/migration ./db/migration/
 
 # Set entrypoint and default command explicitly
+# Debug: List flyway contents
+RUN ls -la /flyway/ && /flyway/flyway --version
 ENTRYPOINT ["/flyway/flyway"]
 CMD ["migrate"]

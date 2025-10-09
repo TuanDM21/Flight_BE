@@ -34,6 +34,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.migration
+      args:
+        BUILD_DATE: ${BUILD_DATE:-default}
     container_name: flight-migration-dev
     working_dir: /flyway
     env_file:
