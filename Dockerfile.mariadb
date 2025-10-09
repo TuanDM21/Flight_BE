@@ -1,4 +1,4 @@
-FROM ghcr.io/library/mariadb:11.2
+FROM mariadb:11.2
 
 # Copy initialization script and set proper permissions
 COPY scripts/init-mariadb.sh /docker-entrypoint-initdb.d/init-mariadb.sh
