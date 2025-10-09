@@ -51,9 +51,25 @@ RUN echo '#!/bin/bash' > /usr/local/bin/flyway-wrapper \
     && echo 'exec /flyway/flyway "$@"' >> /usr/local/bin/flyway-wrapper \
     && chmod +x /usr/local/bin/flyway-wrapper
 
-# Create symlink for backward compatibility với direct 'migrate' command
-RUN ln -s /usr/local/bin/flyway-wrapper /usr/local/bin/migrate \
-    && ln -s /flyway/flyway /usr/local/bin/flyway
+# Create migrate script directly (NOT symlink) for VPS compatibility
+RUN echo '#!/bin/bash' > /usr/local/bin/migrate \
+    && echo 'echo "=== MIGRATE COMMAND EXECUTION ==="' >> /usr/local/bin/migrate \
+    && echo 'echo "Args: $@"' >> /usr/local/bin/migrate \
+    && echo 'echo "Executing: /flyway/flyway $@"' >> /usr/local/bin/migrate \
+    && echo 'exec /flyway/flyway "$@"' >> /usr/local/bin/migrate \
+    && chmod +x /usr/local/bin/migrate
+
+# Also create flyway script directly
+RUN echo '#!/bin/bash' > /usr/local/bin/flyway \
+    && echo 'exec /flyway/flyway "$@"' >> /usr/local/bin/flyway \
+    && chmod +x /usr/local/bin/flyway
+
+# Verify all scripts are executable and in PATH
+RUN echo "=== SCRIPT VERIFICATION ===" \
+    && ls -la /usr/local/bin/migrate /usr/local/bin/flyway /usr/local/bin/flyway-wrapper \
+    && echo "=== TEST MIGRATE COMMAND ===" \
+    && which migrate \
+    && /usr/local/bin/migrate --help | head -3
 
 # Use wrapper as entrypoint for better debugging
 ENTRYPOINT ["/usr/local/bin/flyway-wrapper"]
